@@ -10,6 +10,9 @@ const script = html.match(/<script>\r?\n([\s\S]*?)<\/script>/)[1];
 for (const forbidden of ['/api/avatar', '/api/share', '/api/cards', 'portraitSection', 'cardSection']) {
   assert.ok(!html.includes(forbidden), `removed image feature remains: ${forbidden}`);
 }
+for (const required of ['/api/profile-photo', 'photoCanvas', 'PHOTO_BYTES', 'RGB565']) {
+  assert.ok(html.toLowerCase().includes(required.toLowerCase()), `profile photo UI missing: ${required}`);
+}
 assert.ok(!/<(?:script|img|link)\b[^>]*(?:src|href)=["']https?:|url\(["']?https?:/i.test(html),
   'the captive page must not load internet resources');
 
@@ -51,7 +54,22 @@ class Element {
 }
 
 const get = id => {
-  if (!elements.has(id)) elements.set(id, new Element());
+  if (!elements.has(id)) {
+    const element = new Element();
+    if (id === 'photoCanvas') {
+      element.width = 90;
+      element.height = 120;
+      const pixels = () => new Uint8ClampedArray(90 * 120 * 4).fill(96);
+      element.getContext = () => ({
+        clearRect() {},
+        drawImage() {},
+        createImageData: () => ({ data: pixels() }),
+        getImageData: () => ({ data: pixels() }),
+        putImageData() {},
+      });
+    }
+    elements.set(id, element);
+  }
   return elements.get(id);
 };
 
@@ -61,6 +79,7 @@ let emptyScan = true;
 let failScan = false;
 let connectError = '';
 let denyFinish = false;
+let dropFinishNetwork = false;
 let savedProfile = {
   name: '测试',
   signature: '已有签名',
@@ -79,6 +98,7 @@ const phoneWindow = {
   addEventListener() {},
   isSecureContext: false,
   crypto: require('node:crypto').webcrypto,
+  createImageBitmap: async () => ({ width: 90, height: 120 }),
   location: { origin: 'http://192.168.4.1' },
 };
 
@@ -94,6 +114,7 @@ const context = vm.createContext({
     }
   },
   TextEncoder,
+  Blob,
   AbortController,
   URL,
   URLSearchParams,
@@ -107,8 +128,18 @@ const context = vm.createContext({
     requests.push({ url, options });
     let result = {};
     let ok = true;
+    let status = 200;
     if (url.startsWith('/api/cities')) result = cityCatalog;
     if (url.startsWith('/api/profile') && !options.method) result = savedProfile;
+    if (url.startsWith('/api/profile-photo')) {
+      if (options.method === 'GET') {
+        ok = false;
+        status = 404;
+        result = { error: 'not_found' };
+      } else {
+        result = { ok: true, version: Date.now() };
+      }
+    }
     if (url.startsWith('/api/setup')) {
       result = {
         state,
@@ -129,7 +160,13 @@ const context = vm.createContext({
       ok = false;
       result = { error: 'network_required' };
     }
-    return { ok, json: async () => result };
+    if (url.startsWith('/api/finish') && dropFinishNetwork) throw new TypeError('Failed to fetch');
+    return {
+      ok,
+      status,
+      json: async () => result,
+      arrayBuffer: async () => new ArrayBuffer(0),
+    };
   },
 });
 
@@ -182,8 +219,13 @@ const posts = () => requests.filter(request => request.options.method === 'POST'
   get('name').value = '新名字';
   denyFinish = true;
   await get('save').onclick();
-  assert.match(get('saveStatus').textContent, /连接 Wi-Fi/);
+  assert.match(get('saveStatus').textContent, /未确认完成/);
   denyFinish = false;
+  dropFinishNetwork = true;
+  await get('save').onclick();
+  assert.equal(get('step3').hidden, false);
+  assert.match(get('doneSummary').textContent, /正在返回首页/);
+  dropFinishNetwork = false;
   await get('save').onclick();
   assert.equal(get('step3').hidden, false);
   assert.equal(get('doneName').textContent, '新名字');
@@ -256,7 +298,30 @@ const posts = () => requests.filter(request => request.options.method === 'POST'
   assert.equal(posts().length, beforeInvalid);
   assert.match(get('saveStatus').textContent, /有效/);
 
-  console.log('Phone setup: Wi-Fi, saved-network fallback, cookies, nationwide cities and text profile: PASS');
+  get('city').value = zhuhai[0];
+  get('city').onchange();
+  get('photoInput').files = [{ type: 'image/png', size: 1024 }];
+  await get('photoInput').onchange();
+  assert.match(get('photoStatus').textContent, /尚未保存/);
+  assert.equal(get('photoBadge').textContent, '待保存');
+  await get('save').onclick();
+  const photoPost = posts().find(entry =>
+    entry.url.startsWith('/api/profile-photo') && entry.options.method === 'POST');
+  assert.ok(photoPost, 'selected profile photo uploads on save');
+  assert.match(photoPost.url, /[?&]t=314159(?:&|$)/);
+  const rgb565 = Buffer.from(await photoPost.options.body.arrayBuffer());
+  assert.equal(rgb565.length, 21600);
+  assert.equal(get('photoBadge').textContent, '已设置');
+
+  get('removePhoto').onclick();
+  assert.equal(get('photoBadge').textContent, '待删除');
+  await get('save').onclick();
+  assert.ok(requests.some(entry =>
+    entry.url.startsWith('/api/profile-photo') && entry.options.method === 'DELETE'),
+  'deleting the profile photo uses the authenticated DELETE endpoint');
+  assert.equal(get('photoBadge').textContent, '未设置');
+
+  console.log('Phone setup: Wi-Fi, cities, profile text and colorful 3:4 RGB565 photo: PASS');
 })().catch(error => {
   console.error(error);
   process.exitCode = 1;

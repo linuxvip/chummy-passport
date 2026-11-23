@@ -67,6 +67,7 @@ idf_component_register(
         "apps/netease/netease_player.cc"
         "apps/netease/netease_ui.cc"
         "apps/home/home_profile.c"
+        "apps/home/home_photo.c"
         "apps/home/home_clock.c"
         "apps/home/home_almanac.c"
         "apps/home/home_weather.c"
@@ -108,6 +109,7 @@ idf_component_register(
         spi_flash
         esp_driver_usb_serial_jtag
         esp_http_server
+        spiffs
         lwip
 )
 target_link_options(${COMPONENT_LIB} INTERFACE

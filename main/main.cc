@@ -7,6 +7,7 @@
 #include "boot_splash.h"
 #include "launcher/settings.h"
 #include "launcher/wifi_setup.h"
+#include "apps/home/home_photo.h"
 #include "launcher/power.h"
 #include "wifi_manager.h"
 #include "ssid_manager.h"
@@ -415,6 +416,11 @@ extern "C" void app_main(void) {
     remove_legacy_muse_secrets();
     reminders::initialize();
     lists::initialize();
+
+    xTaskCreate([](void *) {
+        home_photo_prepare();
+        vTaskDelete(nullptr);
+    }, "photo_prep", 3072, nullptr, tskIDLE_PRIORITY + 1, nullptr);
 
     // 2. 硬件总线与外设初始化
     ESP_ERROR_CHECK(bsp_i2c_init());

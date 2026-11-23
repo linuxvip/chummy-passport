@@ -38,7 +38,7 @@ Voice tools require a network connection and Xiaozhi configuration. NetEase play
 
 | App | What it does | Requirements |
 | --- | --- | --- |
-| Home | Four pillars and lunar date (early/late Zi setting), clock, short reflective daily quote, auto-updating weather, and air quality; UP refreshes the weather | Network for the daily quote, weather, and air quality; Beijing is the initial default city |
+| Home | Four selectable layouts: almanac, minimal four pillars, weather life, and a colorful personal profile with name, introduction, weather, lunar date, and Ganzhi | Network for the daily quote and weather; Beijing is the initial default city |
 | Radio | City and station selection, playback, and sleep timer | Wi-Fi and available online stations |
 | Xiaozhi AI | Voice conversations, volume and brightness control, app opening, music and radio requests, timers, reminders, and lists | Network and Xiaozhi configuration; media needs its corresponding service |
 | NetEase Music | Search songs, play playlists and daily recommendations | Wi-Fi, your own NetEase account, and available APIs |
@@ -68,7 +68,7 @@ Use only the matching FoloToy AI Passport hardware revision with ESP32-C3 and 8 
 
 **Back up first.** A full image overwrites configuration in its written range. A complete reset also requires erasing flash. To preserve settings and images, verify the partition layout and use the application image without erasing the whole flash.
 
-On first boot, connect your phone to the device's password-free `Passport-WiFi-xxxx` hotspot and open `http://192.168.4.1`. Follow the setup page to select Wi-Fi, city, and personal details. Xiaozhi needs your own service configuration.
+On first boot, connect your phone to the device's password-free `Passport-WiFi-xxxx` hotspot and open `http://192.168.4.1`. Follow the setup page to select Wi-Fi, city, and personal details. The profile layout can also use one color photo, cropped by the phone to a 3:4, 90×120 RGB565 image; replacing it is transactional and an interrupted upload keeps the previous photo. Xiaozhi needs your own service configuration.
 
 ## Make your own version
 

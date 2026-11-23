@@ -1,6 +1,7 @@
 #include "apps/home/home_upload.h"
 
 #include "apps/home/home_profile.h"
+#include "apps/home/home_photo.h"
 #include "esp_http_server.h"
 #include "esp_log.h"
 #include <esp_random.h>      // esp_fill_random():每次开启上传窗口换一个一次性 token
@@ -66,8 +67,12 @@ static std::vector<SsidItem> s_saved_networks;
 static esp_err_t send_json(httpd_req_t *req, int status, const char *json) {
     httpd_resp_set_type(req, "application/json");
     httpd_resp_set_hdr(req, "Cache-Control", "no-store, max-age=0");
-    httpd_resp_set_status(req, status == 200 ? "200 OK" :
-                              status == 401 ? "401 Unauthorized" : "400 Bad Request");
+    const char *status_text = "400 Bad Request";
+    if (status == 200) status_text = "200 OK";
+    else if (status == 401) status_text = "401 Unauthorized";
+    else if (status == 404) status_text = "404 Not Found";
+    else if (status == 500) status_text = "500 Internal Server Error";
+    httpd_resp_set_status(req, status_text);
     httpd_resp_send(req, json, HTTPD_RESP_USE_STRLEN);
     return ESP_OK;
 }
@@ -168,6 +173,71 @@ static esp_err_t handler_profile_post(httpd_req_t *req) {
     esp_err_t err = home_profile_set_text(&in);
     return send_json(req, err == ESP_OK ? 200 : 400,
                      err == ESP_OK ? "{\"ok\":true}" : "{\"error\":\"invalid\"}");
+}
+
+static esp_err_t handler_profile_photo_get(httpd_req_t *req) {
+    if (!token_ok(req)) return send_json(req, 401, "{\"error\":\"unauthorized\"}");
+    if (!home_photo_available()) return send_json(req, 404, "{\"error\":\"not_found\"}");
+
+    httpd_resp_set_type(req, "application/octet-stream");
+    httpd_resp_set_hdr(req, "Cache-Control", "no-store, max-age=0");
+    char content_length[16];
+    std::snprintf(content_length, sizeof(content_length), "%u",
+                  static_cast<unsigned>(HOME_PROFILE_PHOTO_BYTES));
+    httpd_resp_set_hdr(req, "Content-Length", content_length);
+
+    uint8_t chunk[512];
+    size_t offset = 0;
+    while (offset < HOME_PROFILE_PHOTO_BYTES) {
+        const size_t length = std::min(sizeof(chunk), HOME_PROFILE_PHOTO_BYTES - offset);
+        if (home_photo_read_range(offset, chunk, length) != ESP_OK)
+            return ESP_FAIL;
+        if (httpd_resp_send_chunk(req, reinterpret_cast<const char *>(chunk), length) != ESP_OK)
+            return ESP_FAIL;
+        offset += length;
+    }
+    return httpd_resp_send_chunk(req, NULL, 0);
+}
+
+static esp_err_t handler_profile_photo_post(httpd_req_t *req) {
+    if (!token_ok(req)) return send_json(req, 401, "{\"error\":\"unauthorized\"}");
+    const size_t total = static_cast<size_t>(req->content_len);
+    if (total != HOME_PROFILE_PHOTO_BYTES)
+        return send_json(req, 400, "{\"error\":\"photo_size\"}");
+
+    uint8_t chunk[512];
+    size_t received = 0;
+    bool first = true;
+    while (received < total) {
+        const size_t request = std::min(sizeof(chunk), total - received);
+        const int got = httpd_req_recv(req, reinterpret_cast<char *>(chunk), request);
+        if (got <= 0) {
+            home_photo_abort_upload();
+            return send_json(req, 400, "{\"error\":\"photo_recv\"}");
+        }
+        received += static_cast<size_t>(got);
+        const bool last = received == total;
+        if (home_photo_write_chunk(chunk, static_cast<size_t>(got), first, last, total) != ESP_OK) {
+            home_photo_abort_upload();
+            return send_json(req, 400, "{\"error\":\"photo_store\"}");
+        }
+        first = false;
+    }
+
+    char json[48];
+    std::snprintf(json, sizeof(json), "{\"ok\":true,\"version\":%lu}",
+                  static_cast<unsigned long>(home_photo_version()));
+    return send_json(req, 200, json);
+}
+
+static esp_err_t handler_profile_photo_delete(httpd_req_t *req) {
+    if (!token_ok(req)) return send_json(req, 401, "{\"error\":\"unauthorized\"}");
+    const esp_err_t err = home_photo_delete();
+    if (err != ESP_OK) return send_json(req, 500, "{\"error\":\"photo_delete\"}");
+    char json[48];
+    std::snprintf(json, sizeof(json), "{\"ok\":true,\"version\":%lu}",
+                  static_cast<unsigned long>(home_photo_version()));
+    return send_json(req, 200, json);
 }
 
 // ---------------------------------------------------------------------------
@@ -316,7 +386,7 @@ esp_err_t home_upload_start(void) {
 
     httpd_config_t config = HTTPD_DEFAULT_CONFIG();
     config.stack_size = 6144;
-    config.max_uri_handlers = 9;
+    config.max_uri_handlers = 13;
     // 10 lwIP sockets total: leave room for DNS, SNTP, control/listen sockets,
     // and a new accept before LRU eviction. Phone OS probes also use HTTP.
     config.max_open_sockets = 3;
@@ -336,6 +406,9 @@ esp_err_t home_upload_start(void) {
     const httpd_uri_t cities_uri = {"/api/cities", HTTP_GET, handler_cities, NULL};
     const httpd_uri_t profile_get = {"/api/profile", HTTP_GET, handler_profile_get, NULL};
     const httpd_uri_t profile_post = {"/api/profile", HTTP_POST, handler_profile_post, NULL};
+    const httpd_uri_t photo_get = {"/api/profile-photo", HTTP_GET, handler_profile_photo_get, NULL};
+    const httpd_uri_t photo_post = {"/api/profile-photo", HTTP_POST, handler_profile_photo_post, NULL};
+    const httpd_uri_t photo_delete = {"/api/profile-photo", HTTP_DELETE, handler_profile_photo_delete, NULL};
     const httpd_uri_t setup_uri = {"/api/setup", HTTP_GET, handler_setup, NULL};
     const httpd_uri_t networks_uri = {"/api/networks", HTTP_GET, handler_networks, NULL};
     const httpd_uri_t connect_uri = {"/api/connect", HTTP_POST, handler_connect, NULL};
@@ -346,6 +419,8 @@ esp_err_t home_upload_start(void) {
     struct { const httpd_uri_t *uri; const char *name; } routes[] = {
         {&index_uri, "/"}, {&cities_uri, "GET /api/cities"}, {&profile_get, "GET /api/profile"},
         {&profile_post, "POST /api/profile"},
+        {&photo_get, "GET /api/profile-photo"}, {&photo_post, "POST /api/profile-photo"},
+        {&photo_delete, "DELETE /api/profile-photo"},
         {&setup_uri, "GET /api/setup"}, {&networks_uri, "GET /api/networks"},
         {&connect_uri, "POST /api/connect"}, {&finish_uri, "POST /api/finish"},
         {&captive_uri, "captive portal"},
@@ -371,6 +446,7 @@ void home_upload_stop(void) {
     if (!s_server) return;
     httpd_stop(s_server); // 内部 join 处理器任务后释放
     s_server = NULL;
+    home_photo_abort_upload();
     while (s_network_state.load() == 1) vTaskDelay(pdMS_TO_TICKS(20));
     for (auto &item : s_saved_networks) std::fill(item.password.begin(), item.password.end(), '\0');
     s_saved_networks.clear();

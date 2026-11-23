@@ -54,7 +54,18 @@ details>summary{list-style:none;cursor:pointer}details>summary::-webkit-details-
 a{color:var(--green)}
 .success-mark{width:64px;height:64px;color:var(--green);margin:40px 0 0}
 .recap strong{display:block;font-size:20px;font-weight:650;overflow-wrap:anywhere}.recap span{color:var(--muted);font-size:14px}
+.photo-layout{display:grid;grid-template-columns:150px minmax(0,1fr);gap:16px;align-items:start}
+.photo-stage{position:relative;width:150px;aspect-ratio:3/4;border-radius:10px;overflow:hidden;background:linear-gradient(145deg,#e9e3d5,#d9d2c4);border:1px solid #d3c6ae;box-shadow:inset 0 0 0 3px rgba(255,255,255,.45)}
+.photo-stage canvas{display:block;width:100%;height:100%;touch-action:none;cursor:grab}
+.photo-stage canvas:active{cursor:grabbing}
+.photo-empty{position:absolute;inset:0;display:grid;place-content:center;text-align:center;color:#7e7565;font-size:13px;line-height:1.5;pointer-events:none}
+.photo-tools>*+*{margin-top:10px}
+.photo-tools .secondary{min-height:44px;padding:9px 12px;font-size:14px}
+.photo-zoom{display:block;font-size:12.5px;color:var(--muted);margin-top:10px}.photo-zoom input{width:100%;margin-top:5px}
+.photo-badge{font-size:12px;color:var(--green);background:var(--tint);border-radius:999px;padding:3px 9px;white-space:nowrap}
+.photo-badge[data-state=empty]{color:var(--muted);background:var(--field)}
 @media(min-width:760px){.shell{padding-top:48px}}
+@media(max-width:380px){.photo-layout{grid-template-columns:132px minmax(0,1fr);gap:12px}.photo-stage{width:132px}}
 @media(prefers-reduced-motion:no-preference){.primary,.secondary{transition:background .15s ease-out}}
 </style>
 </head>
@@ -85,6 +96,22 @@ a{color:var(--green)}
 <div class="card">
 <div class="field"><label for="name">名字</label><input id="name" type="text" maxlength="9" autocomplete="nickname" placeholder="显示在首页"></div>
 <div class="field"><label for="sig">签名</label><input id="sig" type="text" maxlength="30" placeholder="一句话介绍自己"></div>
+</div>
+<div class="card">
+<div class="field">
+<div class="row"><div class="field-title">人物志照片<span class="optional">彩色 · 自动裁成 3:4</span></div><span id="photoBadge" class="photo-badge" data-state="empty">未设置</span></div>
+<div class="photo-layout">
+<div class="photo-stage"><canvas id="photoCanvas" width="90" height="120" aria-label="人物志照片预览"></canvas><div id="photoEmpty" class="photo-empty">选择一张<br>彩色照片</div></div>
+<div class="photo-tools">
+<button id="choosePhoto" class="secondary" type="button">选择照片</button>
+<input id="photoInput" class="vh" type="file" accept="image/jpeg,image/png,image/webp,image/heic,image/heif">
+<label class="photo-zoom" for="photoZoom">缩放 <span id="photoZoomValue">100%</span><input id="photoZoom" type="range" min="100" max="300" value="100" disabled></label>
+<button id="removePhoto" class="text-button" type="button" disabled>删除照片</button>
+<p class="help">选好后可拖动照片调整位置。只保存显示用的小图，不会把手机原图留在设备上。</p>
+</div>
+</div>
+<p id="photoStatus" class="status" role="status" aria-live="polite"></p>
+</div>
 </div>
 <div class="card">
 <div class="field"><label for="city">城市<span class="optional">用于天气和收音机</span></label>
@@ -120,6 +147,9 @@ let scanTimer=null,scanRound=0,scanning=false;
 // Directory is served from this device, including while the phone has no Internet.
 let cities=[],loadedProfile={},cityCatalogLoaded=false;
 let locatedProfile=null,locationRequest=null,locationTimer=null,locationGeneration=0;
+const PHOTO_W=90,PHOTO_H=120,PHOTO_BYTES=PHOTO_W*PHOTO_H*2;
+let photoSaved=false,photoDirty=false,photoRemove=false,photoImage=null;
+let photoBaseScale=1,photoScale=1,photoX=0,photoY=0,photoDrag=null,photoObjectUrl=null;
 const provinces=['北京','天津','河北','山西','内蒙古','辽宁','吉林','黑龙江','上海','江苏','浙江','安徽','福建','江西','山东','河南','湖北','湖南','广东','广西','海南','重庆','四川','贵州','云南','西藏','陕西','甘肃','青海','宁夏','新疆','香港','澳门','台湾'];
 for(const p of provinces){$('province').add(new Option(p,p));$('customRegion').add(new Option(p,p))}
 function cityOption(c){return new Option(c[1]+' · '+c[4]+(c[5]!==c[1]?' / '+c[5]:''),c[0])}
@@ -151,7 +181,7 @@ async function api(path,body){
  try{
   r=await fetch(path+(path.includes('?')?'&':'?')+'t='+encodeURIComponent(window.__T||''),options);
   try{j=await r.json()}catch(e){if(controller.signal.aborted)throw e}
- }catch(e){e.path=path;throw e}finally{clearTimeout(timer)}
+ }catch(e){e.path=path;e.network=true;throw e}finally{clearTimeout(timer)}
  if(!r.ok){
   const errors={
    unauthorized:'设置页面已失效，请刷新后重试。',saved_not_found:'附近暂未发现可用的已保存网络。请选择指定网络重试，或只修改个人资料。',
@@ -161,6 +191,166 @@ async function api(path,body){
   error.code=j.error||'rejected';error.deviceCode=j.code||'';error.path=path;throw error;
  }
  return j;
+}
+function photoContext(){const canvas=$('photoCanvas');return canvas.getContext?canvas.getContext('2d',{willReadFrequently:true}):null}
+function clearPhotoCanvas(){const ctx=photoContext();if(ctx)ctx.clearRect(0,0,PHOTO_W,PHOTO_H)}
+function updatePhotoUi(){
+ const state=photoRemove?'remove':photoDirty?'dirty':photoSaved?'saved':'empty';
+ const badge=$('photoBadge');
+ badge.dataset.state=state==='empty'?'empty':'set';
+ badge.textContent=photoRemove?'待删除':photoDirty?'待保存':photoSaved?'已设置':'未设置';
+ $('photoEmpty').hidden=Boolean(photoImage)||photoSaved&&!photoRemove;
+ $('photoZoom').disabled=!photoImage;
+ const canRemove=photoSaved||photoDirty||Boolean(photoImage);
+ $('removePhoto').disabled=!canRemove;
+ $('removePhoto').textContent=photoRemove?'撤销删除':photoDirty&&!photoSaved?'清除选择':'删除照片';
+}
+function fitPhoto(){
+ if(!photoImage)return;
+ photoBaseScale=Math.max(PHOTO_W/photoImage.width,PHOTO_H/photoImage.height);
+ photoScale=photoBaseScale*Number($('photoZoom').value)/100;
+ photoX=(PHOTO_W-photoImage.width*photoScale)/2;
+ photoY=(PHOTO_H-photoImage.height*photoScale)/2;
+ renderPhotoCrop();
+}
+function clampPhoto(){
+ if(!photoImage)return;
+ const drawW=photoImage.width*photoScale,drawH=photoImage.height*photoScale;
+ photoX=Math.min(0,Math.max(PHOTO_W-drawW,photoX));
+ photoY=Math.min(0,Math.max(PHOTO_H-drawH,photoY));
+}
+function renderPhotoCrop(){
+ if(!photoImage)return;
+ const ctx=photoContext();if(!ctx)return;
+ clampPhoto();
+ ctx.clearRect(0,0,PHOTO_W,PHOTO_H);
+ ctx.imageSmoothingEnabled=true;
+ ctx.drawImage(photoImage,photoX,photoY,photoImage.width*photoScale,photoImage.height*photoScale);
+}
+function decodeRgb565(raw){
+ const ctx=photoContext();if(!ctx)return false;
+ const pixels=ctx.createImageData(PHOTO_W,PHOTO_H);
+ for(let i=0,j=0;i<PHOTO_BYTES;i+=2,++j){
+  const value=raw[i]|(raw[i+1]<<8);
+  const r=(value>>11)&31,g=(value>>5)&63,b=value&31;
+  pixels.data[j*4]=Math.round(r*255/31);
+  pixels.data[j*4+1]=Math.round(g*255/63);
+  pixels.data[j*4+2]=Math.round(b*255/31);
+  pixels.data[j*4+3]=255;
+ }
+ ctx.putImageData(pixels,0,0);
+ return true;
+}
+async function photoRequest(method='GET',body){
+ const controller=new AbortController();
+ const timer=setTimeout(()=>controller.abort(),45000);
+ try{return await fetch('/api/profile-photo?t='+encodeURIComponent(window.__T||''),{method,body,cache:'no-store',signal:controller.signal})}
+ finally{clearTimeout(timer)}
+}
+async function photoJsonError(response){
+ let data={};try{data=await response.json()}catch(e){}
+ const messages={photo_size:'照片尺寸不正确，请重新选择。',photo_recv:'照片传输中断，请保持连接后重试。',photo_store:'设备存储失败，原照片未改变。',photo_delete:'照片删除失败，请重试。',unauthorized:'设置页面已失效，请刷新后重试。'};
+ return new Error(messages[data.error]||'照片处理失败，请重试。');
+}
+async function uploadPhoto(){
+ say('photoStatus','正在转换并上传照片…');
+ const raw=photoRgb565();
+ const response=await photoRequest('POST',new Blob([raw],{type:'application/octet-stream'}));
+ if(!response.ok)throw await photoJsonError(response);
+ photoSaved=true;photoDirty=false;photoRemove=false;
+ updatePhotoUi();say('photoStatus','照片已保存，回到人物志首页即可看到。');
+}
+async function deletePhoto(){
+ const response=await photoRequest('DELETE');
+ if(!response.ok)throw await photoJsonError(response);
+ photoSaved=false;photoDirty=false;photoRemove=false;photoImage=null;
+ clearPhotoCanvas();updatePhotoUi();say('photoStatus','照片已删除。');
+}
+function photoRgb565(){
+ renderPhotoCrop();
+ const ctx=photoContext();if(!ctx)throw new Error('当前浏览器无法处理照片。');
+ const pixels=ctx.getImageData(0,0,PHOTO_W,PHOTO_H).data;
+ const output=new Uint8Array(PHOTO_BYTES);
+ for(let i=0,j=0;i<pixels.length;i+=4,++j){
+  const value=((pixels[i]>>3)<<11)|((pixels[i+1]>>2)<<5)|(pixels[i+2]>>3);
+  output[j*2]=value&255;output[j*2+1]=value>>8;
+ }
+ return output;
+}
+function loadPhotoFile(file){
+ return new Promise((resolve,reject)=>{
+  if(window.createImageBitmap){window.createImageBitmap(file).then(resolve).catch(()=>loadPhotoFileElement(file,resolve,reject));return}
+  loadPhotoFileElement(file,resolve,reject);
+ });
+}
+function loadPhotoFileElement(file,resolve,reject){
+ if(photoObjectUrl)URL.revokeObjectURL(photoObjectUrl);
+ photoObjectUrl=URL.createObjectURL(file);
+ const image=new Image();
+ image.onload=()=>{if(photoObjectUrl){URL.revokeObjectURL(photoObjectUrl);photoObjectUrl=null}resolve(image)};
+ image.onerror=()=>reject(new Error('无法读取这张照片，请换一张 JPG、PNG 或 WebP 图片。'));
+ image.src=photoObjectUrl;
+}
+async function loadSavedPhoto(quiet=false){
+ try{
+  const response=await photoRequest('GET');
+  if(response.status===404){photoSaved=false;photoDirty=false;photoRemove=false;photoImage=null;clearPhotoCanvas();updatePhotoUi();return}
+  if(!response.ok)throw await photoJsonError(response);
+  if(typeof response.arrayBuffer!=='function')return;
+  const raw=new Uint8Array(await response.arrayBuffer());
+  if(raw.length!==PHOTO_BYTES)throw new Error('设备中的照片尺寸不正确。');
+  photoSaved=decodeRgb565(raw);photoDirty=false;photoRemove=false;photoImage=null;
+  updatePhotoUi();if(!quiet)say('photoStatus',photoSaved?'已显示设备中的照片。':'照片读取失败。',!photoSaved);
+ }catch(e){
+  if(!quiet)say('photoStatus','暂时无法读取照片；不影响其他设置。',true);
+ }
+}
+$('choosePhoto').onclick=()=>$('photoInput').click();
+$('photoInput').onchange=async()=>{
+ const file=$('photoInput').files?.[0];if(!file)return;
+ if(!file.type.startsWith('image/')){say('photoStatus','请选择图片文件。',true);return}
+ if(file.size>25*1024*1024){say('photoStatus','照片超过 25 MB，请先压缩后再选。',true);return}
+ try{
+  photoImage=await loadPhotoFile(file);
+  photoDirty=true;photoRemove=false;$('photoZoom').value='100';
+  $('photoZoomValue').textContent='100%';
+  fitPhoto();updatePhotoUi();say('photoStatus','拖动照片可调整位置；保存时上传，尚未保存。');
+ }catch(e){say('photoStatus',e.message,true)}
+ finally{$('photoInput').value=''}
+};
+$('photoZoom').oninput=()=>{
+ const percent=Number($('photoZoom').value);$('photoZoomValue').textContent=percent+'%';
+ if(!photoImage)return;
+ const oldScale=photoScale,centerX=(PHOTO_W/2-photoX)/oldScale,centerY=(PHOTO_H/2-photoY)/oldScale;
+ photoScale=photoBaseScale*percent/100;
+ photoX=PHOTO_W/2-centerX*photoScale;photoY=PHOTO_H/2-centerY*photoScale;
+ renderPhotoCrop();
+};
+$('removePhoto').onclick=()=>{
+ if(photoDirty&&!photoSaved){photoDirty=false;photoRemove=false;photoImage=null;clearPhotoCanvas();updatePhotoUi();say('photoStatus','已清除未保存的照片。');return}
+ photoRemove=!photoRemove;
+ say('photoStatus',photoRemove?'保存后会删除设备中的照片。':'已取消删除。');
+ updatePhotoUi();
+};
+const photoCanvas=$('photoCanvas');
+if(photoCanvas.addEventListener){
+ photoCanvas.addEventListener('pointerdown',event=>{
+  if(!photoImage)return;
+  photoDrag={x:event.clientX,y:event.clientY,left:photoX,top:photoY};
+  if(photoCanvas.setPointerCapture)photoCanvas.setPointerCapture(event.pointerId);
+  event.preventDefault();
+ });
+ photoCanvas.addEventListener('pointermove',event=>{
+  if(!photoDrag||!photoImage)return;
+  const rect=photoCanvas.getBoundingClientRect?photoCanvas.getBoundingClientRect():{width:PHOTO_W};
+  const factor=PHOTO_W/(rect.width||PHOTO_W);
+  photoX=photoDrag.left+(event.clientX-photoDrag.x)*factor;
+  photoY=photoDrag.top+(event.clientY-photoDrag.y)*factor;
+  renderPhotoCrop();event.preventDefault();
+ });
+ const endDrag=event=>{photoDrag=null;if(photoCanvas.releasePointerCapture&&event.pointerId!==undefined)photoCanvas.releasePointerCapture(event.pointerId)};
+ photoCanvas.addEventListener('pointerup',endDrag);
+ photoCanvas.addEventListener('pointercancel',endDrag);
 }
 function step(n){page=n;if(n!==1)clearTimeout(scanTimer);for(let i=1;i<=3;i++){ $('step'+i).hidden=i!==n;const p=$('progress'+i);if(i===n)p.setAttribute('aria-current','step');else p.removeAttribute('aria-current');p.classList.toggle('done',i<n)}$('title'+n).focus({preventScroll:true});window.scrollTo(0,0)}
 function lockNetwork(lock){busy=lock;if(lock)clearTimeout(scanTimer);for(const id of ['connect','reuse','keepSaved','refresh','network','savedNetwork','ssid','password','manualToggle'])$(id).disabled=lock;$('network').disabled=lock||manual;$('connect').textContent=lock?'正在连接…':'连接并继续'}
@@ -202,8 +392,37 @@ $('showPassword').onclick=()=>{const visible=$('password').type==='password';$('
 async function poll(){polls++;try{const state=await api('/api/setup');if(state.finishing){step(3);return}if(state.state==='connected'){networkReady('已连接 '+state.ssid);return}if(state.state==='failed'){lockNetwork(false);say('networkStatus','连接未成功。请检查密码、路由器是否开启，以及是否为 2.4 GHz 网络，然后重试。',true);return}say('networkStatus','正在连接'+(state.ssid?' '+state.ssid:' Wi-Fi')+'，请保持连接设备热点。')}catch(e){say('networkStatus','连接过程中热点可能短暂断开。请重新连接设备热点，此页面会继续检查。',true)}if(polls<180)pollTimer=setTimeout(poll,1500);else{lockNetwork(false);say('networkStatus','暂时联系不到设备。请连接设备热点后刷新页面，查看连接结果。',true)}}
 async function connect(saved=false){const ssid=manual?$('ssid').value:$('network').value,password=$('password').value;if(!saved){if(!ssid||bytes(ssid)>32){say('networkStatus','请选择 Wi-Fi，或输入不超过 32 字节的网络名称。',true);return}const n=bytes(password);if(n!==0&&(n<8||n>63)&&!/^[0-9a-fA-F]{64}$/.test(password)){say('networkStatus','Wi-Fi 密码通常为 8–63 字节，请检查后重试。',true);return}}clearTimeout(pollTimer);polls=0;verified=false;lockNetwork(true);say('networkStatus','正在连接，稍后会自动进入个人资料。');try{await api('/api/connect',{...(saved?{saved:true,ssid:$('savedNetwork').value}:{ssid,password}),epoch:Math.floor(Date.now()/1000),tz_minutes:-new Date().getTimezoneOffset()});}catch(e){if(e.code&&e.code!=='busy'){lockNetwork(false);say('networkStatus',e.message,true);return}say('networkStatus','正在确认设备是否已收到请求，请保持热点连接。')}pollTimer=setTimeout(poll,1000)}
 $('connect').onclick=()=>connect();$('reuse').onclick=()=>connect(true);$('keepSaved').onclick=()=>{$('connectionSummary').textContent='仅修改资料，完成后自动重连已保存网络';step(2)};$('back').onclick=()=>step(1);
-async function save(){if(!verified&&!hasSaved){step(1);say('networkStatus','请先连接 Wi-Fi，再完成设置。',true);return}let selected;try{selected=selectedCityProfile()}catch(e){say('saveStatus',e.message,true);return}const profile={name:$('name').value,signature:$('sig').value,address:loadedProfile.address||'',...selected};for(const [key,max] of [['name',31],['signature',95],['address',127],['city',47],['region',31],['radio_city',47],['lat',15],['lon',15]])if(bytes(profile[key])>max){say('saveStatus','有一项内容过长，请缩短后再保存。',true);return}$('save').disabled=true;$('back').disabled=true;try{say('saveStatus','正在保存个人资料…');await api('/api/profile',profile);say('saveStatus','正在完成设置…');await api('/api/finish',{});$('doneName').textContent=profile.name||'AI 护照';$('doneSummary').textContent='个人资料已保存';step(3)}catch(e){say('saveStatus',e.message+' 尚未完成的内容可再次保存。',true)}finally{$('save').disabled=false;$('back').disabled=false}}
+function completeSave(profile,summary='个人资料已保存'){$('doneName').textContent=profile.name||'AI 护照';$('doneSummary').textContent=summary;step(3)}
+async function save(){
+ if(!verified&&!hasSaved){step(1);say('networkStatus','请先连接 Wi-Fi，再完成设置。',true);return}
+ let selected;
+ try{selected=selectedCityProfile()}catch(e){say('saveStatus',e.message,true);return}
+ const profile={name:$('name').value,signature:$('sig').value,address:loadedProfile.address||'',...selected};
+ for(const [key,max] of [['name',31],['signature',95],['address',127],['city',47],['region',31],['radio_city',47],['lat',15],['lon',15]])if(bytes(profile[key])>max){say('saveStatus','有一项内容过长，请缩短后再保存。',true);return}
+ $('save').disabled=true;$('back').disabled=true;
+ let stage='profile';
+ try{
+  say('saveStatus','正在保存个人资料…');await api('/api/profile',profile);
+  if(photoRemove){stage='photo';say('saveStatus','正在删除人物志照片…');await deletePhoto()}
+  else if(photoDirty){stage='photo';say('saveStatus','正在上传人物志照片…');await uploadPhoto()}
+  stage='finish';say('saveStatus','正在完成设置…');
+  try{await api('/api/finish',{})}
+  catch(e){
+   // Some phone browsers abort the last request as the device hotspot disappears.
+   // Profile and photo have already been acknowledged at this point.
+   if(e.network){completeSave(profile,'资料已保存，设备正在返回首页');return}
+   throw e;
+  }
+  completeSave(profile);
+ }catch(e){
+  const message=stage==='photo'?'人物志照片没有保存完成；连接恢复后可再次保存，原照片会保留。'
+   :stage==='finish'?'资料已保存，但设备未确认完成。请长按确定返回首页后再检查。'
+   :e.network?'与设备的连接中断。请重新连接设备热点后再保存，已填写内容仍在当前页面。':e.message;
+  say('saveStatus',message,true);
+ }finally{$('save').disabled=false;$('back').disabled=false}
+}
 $('save').onclick=()=>{cancelLocation();return save()};
-async function load(){try{const [profile,state]=await Promise.all([api('/api/profile'),api('/api/setup')]);await loadCities();for(const [id,key] of [['name','name'],['sig','signature']])$(id).value=profile[key]||'';restoreCity(profile);hasSaved=state.saved_network;$('reuse').hidden=!hasSaved;$('keepSaved').hidden=!hasSaved;$('savedField').hidden=!hasSaved;const selected=$('savedNetwork').value;$('savedNetwork').replaceChildren(new Option('自动选择附近已保存的网络',''));for(const name of state.saved_networks||[])$('savedNetwork').add(new Option(name,name));if((state.saved_networks||[]).includes(selected))$('savedNetwork').value=selected;$('connect').disabled=false;say('networkStatus','');if(state.finishing){step(3);return}if(state.state==='connected')networkReady('已连接 '+state.ssid);else if(state.state==='connecting'){lockNetwork(true);polls=0;pollTimer=setTimeout(poll,1000)}await scan()}catch(e){say('networkStatus','无法读取设备。请确认手机已连接设备热点，然后刷新页面。',true)}}
+async function load(){try{const [profile,state]=await Promise.all([api('/api/profile'),api('/api/setup')]);await Promise.all([loadCities(),loadSavedPhoto(true)]);for(const [id,key] of [['name','name'],['sig','signature']])$(id).value=profile[key]||'';restoreCity(profile);hasSaved=state.saved_network;$('reuse').hidden=!hasSaved;$('keepSaved').hidden=!hasSaved;$('savedField').hidden=!hasSaved;const selected=$('savedNetwork').value;$('savedNetwork').replaceChildren(new Option('自动选择附近已保存的网络',''));for(const name of state.saved_networks||[])$('savedNetwork').add(new Option(name,name));if((state.saved_networks||[]).includes(selected))$('savedNetwork').value=selected;$('connect').disabled=false;say('networkStatus','');if(state.finishing){step(3);return}if(state.state==='connected')networkReady('已连接 '+state.ssid);else if(state.state==='connecting'){lockNetwork(true);polls=0;pollTimer=setTimeout(poll,1000)}await scan()}catch(e){say('networkStatus','无法读取设备。请确认手机已连接设备热点，然后刷新页面。',true)}}
+updatePhotoUi();
 load();
 </script></body></html>

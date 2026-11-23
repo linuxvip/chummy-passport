@@ -25,6 +25,7 @@
 #include "apps/home/home_clock.h"
 #include "apps/home/home_daily_quote.h"
 #include "apps/home/home_layout.h"
+#include "apps/home/home_photo.h"
 #include "apps/home/home_profile.h"
 #include "apps/home/home_upload.h"
 #include "apps/home/home_weather.h"
@@ -51,6 +52,7 @@ extern "C" {
 #include <algorithm>
 #include <ctime>
 #include <atomic>
+#include <climits>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -152,6 +154,17 @@ int64_t s_almanac_key = -1;
 lv_obj_t *s_lbl_quote = nullptr;
 uint32_t s_quote_version = 0;
 
+lv_obj_t *s_lbl_profile_name = nullptr;
+lv_obj_t *s_lbl_profile_intro = nullptr;
+lv_obj_t *s_lbl_profile_city = nullptr;
+lv_obj_t *s_lbl_profile_wtext = nullptr;
+lv_obj_t *s_lbl_profile_temp = nullptr;
+lv_obj_t *s_profile_photo = nullptr;
+lv_obj_t *s_profile_photo_placeholder = nullptr;
+uint8_t *s_profile_photo_data = nullptr;
+lv_image_dsc_t s_profile_photo_dsc = {};
+uint32_t s_profile_photo_version = UINT32_MAX;
+
 // ---- 像素点阵时钟:4 个数字槽 + 冒号槽(槽 2),5×7 字模,每格一个 4×4 光点 ----
 lv_obj_t *s_clk_slots[5] = {nullptr, nullptr, nullptr, nullptr, nullptr};
 lv_obj_t *s_clk_colon[2] = {nullptr, nullptr};   // 冒号两点,每秒呼吸
@@ -177,6 +190,7 @@ bool s_weather_fetching = false;
 
 // ---- 天气像素图标:WMO 码 → 方块拼画,与整机"积木"图标语言同源 ----
 void update_weather_labels(const home_profile_t *prof);  // 定义在本段之后
+void update_profile_labels(const home_profile_t *prof);
 
 lv_obj_t *px_container(lv_obj_t *parent, int x, int y, int w, int h) {
     lv_obj_t *o = lv_obj_create(parent);
@@ -317,6 +331,7 @@ void refresh_weather_ui(void) {
             wicon_clear();                   // 无数据:不画,文字会提示"获取中"
         }
     }
+    update_profile_labels(&prof);
 }
 
 // ---- 点阵时钟 ----
@@ -592,7 +607,7 @@ void update_footer_label() {
     }
     const char *hint = s_layout == HOME_LAYOUT_MINIMAL
         ? "长按上换句 · 长按下设置"
-        : s_layout == HOME_LAYOUT_WEATHER
+        : (s_layout == HOME_LAYOUT_WEATHER || s_layout == HOME_LAYOUT_PROFILE)
         ? "上天气 · 下详情 · 确定应用"
         : "上干支 · 下名言 · 确定应用";
     footer_set(hint, &buddy_font_16, kPhosDim);
@@ -727,6 +742,86 @@ void font_safe_text(const char *input, char *out, size_t capacity) {
     }
 }
 
+void update_profile_labels(const home_profile_t *prof) {
+    if (s_layout != HOME_LAYOUT_PROFILE || !s_ui_alive.load() || !s_lbl_profile_name)
+        return;
+    char safe[HOME_SIGNATURE_MAX * 2];
+    font_safe_text(prof && prof->name[0] ? prof->name : "未设名字",
+                   safe, sizeof(safe));
+    lv_label_set_text(s_lbl_profile_name, safe);
+    font_safe_text(prof && prof->signature[0]
+                       ? prof->signature
+                       : "记录日常，在节气里寻找秩序。",
+                   safe, sizeof(safe));
+    lv_label_set_text(s_lbl_profile_intro, safe);
+    if (!s_lbl_profile_city || !s_lbl_profile_wtext || !s_lbl_profile_temp) return;
+    if (!prof || !prof->lat[0]) {
+        lv_label_set_text(s_lbl_profile_city, "未设城市");
+        lv_label_set_text(s_lbl_profile_wtext, "");
+        lv_label_set_text(s_lbl_profile_temp, "--");
+        return;
+    }
+    lv_label_set_text(s_lbl_profile_city, prof->city);
+    home_weather_t weather;
+    if (home_weather_get(&weather) && weather.valid) {
+        lv_label_set_text(s_lbl_profile_wtext, home_weather_code_text(weather.code));
+        char temperature[12];
+        std::snprintf(temperature, sizeof(temperature), "%d°",
+                      static_cast<int>(weather.temp_c));
+        lv_label_set_text(s_lbl_profile_temp, temperature);
+    } else {
+        lv_label_set_text(s_lbl_profile_wtext, "");
+        lv_label_set_text(s_lbl_profile_temp, "--");
+    }
+}
+
+void release_profile_photo() {
+    if (s_profile_photo) {
+        lv_obj_add_flag(s_profile_photo, LV_OBJ_FLAG_HIDDEN);
+        lv_image_set_src(s_profile_photo, nullptr);
+    }
+    std::free(s_profile_photo_data);
+    s_profile_photo_data = nullptr;
+    s_profile_photo_dsc = {};
+}
+
+void sync_profile_photo() {
+    if (s_layout != HOME_LAYOUT_PROFILE || !s_profile_photo) return;
+    const uint32_t version = home_photo_version();
+    if (version == s_profile_photo_version) return;
+    s_profile_photo_version = version;
+
+    if (!home_photo_available()) {
+        release_profile_photo();
+        if (s_profile_photo_placeholder)
+            lv_obj_remove_flag(s_profile_photo_placeholder, LV_OBJ_FLAG_HIDDEN);
+        return;
+    }
+    if (!s_profile_photo_data) {
+        s_profile_photo_data = static_cast<uint8_t *>(std::malloc(HOME_PROFILE_PHOTO_BYTES));
+    }
+    const bool loaded = s_profile_photo_data &&
+        home_photo_read(s_profile_photo_data, HOME_PROFILE_PHOTO_BYTES) == ESP_OK;
+    if (!loaded) {
+        release_profile_photo();
+        if (s_profile_photo_placeholder)
+            lv_obj_remove_flag(s_profile_photo_placeholder, LV_OBJ_FLAG_HIDDEN);
+        return;
+    }
+
+    s_profile_photo_dsc.header.magic = LV_IMAGE_HEADER_MAGIC;
+    s_profile_photo_dsc.header.cf = LV_COLOR_FORMAT_RGB565;
+    s_profile_photo_dsc.header.w = HOME_PROFILE_PHOTO_W;
+    s_profile_photo_dsc.header.h = HOME_PROFILE_PHOTO_H;
+    s_profile_photo_dsc.header.stride = HOME_PROFILE_PHOTO_W * 2;
+    s_profile_photo_dsc.data_size = HOME_PROFILE_PHOTO_BYTES;
+    s_profile_photo_dsc.data = s_profile_photo_data;
+    lv_image_set_src(s_profile_photo, &s_profile_photo_dsc);
+    if (s_profile_photo_placeholder)
+        lv_obj_add_flag(s_profile_photo_placeholder, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_remove_flag(s_profile_photo, LV_OBJ_FLAG_HIDDEN);
+}
+
 void update_almanac_labels() {
     if (!s_ui_alive.load() || !s_pillar_labels[0][0]) return;
     struct tm tm;
@@ -784,7 +879,26 @@ void update_almanac_labels() {
     std::snprintf(next_term, sizeof(next_term), "距%s %u天",
                   almanac.next_solar_term,
                   (unsigned)almanac.days_to_next_solar_term);
-    if (s_layout == HOME_LAYOUT_WEATHER) {
+    if (s_layout == HOME_LAYOUT_PROFILE) {
+        const char *pillars_full[] = {
+            almanac.year, almanac.month, almanac.day, almanac.hour,
+        };
+        for (int col = 0; col < 4; ++col) {
+            char stem[4] = {};
+            std::snprintf(stem, sizeof(stem), "%.3s", pillars_full[col]);
+            lv_label_set_text(s_pillar_labels[1][col], pillars_full[col]);
+            lv_label_set_text(s_pillar_labels[2][col], "");
+            ui_pixel_text_color(s_pillar_labels[1][col],
+                                five_element_color(five_element_for_glyph(stem)));
+        }
+        char combined[52];
+        std::snprintf(combined, sizeof(combined), "%s · %s",
+                      almanac.lunar_month_day,
+                      term_today[0] ? term_today : next_term);
+        lv_label_set_text(s_lbl_lunar_date, combined);
+        lv_label_set_text(s_lbl_solar_term_today, "");
+        lv_label_set_text(s_lbl_next_solar_term, "");
+    } else if (s_layout == HOME_LAYOUT_WEATHER) {
         char combined[52];
         std::snprintf(combined, sizeof(combined), "%s · %s",
                       almanac.lunar_month_day,
@@ -829,7 +943,7 @@ void update_daily_quote_labels() {
 }
 
 void apply_profile(const home_profile_t *prof) {
-    (void)prof;
+    update_profile_labels(prof);
     refresh_weather_ui();
 }
 
@@ -1220,10 +1334,176 @@ void create_weather_ui() {
     create_footer("上天气 · 下详情 · 确定应用");
 }
 
+void create_profile_ui() {
+    create_base_ui();
+
+    lv_obj_t *profile_card = px_container(s_screen, 4, 26, 232, 164);
+    lv_obj_set_style_bg_color(profile_card,
+                              lv_color_hex(ui_theme_color_on_dark(UI_COLOR_SURFACE)), 0);
+    lv_obj_set_style_bg_opa(profile_card, LV_OPA_COVER, 0);
+    lv_obj_set_style_border_width(profile_card, 1, 0);
+    lv_obj_set_style_border_color(profile_card, lv_color_hex(kPhosBorder), 0);
+
+    lv_obj_t *photo_frame = px_container(s_screen, 8, 32, 94, 124);
+    lv_obj_set_style_bg_color(photo_frame, lv_color_hex(0xD6A84E), 0);
+    lv_obj_set_style_bg_opa(photo_frame, LV_OPA_COVER, 0);
+    lv_obj_set_style_border_width(photo_frame, 1, 0);
+    lv_obj_set_style_border_color(photo_frame, lv_color_hex(0xF0CB78), 0);
+
+    lv_obj_t *photo_surface = px_container(photo_frame, 2, 2,
+                                           HOME_PROFILE_PHOTO_W, HOME_PROFILE_PHOTO_H);
+    lv_obj_set_style_bg_color(photo_surface,
+                              lv_color_hex(ui_theme_color_on_dark(UI_COLOR_SURFACE_ALT)), 0);
+    lv_obj_set_style_bg_opa(photo_surface, LV_OPA_COVER, 0);
+    s_profile_photo = lv_image_create(photo_surface);
+    lv_obj_set_pos(s_profile_photo, 0, 0);
+    lv_obj_set_size(s_profile_photo, HOME_PROFILE_PHOTO_W, HOME_PROFILE_PHOTO_H);
+    lv_obj_add_flag(s_profile_photo, LV_OBJ_FLAG_HIDDEN);
+
+    s_profile_photo_placeholder = make_label(photo_surface, &buddy_font_16,
+                                             kPhosDim, LV_TEXT_ALIGN_CENTER);
+    lv_obj_set_pos(s_profile_photo_placeholder, 0, 36);
+    lv_obj_set_size(s_profile_photo_placeholder, HOME_PROFILE_PHOTO_W, 50);
+    lv_label_set_long_mode(s_profile_photo_placeholder, LV_LABEL_LONG_MODE_WRAP);
+    lv_label_set_text(s_profile_photo_placeholder, "彩色\n人物照");
+
+    lv_obj_t *stamp = px_block(s_screen, 82, 42, 18, 21, 0xB43B2D);
+    lv_obj_set_style_border_width(stamp, 1, 0);
+    lv_obj_set_style_border_color(stamp, lv_color_hex(0xF2D9A2), 0);
+    lv_obj_t *stamp_text = make_label(s_screen, &buddy_font_16, 0xFFF2DA,
+                                      LV_TEXT_ALIGN_CENTER);
+    lv_obj_set_pos(stamp_text, 84, 43);
+    lv_obj_set_size(stamp_text, 14, 19);
+    lv_label_set_text(stamp_text, "印");
+
+    lv_obj_t *caption = make_label(s_screen, &buddy_font_16, kPhosDim,
+                                   LV_TEXT_ALIGN_CENTER);
+    lv_obj_set_pos(caption, 4, 157);
+    lv_obj_set_size(caption, 102, 18);
+    lv_label_set_text(caption, "一页人物志");
+    lv_obj_t *caption2 = make_label(s_screen, &buddy_font_16, kPhosDim,
+                                    LV_TEXT_ALIGN_CENTER);
+    lv_obj_set_pos(caption2, 4, 174);
+    lv_obj_set_size(caption2, 102, 18);
+    lv_label_set_text(caption2, "一张彩色相片");
+
+    lv_obj_t *kicker = make_label(s_screen, &buddy_font_16, kAccent, LV_TEXT_ALIGN_LEFT);
+    lv_obj_set_pos(kicker, 112, 31);
+    lv_obj_set_size(kicker, 116, 18);
+    lv_label_set_text(kicker, "人 物 志");
+
+    s_lbl_profile_name = make_label(s_screen, &ui_font_20, kPhos, LV_TEXT_ALIGN_LEFT);
+    lv_obj_set_pos(s_lbl_profile_name, 112, 49);
+    lv_obj_set_size(s_lbl_profile_name, 116, 28);
+    lv_label_set_long_mode(s_lbl_profile_name, LV_LABEL_LONG_MODE_DOTS);
+
+    s_lbl_profile_city = make_label(s_screen, &buddy_font_16, kPhosDim,
+                                    LV_TEXT_ALIGN_LEFT);
+    lv_obj_set_pos(s_lbl_profile_city, 112, 82);
+    lv_obj_set_size(s_lbl_profile_city, 60, 18);
+    lv_label_set_long_mode(s_lbl_profile_city, LV_LABEL_LONG_MODE_DOTS);
+    s_lbl_profile_wtext = make_label(s_screen, &buddy_font_16, kWeatherAccent,
+                                     LV_TEXT_ALIGN_LEFT);
+    lv_obj_set_pos(s_lbl_profile_wtext, 174, 82);
+    lv_obj_set_size(s_lbl_profile_wtext, 34, 18);
+    lv_label_set_long_mode(s_lbl_profile_wtext, LV_LABEL_LONG_MODE_DOTS);
+    s_lbl_profile_temp = make_label(s_screen, &lv_font_montserrat_20, kTemperature,
+                                    LV_TEXT_ALIGN_LEFT);
+    lv_obj_set_pos(s_lbl_profile_temp, 208, 78);
+    lv_obj_set_size(s_lbl_profile_temp, 26, 26);
+    lv_label_set_long_mode(s_lbl_profile_temp, LV_LABEL_LONG_MODE_CLIP);
+
+    px_block(s_screen, 112, 106, 116, 1, kPhosBorder);
+    s_lbl_profile_intro = make_label(s_screen, &buddy_font_16, kPhos,
+                                    LV_TEXT_ALIGN_LEFT);
+    lv_obj_set_pos(s_lbl_profile_intro, 112, 113);
+    lv_obj_set_size(s_lbl_profile_intro, 116, 64);
+    lv_obj_set_style_text_letter_space(s_lbl_profile_intro, 0, 0);
+    lv_label_set_long_mode(s_lbl_profile_intro, LV_LABEL_LONG_MODE_DOTS);
+
+    lv_obj_t *today = px_container(s_screen, 4, 194, 232, 96);
+    lv_obj_set_style_bg_color(today, lv_color_hex(ui_theme_color_on_dark(UI_COLOR_SURFACE)), 0);
+    lv_obj_set_style_bg_opa(today, LV_OPA_COVER, 0);
+    lv_obj_set_style_border_width(today, 1, 0);
+    lv_obj_set_style_border_color(today, lv_color_hex(kPhosBorder), 0);
+    px_block(today, 0, 0, 3, 96, kAccent);
+
+    s_lbl_clock_text = make_label(today, &lv_font_montserrat_20, kPhos, LV_TEXT_ALIGN_LEFT);
+    lv_obj_set_pos(s_lbl_clock_text, 10, 3);
+    lv_obj_set_size(s_lbl_clock_text, 64, 26);
+    lv_label_set_long_mode(s_lbl_clock_text, LV_LABEL_LONG_MODE_CLIP);
+    s_lbl_date = make_label(today, &buddy_font_16, kPhosDim, LV_TEXT_ALIGN_RIGHT);
+    lv_obj_set_pos(s_lbl_date, 72, 6);
+    lv_obj_set_size(s_lbl_date, 154, 18);
+    lv_label_set_long_mode(s_lbl_date, LV_LABEL_LONG_MODE_DOTS);
+
+    s_lbl_city = make_label(today, &buddy_font_16, kPhosDim, LV_TEXT_ALIGN_LEFT);
+    lv_obj_set_pos(s_lbl_city, 12, 28);
+    lv_obj_set_size(s_lbl_city, 54, 18);
+    lv_label_set_long_mode(s_lbl_city, LV_LABEL_LONG_MODE_DOTS);
+    s_lbl_wtext = make_label(today, &buddy_font_16, kWeatherAccent, LV_TEXT_ALIGN_LEFT);
+    lv_obj_set_pos(s_lbl_wtext, 68, 28);
+    lv_obj_set_size(s_lbl_wtext, 36, 18);
+    lv_label_set_long_mode(s_lbl_wtext, LV_LABEL_LONG_MODE_DOTS);
+    s_lbl_temp = make_label(today, &lv_font_montserrat_20, kTemperature, LV_TEXT_ALIGN_LEFT);
+    lv_obj_set_pos(s_lbl_temp, 104, 24);
+    lv_obj_set_size(s_lbl_temp, 34, 26);
+    lv_label_set_long_mode(s_lbl_temp, LV_LABEL_LONG_MODE_CLIP);
+
+    s_lbl_lunar_date = make_label(today, &buddy_font_16, kPhos, LV_TEXT_ALIGN_LEFT);
+    lv_obj_set_pos(s_lbl_lunar_date, 12, 48);
+    lv_obj_set_size(s_lbl_lunar_date, 216, 18);
+    lv_label_set_long_mode(s_lbl_lunar_date, LV_LABEL_LONG_MODE_DOTS);
+    s_lbl_solar_term_today = make_label(today, &buddy_font_16, kPhos,
+                                       LV_TEXT_ALIGN_LEFT);
+    lv_obj_set_pos(s_lbl_solar_term_today, 12, 48);
+    lv_obj_set_size(s_lbl_solar_term_today, 216, 18);
+    lv_obj_add_flag(s_lbl_solar_term_today, LV_OBJ_FLAG_HIDDEN);
+    s_lbl_next_solar_term = make_label(today, &buddy_font_16, kPhosDim,
+                                      LV_TEXT_ALIGN_LEFT);
+    lv_obj_set_pos(s_lbl_next_solar_term, 12, 48);
+    lv_obj_set_size(s_lbl_next_solar_term, 216, 18);
+    lv_obj_add_flag(s_lbl_next_solar_term, LV_OBJ_FLAG_HIDDEN);
+
+    constexpr int kPillarX[4] = {8, 64, 120, 176};
+    for (int col = 0; col < 4; ++col) {
+        s_pillar_labels[0][col] = make_label(today, &buddy_font_16, kPhosDim,
+                                              LV_TEXT_ALIGN_CENTER);
+        lv_obj_set_pos(s_pillar_labels[0][col], kPillarX[col], 67);
+        lv_obj_set_size(s_pillar_labels[0][col], 52, 16);
+        lv_obj_add_flag(s_pillar_labels[0][col], LV_OBJ_FLAG_HIDDEN);
+        s_pillar_labels[1][col] = make_label(today, &ganzhi_font_20, kPhos,
+                                              LV_TEXT_ALIGN_CENTER);
+        lv_obj_set_pos(s_pillar_labels[1][col], kPillarX[col], 66);
+        lv_obj_set_size(s_pillar_labels[1][col], 52, 26);
+        lv_label_set_long_mode(s_pillar_labels[1][col], LV_LABEL_LONG_MODE_CLIP);
+        s_pillar_labels[2][col] = make_label(today, &ganzhi_font_20, kAccent,
+                                              LV_TEXT_ALIGN_CENTER);
+        lv_obj_set_pos(s_pillar_labels[2][col], kPillarX[col], 66);
+        lv_obj_set_size(s_pillar_labels[2][col], 52, 26);
+        lv_obj_add_flag(s_pillar_labels[2][col], LV_OBJ_FLAG_HIDDEN);
+    }
+
+    s_wicon_zone = nullptr;
+    s_lbl_humidity = nullptr;
+    s_lbl_wind = nullptr;
+    s_lbl_feels = nullptr;
+    s_lbl_stat = nullptr;
+    lv_label_set_text(s_lbl_temp, "--");
+    lv_label_set_text(s_lbl_wtext, "");
+    s_profile_photo_version = UINT32_MAX;
+    home_profile_t prof;
+    home_profile_get(&prof);
+    update_profile_labels(&prof);
+    sync_profile_photo();
+    create_footer("上天气 · 下详情 · 确定应用");
+}
+
 void create_ui() {
     s_layout = settings_get_home_layout();
     if (s_layout == HOME_LAYOUT_MINIMAL) create_minimal_ui();
     else if (s_layout == HOME_LAYOUT_WEATHER) create_weather_ui();
+    else if (s_layout == HOME_LAYOUT_PROFILE) create_profile_ui();
     else create_almanac_ui();
 }
 
@@ -1251,6 +1531,7 @@ void home_task(void *arg) {
                     s_quote_version = quote_version;
                     update_daily_quote_labels();
                 }
+                sync_profile_photo();
                 // 底部行每秒重算:上传模式下它会把刚拿到的 IP 补进 URL,
                 // 避免"Wi-Fi 刚连上还没拿到地址"时显示成空的 http://。
                 update_footer_label();
@@ -1432,6 +1713,7 @@ void home_stop() {
 
     bsp_lvgl_lock(-1);
     if (s_screen) {
+        release_profile_photo();
         lv_obj_delete(s_screen);
     }
     s_screen = nullptr;
@@ -1446,6 +1728,14 @@ void home_stop() {
     s_lbl_solar_term_today = nullptr;
     s_lbl_next_solar_term = nullptr;
     s_lbl_quote = nullptr;
+    s_lbl_profile_name = nullptr;
+    s_lbl_profile_intro = nullptr;
+    s_lbl_profile_city = nullptr;
+    s_lbl_profile_wtext = nullptr;
+    s_lbl_profile_temp = nullptr;
+    s_profile_photo = nullptr;
+    s_profile_photo_placeholder = nullptr;
+    s_profile_photo_version = UINT32_MAX;
     s_almanac_key = -1;
     for (lv_obj_t *&slot : s_clk_slots) slot = nullptr;
     for (lv_obj_t *&dot : s_clk_colon) dot = nullptr;
