@@ -68,7 +68,7 @@ Use only the matching FoloToy AI Passport hardware revision with ESP32-C3 and 8 
 
 **Back up first.** A full image overwrites configuration in its written range. A complete reset also requires erasing flash. To preserve settings and images, verify the partition layout and use the application image without erasing the whole flash.
 
-On first boot, connect your phone to the device's password-free `Passport-WiFi-xxxx` hotspot and open `http://192.168.4.1`. Follow the setup page to select Wi-Fi, city, and personal details. The profile layout can also use one color photo, cropped by the phone to a 3:4, 90×120 RGB565 image; replacing it is transactional and an interrupted upload keeps the previous photo. Xiaozhi needs your own service configuration.
+On first boot, connect your phone to the device's password-free `Passport-WiFi-xxxx` hotspot and open `http://192.168.4.1`. Follow the setup page to select Wi-Fi, city, and personal details. The profile layout can also use one color photo, cropped by the phone to a 3:4, 108×144 RGB565 image; replacing it is transactional and an interrupted upload keeps the previous photo. Xiaozhi needs your own service configuration.
 
 ## Make your own version
 

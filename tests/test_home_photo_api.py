@@ -21,8 +21,8 @@ assert "content_len" in upload and "HOME_PROFILE_PHOTO_BYTES" in upload
 assert "uint8_t chunk[512]" in upload
 
 assert "#define HOME_PROFILE_PHOTO_BYTES" in header
-assert "#define HOME_PROFILE_PHOTO_W 90" in header
-assert "#define HOME_PROFILE_PHOTO_H 120" in header
+assert "#define HOME_PROFILE_PHOTO_W 108" in header
+assert "#define HOME_PROFILE_PHOTO_H 144" in header
 assert "home_photo_read_range" in header
 assert "home_photo_delete" in header
 assert "profile-photo.tmp" in photo

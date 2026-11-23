@@ -10,8 +10,8 @@
 extern "C" {
 #endif
 
-#define HOME_PROFILE_PHOTO_W 90
-#define HOME_PROFILE_PHOTO_H 120
+#define HOME_PROFILE_PHOTO_W 108
+#define HOME_PROFILE_PHOTO_H 144
 #define HOME_PROFILE_PHOTO_BYTES ((size_t)HOME_PROFILE_PHOTO_W * HOME_PROFILE_PHOTO_H * 2)
 
 // Mount the storage partition in the background; safe to call more than once.

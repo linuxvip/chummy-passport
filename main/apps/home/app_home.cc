@@ -748,6 +748,12 @@ void update_profile_labels(const home_profile_t *prof) {
     char safe[HOME_SIGNATURE_MAX * 2];
     font_safe_text(prof && prof->name[0] ? prof->name : "未设名字",
                    safe, sizeof(safe));
+    lv_point_t name_size{};
+    lv_text_get_size(&name_size, safe, &ui_font_20, 0, 0, LV_COORD_MAX,
+                     LV_TEXT_FLAG_NONE);
+    const lv_font_t *name_font = name_size.x <= 108 ? &ui_font_20 : &buddy_font_16;
+    if (lv_obj_get_style_text_font(s_lbl_profile_name, LV_PART_MAIN) != name_font)
+        lv_obj_set_style_text_font(s_lbl_profile_name, name_font, 0);
     lv_label_set_text(s_lbl_profile_name, safe);
     font_safe_text(prof && prof->signature[0]
                        ? prof->signature
@@ -1337,14 +1343,14 @@ void create_weather_ui() {
 void create_profile_ui() {
     create_base_ui();
 
-    lv_obj_t *profile_card = px_container(s_screen, 4, 26, 232, 164);
+    lv_obj_t *profile_card = px_container(s_screen, 4, 26, 232, 158);
     lv_obj_set_style_bg_color(profile_card,
                               lv_color_hex(ui_theme_color_on_dark(UI_COLOR_SURFACE)), 0);
     lv_obj_set_style_bg_opa(profile_card, LV_OPA_COVER, 0);
     lv_obj_set_style_border_width(profile_card, 1, 0);
     lv_obj_set_style_border_color(profile_card, lv_color_hex(kPhosBorder), 0);
 
-    lv_obj_t *photo_frame = px_container(s_screen, 8, 32, 94, 124);
+    lv_obj_t *photo_frame = px_container(s_screen, 8, 31, 112, 148);
     lv_obj_set_style_bg_color(photo_frame, lv_color_hex(0xD6A84E), 0);
     lv_obj_set_style_bg_opa(photo_frame, LV_OPA_COVER, 0);
     lv_obj_set_style_border_width(photo_frame, 1, 0);
@@ -1367,108 +1373,108 @@ void create_profile_ui() {
     lv_label_set_long_mode(s_profile_photo_placeholder, LV_LABEL_LONG_MODE_WRAP);
     lv_label_set_text(s_profile_photo_placeholder, "彩色\n人物照");
 
-    lv_obj_t *stamp = px_block(s_screen, 82, 42, 18, 21, 0xB43B2D);
+    lv_obj_t *stamp = px_block(s_screen, 98, 41, 18, 21, 0xB43B2D);
     lv_obj_set_style_border_width(stamp, 1, 0);
     lv_obj_set_style_border_color(stamp, lv_color_hex(0xF2D9A2), 0);
     lv_obj_t *stamp_text = make_label(s_screen, &buddy_font_16, 0xFFF2DA,
                                       LV_TEXT_ALIGN_CENTER);
-    lv_obj_set_pos(stamp_text, 84, 43);
+    lv_obj_set_pos(stamp_text, 100, 42);
     lv_obj_set_size(stamp_text, 14, 19);
     lv_label_set_text(stamp_text, "印");
 
     lv_obj_t *kicker = make_label(s_screen, &buddy_font_16, kAccent, LV_TEXT_ALIGN_LEFT);
-    lv_obj_set_pos(kicker, 112, 31);
-    lv_obj_set_size(kicker, 116, 18);
+    lv_obj_set_pos(kicker, 126, 31);
+    lv_obj_set_size(kicker, 108, 18);
     lv_label_set_text(kicker, "人 物 志");
 
     s_lbl_profile_name = make_label(s_screen, &ui_font_20, kPhos, LV_TEXT_ALIGN_LEFT);
-    lv_obj_set_pos(s_lbl_profile_name, 112, 49);
-    lv_obj_set_size(s_lbl_profile_name, 116, 28);
+    lv_obj_set_pos(s_lbl_profile_name, 126, 49);
+    lv_obj_set_size(s_lbl_profile_name, 108, 28);
     lv_label_set_long_mode(s_lbl_profile_name, LV_LABEL_LONG_MODE_DOTS);
 
     s_lbl_profile_city = make_label(s_screen, &buddy_font_16, kPhosDim,
                                     LV_TEXT_ALIGN_LEFT);
-    lv_obj_set_pos(s_lbl_profile_city, 112, 82);
-    lv_obj_set_size(s_lbl_profile_city, 60, 18);
+    lv_obj_set_pos(s_lbl_profile_city, 126, 82);
+    lv_obj_set_size(s_lbl_profile_city, 50, 18);
     lv_label_set_long_mode(s_lbl_profile_city, LV_LABEL_LONG_MODE_DOTS);
     s_lbl_profile_wtext = make_label(s_screen, &buddy_font_16, kWeatherAccent,
                                      LV_TEXT_ALIGN_LEFT);
     lv_obj_set_pos(s_lbl_profile_wtext, 174, 82);
-    lv_obj_set_size(s_lbl_profile_wtext, 34, 18);
+    lv_obj_set_size(s_lbl_profile_wtext, 30, 18);
     lv_label_set_long_mode(s_lbl_profile_wtext, LV_LABEL_LONG_MODE_DOTS);
     s_lbl_profile_temp = make_label(s_screen, &lv_font_montserrat_20, kTemperature,
                                     LV_TEXT_ALIGN_LEFT);
-    lv_obj_set_pos(s_lbl_profile_temp, 208, 78);
-    lv_obj_set_size(s_lbl_profile_temp, 26, 26);
+    lv_obj_set_pos(s_lbl_profile_temp, 205, 78);
+    lv_obj_set_size(s_lbl_profile_temp, 29, 26);
     lv_label_set_long_mode(s_lbl_profile_temp, LV_LABEL_LONG_MODE_CLIP);
 
-    px_block(s_screen, 112, 106, 116, 1, kPhosBorder);
+    px_block(s_screen, 126, 106, 108, 1, kPhosBorder);
     s_lbl_profile_intro = make_label(s_screen, &buddy_font_16, kPhos,
                                     LV_TEXT_ALIGN_LEFT);
-    lv_obj_set_pos(s_lbl_profile_intro, 112, 113);
-    lv_obj_set_size(s_lbl_profile_intro, 116, 64);
+    lv_obj_set_pos(s_lbl_profile_intro, 126, 113);
+    lv_obj_set_size(s_lbl_profile_intro, 108, 64);
     lv_obj_set_style_text_letter_space(s_lbl_profile_intro, 0, 0);
     lv_label_set_long_mode(s_lbl_profile_intro, LV_LABEL_LONG_MODE_DOTS);
 
-    lv_obj_t *today = px_container(s_screen, 4, 194, 232, 96);
+    lv_obj_t *today = px_container(s_screen, 4, 190, 232, 100);
     lv_obj_set_style_bg_color(today, lv_color_hex(ui_theme_color_on_dark(UI_COLOR_SURFACE)), 0);
     lv_obj_set_style_bg_opa(today, LV_OPA_COVER, 0);
     lv_obj_set_style_border_width(today, 1, 0);
     lv_obj_set_style_border_color(today, lv_color_hex(kPhosBorder), 0);
-    px_block(today, 0, 0, 3, 96, kAccent);
+    px_block(today, 0, 0, 3, 100, kAccent);
 
     s_lbl_clock_text = make_label(today, &lv_font_montserrat_20, kPhos, LV_TEXT_ALIGN_LEFT);
-    lv_obj_set_pos(s_lbl_clock_text, 10, 3);
-    lv_obj_set_size(s_lbl_clock_text, 64, 26);
+    lv_obj_set_pos(s_lbl_clock_text, 10, 1);
+    lv_obj_set_size(s_lbl_clock_text, 70, 26);
     lv_label_set_long_mode(s_lbl_clock_text, LV_LABEL_LONG_MODE_CLIP);
-    s_lbl_date = make_label(today, &buddy_font_16, kPhosDim, LV_TEXT_ALIGN_RIGHT);
-    lv_obj_set_pos(s_lbl_date, 72, 6);
-    lv_obj_set_size(s_lbl_date, 154, 18);
+    s_lbl_date = make_label(today, &buddy_font_16, kPhosDim, LV_TEXT_ALIGN_CENTER);
+    lv_obj_set_pos(s_lbl_date, 12, 31);
+    lv_obj_set_size(s_lbl_date, 208, 18);
     lv_label_set_long_mode(s_lbl_date, LV_LABEL_LONG_MODE_DOTS);
 
     s_lbl_city = make_label(today, &buddy_font_16, kPhosDim, LV_TEXT_ALIGN_LEFT);
-    lv_obj_set_pos(s_lbl_city, 12, 28);
-    lv_obj_set_size(s_lbl_city, 54, 18);
+    lv_obj_set_pos(s_lbl_city, 116, 6);
+    lv_obj_set_size(s_lbl_city, 46, 18);
     lv_label_set_long_mode(s_lbl_city, LV_LABEL_LONG_MODE_DOTS);
     s_lbl_wtext = make_label(today, &buddy_font_16, kWeatherAccent, LV_TEXT_ALIGN_LEFT);
-    lv_obj_set_pos(s_lbl_wtext, 68, 28);
-    lv_obj_set_size(s_lbl_wtext, 36, 18);
+    lv_obj_set_pos(s_lbl_wtext, 164, 6);
+    lv_obj_set_size(s_lbl_wtext, 30, 18);
     lv_label_set_long_mode(s_lbl_wtext, LV_LABEL_LONG_MODE_DOTS);
     s_lbl_temp = make_label(today, &lv_font_montserrat_20, kTemperature, LV_TEXT_ALIGN_LEFT);
-    lv_obj_set_pos(s_lbl_temp, 104, 24);
-    lv_obj_set_size(s_lbl_temp, 34, 26);
+    lv_obj_set_pos(s_lbl_temp, 194, 2);
+    lv_obj_set_size(s_lbl_temp, 38, 26);
     lv_label_set_long_mode(s_lbl_temp, LV_LABEL_LONG_MODE_CLIP);
 
     s_lbl_lunar_date = make_label(today, &buddy_font_16, kPhos, LV_TEXT_ALIGN_LEFT);
-    lv_obj_set_pos(s_lbl_lunar_date, 12, 48);
-    lv_obj_set_size(s_lbl_lunar_date, 216, 18);
+    lv_obj_set_pos(s_lbl_lunar_date, 12, 50);
+    lv_obj_set_size(s_lbl_lunar_date, 208, 18);
     lv_label_set_long_mode(s_lbl_lunar_date, LV_LABEL_LONG_MODE_DOTS);
     s_lbl_solar_term_today = make_label(today, &buddy_font_16, kPhos,
                                        LV_TEXT_ALIGN_LEFT);
-    lv_obj_set_pos(s_lbl_solar_term_today, 12, 48);
-    lv_obj_set_size(s_lbl_solar_term_today, 216, 18);
+    lv_obj_set_pos(s_lbl_solar_term_today, 12, 50);
+    lv_obj_set_size(s_lbl_solar_term_today, 208, 18);
     lv_obj_add_flag(s_lbl_solar_term_today, LV_OBJ_FLAG_HIDDEN);
     s_lbl_next_solar_term = make_label(today, &buddy_font_16, kPhosDim,
                                       LV_TEXT_ALIGN_LEFT);
-    lv_obj_set_pos(s_lbl_next_solar_term, 12, 48);
-    lv_obj_set_size(s_lbl_next_solar_term, 216, 18);
+    lv_obj_set_pos(s_lbl_next_solar_term, 12, 50);
+    lv_obj_set_size(s_lbl_next_solar_term, 208, 18);
     lv_obj_add_flag(s_lbl_next_solar_term, LV_OBJ_FLAG_HIDDEN);
 
     constexpr int kPillarX[4] = {8, 64, 120, 176};
     for (int col = 0; col < 4; ++col) {
         s_pillar_labels[0][col] = make_label(today, &buddy_font_16, kPhosDim,
                                               LV_TEXT_ALIGN_CENTER);
-        lv_obj_set_pos(s_pillar_labels[0][col], kPillarX[col], 67);
+        lv_obj_set_pos(s_pillar_labels[0][col], kPillarX[col], 71);
         lv_obj_set_size(s_pillar_labels[0][col], 52, 16);
         lv_obj_add_flag(s_pillar_labels[0][col], LV_OBJ_FLAG_HIDDEN);
         s_pillar_labels[1][col] = make_label(today, &ganzhi_font_20, kPhos,
                                               LV_TEXT_ALIGN_CENTER);
-        lv_obj_set_pos(s_pillar_labels[1][col], kPillarX[col], 66);
+        lv_obj_set_pos(s_pillar_labels[1][col], kPillarX[col], 70);
         lv_obj_set_size(s_pillar_labels[1][col], 52, 26);
         lv_label_set_long_mode(s_pillar_labels[1][col], LV_LABEL_LONG_MODE_CLIP);
         s_pillar_labels[2][col] = make_label(today, &ganzhi_font_20, kAccent,
                                               LV_TEXT_ALIGN_CENTER);
-        lv_obj_set_pos(s_pillar_labels[2][col], kPillarX[col], 66);
+        lv_obj_set_pos(s_pillar_labels[2][col], kPillarX[col], 70);
         lv_obj_set_size(s_pillar_labels[2][col], 52, 26);
         lv_obj_add_flag(s_pillar_labels[2][col], LV_OBJ_FLAG_HIDDEN);
     }
@@ -1478,6 +1484,7 @@ void create_profile_ui() {
     s_lbl_wind = nullptr;
     s_lbl_feels = nullptr;
     s_lbl_stat = nullptr;
+    px_block(today, 12, 29, 208, 1, kPhosBorder);
     lv_label_set_text(s_lbl_temp, "--");
     lv_label_set_text(s_lbl_wtext, "");
     s_profile_photo_version = UINT32_MAX;

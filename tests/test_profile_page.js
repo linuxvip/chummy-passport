@@ -314,7 +314,7 @@ const posts = () => requests.filter(request => request.options.method === 'POST'
   assert.ok(photoPost, 'selected profile photo uploads on save');
   assert.match(photoPost.url, /[?&]t=314159(?:&|$)/);
   const rgb565 = Buffer.from(await photoPost.options.body.arrayBuffer());
-  assert.equal(rgb565.length, 21600);
+  assert.equal(rgb565.length, 108 * 144 * 2);
   assert.equal(get('photoBadge').textContent, '已设置');
 
   get('removePhoto').onclick();
