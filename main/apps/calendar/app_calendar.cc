@@ -33,7 +33,6 @@ enum class PickerField : uint8_t { Year, Month, Jump, Cancel, Count };
 struct Cell {
     lv_obj_t *box = nullptr;
     lv_obj_t *day = nullptr;
-    lv_obj_t *sub = nullptr;
     lv_obj_t *ganzhi = nullptr;
 };
 
@@ -55,6 +54,7 @@ ui_pixel_battery_t s_battery{};
 lv_obj_t *s_wifi_bars[3] = {nullptr, nullptr, nullptr};
 lv_obj_t *s_month_title = nullptr;
 lv_obj_t *s_grid = nullptr;
+lv_obj_t *s_selection_summary = nullptr;
 Cell s_cells[42] = {};
 lv_obj_t *s_picker_rows[static_cast<int>(PickerField::Count)] = {};
 lv_obj_t *s_picker_names[static_cast<int>(PickerField::Count)] = {};
@@ -125,6 +125,7 @@ void close_screen() {
     s_battery = {};
     s_month_title = nullptr;
     s_grid = nullptr;
+    s_selection_summary = nullptr;
     for (auto &cell : s_cells) cell = {};
     for (auto &label : s_picker_rows) label = nullptr;
     for (auto &label : s_picker_names) label = nullptr;
@@ -172,15 +173,10 @@ void refresh_month() {
         const bool today = same_date(s_year, s_month, date_day,
                                      s_today_year, s_today_month, s_today_day);
         set_text(cell.day, day_text);
-        if (info.solar_term_index != kNoTerm) {
-            set_text(cell.sub, calendar_solar_term_name(info.solar_term_index));
-            ui_pixel_text_color(cell.sub, UI_DANGER);
-        } else {
-            set_text(cell.sub, info.lunar_cell);
-            ui_pixel_text_color(cell.sub, UI_TEXT_DIM);
-        }
         set_text(cell.ganzhi, info.day_ganzhi);
-        ui_pixel_text_color(cell.day, selected || today ? UI_ACCENT : UI_TEXT);
+        ui_pixel_text_color(cell.day,
+            selected || today ? UI_ACCENT :
+            info.solar_term_index != kNoTerm ? UI_DANGER : UI_TEXT);
         ui_pixel_bg_color(cell.box, selected ? UI_SURFACE_ALT : UI_BG);
         lv_obj_set_style_border_width(cell.box, selected ? 1 : 1, 0);
         lv_obj_set_style_border_side(cell.box,
@@ -188,6 +184,25 @@ void refresh_month() {
                 (LV_BORDER_SIDE_RIGHT | LV_BORDER_SIDE_BOTTOM)), 0);
         lv_obj_set_style_border_color(cell.box,
             lv_color_hex(selected ? UI_ACCENT : UI_BORDER), 0);
+    }
+
+    calendar_day_t selected;
+    if (calendar_day_info(s_year, s_month, s_day, &selected)) {
+        char summary[64];
+        if (selected.solar_term_index != kNoTerm) {
+            std::snprintf(summary, sizeof(summary), "今日交%s",
+                          calendar_solar_term_name(selected.solar_term_index));
+            ui_pixel_text_color(s_selection_summary, UI_DANGER);
+        } else {
+            char next[10];
+            uint8_t days_until = 0;
+            calendar_next_solar_term(s_year, s_month, s_day, next, &days_until);
+            std::snprintf(summary, sizeof(summary), "%s · 距%s%u天",
+                          selected.lunar_full + std::strlen("农历"),
+                          next, (unsigned)days_until);
+            ui_pixel_text_color(s_selection_summary, UI_TEXT_DIM);
+        }
+        set_text(s_selection_summary, summary);
     }
 }
 
@@ -198,13 +213,13 @@ void build_month() {
     ui_pixel_background(s_screen);
     add_top_bar("万年历");
 
-    s_month_title = label(s_screen, &ganzhi_font_12, UI_ACCENT,
-                          12, 28, 216, 18, LV_TEXT_ALIGN_CENTER);
+    s_month_title = label(s_screen, &buddy_font_16, UI_ACCENT,
+                          12, 28, 216, 20, LV_TEXT_ALIGN_CENTER);
     const char *weekdays[] = {"日", "一", "二", "三", "四", "五", "六"};
     for (int col = 0; col < 7; ++col) {
-        lv_obj_t *weekday = label(s_screen, &calendar_font_9, UI_TEXT_DIM,
+        lv_obj_t *weekday = label(s_screen, &buddy_font_16, UI_TEXT_DIM,
                                   kGridX + col * kCellW, 48,
-                                  kCellW, 15, LV_TEXT_ALIGN_CENTER);
+                                  kCellW, 18, LV_TEXT_ALIGN_CENTER);
         set_text(weekday, weekdays[col]);
     }
 
@@ -227,17 +242,14 @@ void build_month() {
         lv_obj_set_style_bg_color(cell.box, lv_color_hex(UI_BG), 0);
         lv_obj_set_style_border_width(cell.box, 1, 0);
         lv_obj_set_style_border_color(cell.box, lv_color_hex(UI_BORDER), 0);
-        cell.day = label(cell.box, &ganzhi_font_12, UI_TEXT,
-                         0, 0, kCellW, 15, LV_TEXT_ALIGN_CENTER);
-        cell.sub = label(cell.box, &calendar_font_9, UI_TEXT_DIM,
-                         0, 12, kCellW, 12, LV_TEXT_ALIGN_CENTER);
-        cell.ganzhi = label(cell.box, &calendar_font_9, UI_TEXT,
-                            0, 24, kCellW, 12, LV_TEXT_ALIGN_CENTER);
+        cell.day = label(cell.box, &lv_font_montserrat_14, UI_TEXT,
+                         0, 1, kCellW, 17, LV_TEXT_ALIGN_CENTER);
+        cell.ganzhi = label(cell.box, &ganzhi_font_12, UI_TEXT,
+                            0, 18, kCellW, 16, LV_TEXT_ALIGN_CENTER);
     }
 
-    lv_obj_t *legend = label(s_screen, &buddy_font_16, UI_TEXT_DIM,
-                             12, 256, 216, 16);
-    set_text(legend, "日 / 农历或节气 / 日干支");
+    s_selection_summary = label(s_screen, &buddy_font_16, UI_TEXT_DIM,
+                                12, 254, 216, 18, LV_TEXT_ALIGN_CENTER);
     ui_pixel_footer(s_screen, "上下选日 · 确定详情",
                     "长按上今天 · 长按下年月", &buddy_font_16);
     refresh_month();
