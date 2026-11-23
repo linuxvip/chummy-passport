@@ -24,6 +24,7 @@
 #include "apps/home/home_almanac.h"
 #include "apps/home/home_clock.h"
 #include "apps/home/home_daily_quote.h"
+#include "apps/home/home_layout.h"
 #include "apps/home/home_profile.h"
 #include "apps/home/home_upload.h"
 #include "apps/home/home_weather.h"
@@ -137,8 +138,10 @@ uint8_t s_detail_mode = 0;
 
 lv_obj_t *s_screen = nullptr;
 lv_obj_t *s_lbl_date = nullptr;
+lv_obj_t *s_lbl_clock_text = nullptr;
 lv_obj_t *s_wifi_bars[3] = {nullptr, nullptr, nullptr};
 ui_pixel_battery_t s_batt = {nullptr, nullptr};
+home_layout_t s_layout = HOME_LAYOUT_ALMANAC;
 // 四柱按三个严格对齐的行绘制:列头、天干、地支。
 lv_obj_t *s_pillar_labels[3][4] = {};
 lv_obj_t *s_lbl_lunar_date = nullptr;
@@ -389,10 +392,12 @@ void update_clock_labels() {
     // Shift the whole clock as a group so its visible ink starts at kInfoLeft,
     // retaining the existing spacing between digits and colon.
     const int clock_inset = (hh[0] == '1' || hh[0] == '-') ? kCell : 0;
-    for (int i = 0; i < 5; ++i) {
-        const int x = kInfoLeft + kClockSlotOffset[i] - clock_inset;
-        if (s_clk_slots[i] && lv_obj_get_x(s_clk_slots[i]) != x)
-            lv_obj_set_x(s_clk_slots[i], x);
+    if (s_layout == HOME_LAYOUT_ALMANAC) {
+        for (int i = 0; i < 5; ++i) {
+            const int x = kInfoLeft + kClockSlotOffset[i] - clock_inset;
+            if (s_clk_slots[i] && lv_obj_get_x(s_clk_slots[i]) != x)
+                lv_obj_set_x(s_clk_slots[i], x);
+        }
     }
     const char digits[4] = {hh[0], hh[1], mm[0], mm[1]};
     const int slot_map[4] = {0, 1, 3, 4};   // 槽 2 是冒号
@@ -404,12 +409,19 @@ void update_clock_labels() {
         }
     }
     ui_pixel_label_set_text(s_lbl_date, date_buf);
-    lv_font_glyph_dsc_t first_glyph{};
-    const uint32_t first_codepoint = valid ? static_cast<uint8_t>(date_buf[0]) : 0x7b49; // 等
-    const int date_inset = lv_font_get_glyph_dsc(&buddy_font_16, &first_glyph, first_codepoint, 0)
-        ? first_glyph.ofs_x : 0;
-    // The subset glyph for 等 also has one transparent column inside its box.
-    lv_obj_set_x(s_lbl_date, kInfoLeft - date_inset - (valid ? 0 : 1));
+    if (s_layout == HOME_LAYOUT_ALMANAC) {
+        lv_font_glyph_dsc_t first_glyph{};
+        const uint32_t first_codepoint = valid ? static_cast<uint8_t>(date_buf[0]) : 0x7b49; // 等
+        const int date_inset = lv_font_get_glyph_dsc(&buddy_font_16, &first_glyph, first_codepoint, 0)
+            ? first_glyph.ofs_x : 0;
+        // The subset glyph for 等 also has one transparent column inside its box.
+        lv_obj_set_x(s_lbl_date, kInfoLeft - date_inset - (valid ? 0 : 1));
+    } else if (s_lbl_clock_text) {
+        char time_text[8];
+        if (valid) std::snprintf(time_text, sizeof(time_text), "%s:%s", hh, mm);
+        else std::snprintf(time_text, sizeof(time_text), "--:--");
+        lv_label_set_text(s_lbl_clock_text, time_text);
+    }
 
     s_clk_colon_on = !s_clk_colon_on;
     for (lv_obj_t *dot : s_clk_colon) {
@@ -461,7 +473,10 @@ void update_weather_labels(const home_profile_t *prof) {
         lv_label_set_text(s_lbl_temp, t);
 
         char h[20];
-        std::snprintf(h, sizeof(h), "湿度 %u%%", (unsigned)w.humidity);
+        if (s_layout == HOME_LAYOUT_MINIMAL)
+            std::snprintf(h, sizeof(h), "湿%u%%", (unsigned)w.humidity);
+        else
+            std::snprintf(h, sizeof(h), "湿度 %u%%", (unsigned)w.humidity);
         if (s_lbl_humidity) lv_label_set_text(s_lbl_humidity, h);
 
         int feels = static_cast<int>(w.temp_c);
@@ -504,9 +519,14 @@ void update_wind_line() {
             if (unknown_age) std::snprintf(line, sizeof(line), "%s", age);
             else std::snprintf(line, sizeof(line), "%s更新", age);
         } else {
-            std::snprintf(line, sizeof(line), "%s %d级",
-                          home_weather_wind_dir_text(w.wind_dir),
-                          home_weather_beaufort(w.wind_kmh));
+            if (s_layout == HOME_LAYOUT_MINIMAL)
+                std::snprintf(line, sizeof(line), "%s%d级",
+                              home_weather_wind_dir_text(w.wind_dir),
+                              home_weather_beaufort(w.wind_kmh));
+            else
+                std::snprintf(line, sizeof(line), "%s %d级",
+                              home_weather_wind_dir_text(w.wind_dir),
+                              home_weather_beaufort(w.wind_kmh));
         }
         ui_pixel_label_set_text(s_lbl_wind, line);
     } else {
@@ -570,7 +590,12 @@ void update_footer_label() {
         footer_set("Open-Meteo/CAMS 估算", &buddy_font_16, kPhos);
         return;
     }
-    footer_set("上干支 · 下名言 · 确定应用", &buddy_font_16, kPhosDim);
+    const char *hint = s_layout == HOME_LAYOUT_MINIMAL
+        ? "长按上换句 · 长按下设置"
+        : s_layout == HOME_LAYOUT_WEATHER
+        ? "上天气 · 下详情 · 确定应用"
+        : "上干支 · 下名言 · 确定应用";
+    footer_set(hint, &buddy_font_16, kPhosDim);
 }
 
 bool local_calendar(struct tm *out) {
@@ -751,17 +776,27 @@ void update_almanac_labels() {
         ui_pixel_text_color(s_pillar_labels[2][col],
                             five_element_color(five_element_for_glyph(branch)));
     }
-    lv_label_set_text(s_lbl_lunar_date, almanac.lunar_month_day);
     char term_today[20] = {};
     if (almanac.solar_term_today[0])
         std::snprintf(term_today, sizeof(term_today), "今日交%s",
                       almanac.solar_term_today);
-    lv_label_set_text(s_lbl_solar_term_today, term_today);
     char next_term[24];
     std::snprintf(next_term, sizeof(next_term), "距%s %u天",
                   almanac.next_solar_term,
                   (unsigned)almanac.days_to_next_solar_term);
-    lv_label_set_text(s_lbl_next_solar_term, next_term);
+    if (s_layout == HOME_LAYOUT_WEATHER) {
+        char combined[52];
+        std::snprintf(combined, sizeof(combined), "%s · %s",
+                      almanac.lunar_month_day,
+                      term_today[0] ? term_today : next_term);
+        lv_label_set_text(s_lbl_lunar_date, combined);
+        lv_label_set_text(s_lbl_solar_term_today, "");
+        lv_label_set_text(s_lbl_next_solar_term, "");
+    } else {
+        lv_label_set_text(s_lbl_lunar_date, almanac.lunar_month_day);
+        lv_label_set_text(s_lbl_solar_term_today, term_today);
+        lv_label_set_text(s_lbl_next_solar_term, next_term);
+    }
 }
 
 void update_daily_quote_labels() {
@@ -785,7 +820,9 @@ void update_daily_quote_labels() {
             }
             width += glyph_width;
         }
-        lv_obj_set_pos(s_lbl_quote, 10, lines == 1 ? 15 : 1);
+        const int quote_y = s_layout != HOME_LAYOUT_ALMANAC
+            ? 1 : lines == 1 ? 15 : 1;
+        lv_obj_set_pos(s_lbl_quote, 10, quote_y);
     } else {
         lv_label_set_text(s_lbl_quote, "");
     }
@@ -826,7 +863,7 @@ void draw_passport_details(lv_event_t *event) {
     ink.box(kInfoLeft, 162, 108, 1, kPhosBorder);
 }
 
-void create_ui() {
+void create_base_ui() {
     s_screen = lv_obj_create(nullptr);
     lv_obj_set_style_pad_all(s_screen, 0, 0);
     lv_obj_clear_flag(s_screen, LV_OBJ_FLAG_SCROLLABLE);
@@ -844,7 +881,21 @@ void create_ui() {
 
     lv_obj_t *home_title = ui_pixel_label(s_screen, "命海拾遗", &buddy_font_16, kPhosDim);
     lv_obj_set_pos(home_title, 42, 4);
+}
 
+void create_footer(const char *text) {
+    px_block(s_screen, 0, 292, 240, 1, kPhosBorder);
+    lv_obj_t *strip = px_block(s_screen, 0, 293, 240, 27, kBg);
+    lv_obj_set_style_bg_opa(strip, LV_OPA_COVER, 0);
+    s_lbl_footer = make_label(s_screen, &buddy_font_16, kPhosDim, LV_TEXT_ALIGN_CENTER);
+    lv_obj_set_width(s_lbl_footer, kContentW);
+    lv_obj_align(s_lbl_footer, LV_ALIGN_BOTTOM_MID, 0, -6);
+    lv_label_set_long_mode(s_lbl_footer, LV_LABEL_LONG_MODE_DOTS);
+    lv_label_set_text(s_lbl_footer, text);
+}
+
+void create_almanac_ui() {
+    create_base_ui();
     lv_obj_add_event_cb(s_screen, draw_passport_details, LV_EVENT_DRAW_MAIN, nullptr);
 
     // ---- 左侧四柱历 (4,30..128,232):继续加宽，右侧保留 112px ----
@@ -974,15 +1025,206 @@ void create_ui() {
     lv_obj_set_size(s_lbl_quote, 202, 50);
     lv_label_set_long_mode(s_lbl_quote, LV_LABEL_LONG_MODE_DOTS);
 
-    // ---- 按键提示:底黑条 + 1px 细分隔线 + 提拉 6px 安全边距 ----
-    px_block(s_screen, 0, 292, 240, 1, kPhosBorder);
-    lv_obj_t *strip = px_block(s_screen, 0, 293, 240, 27, kBg);
-    lv_obj_set_style_bg_opa(strip, LV_OPA_COVER, 0);
-    s_lbl_footer = make_label(s_screen, &buddy_font_16, kPhosDim, LV_TEXT_ALIGN_CENTER);
-    lv_obj_set_width(s_lbl_footer, kContentW);
-    lv_obj_align(s_lbl_footer, LV_ALIGN_BOTTOM_MID, 0, -6);
-    lv_label_set_long_mode(s_lbl_footer, LV_LABEL_LONG_MODE_DOTS);
-    lv_label_set_text(s_lbl_footer, "上干支 · 下名言 · 确定应用");
+    create_footer("上干支 · 下名言 · 确定应用");
+}
+
+void create_minimal_ui() {
+    create_base_ui();
+
+    lv_obj_t *heading = make_label(s_screen, &buddy_font_16, kAccent, LV_TEXT_ALIGN_LEFT);
+    lv_obj_set_pos(heading, 12, 31);
+    lv_label_set_text(heading, "今日四柱");
+
+    s_lbl_clock_text = make_label(s_screen, &lv_font_montserrat_20, kPhos, LV_TEXT_ALIGN_RIGHT);
+    lv_obj_set_pos(s_lbl_clock_text, 168, 29);
+    lv_obj_set_size(s_lbl_clock_text, 62, 24);
+    lv_label_set_long_mode(s_lbl_clock_text, LV_LABEL_LONG_MODE_CLIP);
+
+    s_lbl_date = make_label(s_screen, &buddy_font_16, kPhos, LV_TEXT_ALIGN_LEFT);
+    lv_obj_set_pos(s_lbl_date, 12, 54);
+    lv_obj_set_size(s_lbl_date, 132, 18);
+    lv_label_set_long_mode(s_lbl_date, LV_LABEL_LONG_MODE_DOTS);
+
+    s_lbl_city = make_label(s_screen, &buddy_font_16, kPhosDim, LV_TEXT_ALIGN_RIGHT);
+    lv_obj_set_pos(s_lbl_city, 148, 54);
+    lv_obj_set_size(s_lbl_city, 82, 18);
+    lv_label_set_long_mode(s_lbl_city, LV_LABEL_LONG_MODE_DOTS);
+
+    lv_obj_t *almanac = px_container(s_screen, 8, 78, 224, 160);
+    lv_obj_set_style_bg_color(almanac, lv_color_hex(ui_theme_color_on_dark(UI_COLOR_SURFACE)), 0);
+    lv_obj_set_style_bg_opa(almanac, LV_OPA_COVER, 0);
+    lv_obj_set_style_border_width(almanac, 1, 0);
+    lv_obj_set_style_border_color(almanac, lv_color_hex(kPhosBorder), 0);
+    constexpr int kPillarX[4] = {8, 62, 116, 170};
+    constexpr int kPillarY[3] = {4, 30, 70};
+    for (int col = 0; col < 4; ++col) {
+        s_pillar_labels[0][col] = make_label(almanac, &buddy_font_16, kPhosDim,
+                                              LV_TEXT_ALIGN_CENTER);
+        lv_obj_set_pos(s_pillar_labels[0][col], kPillarX[col], kPillarY[0]);
+        lv_obj_set_size(s_pillar_labels[0][col], 46, 18);
+        s_pillar_labels[1][col] = make_label(almanac, &ganzhi_font_20, kPhos,
+                                              LV_TEXT_ALIGN_CENTER);
+        lv_obj_set_pos(s_pillar_labels[1][col], kPillarX[col], kPillarY[1]);
+        lv_obj_set_size(s_pillar_labels[1][col], 46, 28);
+        s_pillar_labels[2][col] = make_label(almanac, &ganzhi_font_20, kAccent,
+                                              LV_TEXT_ALIGN_CENTER);
+        lv_obj_set_pos(s_pillar_labels[2][col], kPillarX[col], kPillarY[2]);
+        lv_obj_set_size(s_pillar_labels[2][col], 46, 28);
+    }
+    px_block(almanac, 6, 26, 212, 1, kPhosBorder);
+    px_block(almanac, 6, 61, 212, 1, kPhosBorder);
+    px_block(almanac, 6, 101, 212, 1, kPhosBorder);
+
+    s_lbl_lunar_date = make_label(almanac, &buddy_font_16, kPhos, LV_TEXT_ALIGN_CENTER);
+    lv_obj_set_pos(s_lbl_lunar_date, 0, 106);
+    lv_obj_set_size(s_lbl_lunar_date, 224, 18);
+    s_lbl_solar_term_today = make_label(almanac, &buddy_font_16, kPhos, LV_TEXT_ALIGN_CENTER);
+    lv_obj_set_pos(s_lbl_solar_term_today, 0, 124);
+    lv_obj_set_size(s_lbl_solar_term_today, 224, 18);
+    s_lbl_next_solar_term = make_label(almanac, &buddy_font_16, kPhosDim, LV_TEXT_ALIGN_CENTER);
+    lv_obj_set_pos(s_lbl_next_solar_term, 0, 141);
+    lv_obj_set_size(s_lbl_next_solar_term, 224, 18);
+
+    lv_obj_t *weather = px_container(s_screen, 8, 240, 224, 28);
+    lv_obj_set_style_bg_color(weather, lv_color_hex(ui_theme_color_on_dark(UI_COLOR_SURFACE)), 0);
+    lv_obj_set_style_bg_opa(weather, LV_OPA_COVER, 0);
+    lv_obj_set_style_border_width(weather, 1, 0);
+    lv_obj_set_style_border_color(weather, lv_color_hex(kPhosBorder), 0);
+    s_lbl_temp = make_label(weather, &lv_font_montserrat_20, kTemperature, LV_TEXT_ALIGN_LEFT);
+    lv_obj_set_pos(s_lbl_temp, 8, 2);
+    lv_obj_set_size(s_lbl_temp, 34, 24);
+    s_lbl_wtext = make_label(weather, &buddy_font_16, kWeatherAccent, LV_TEXT_ALIGN_LEFT);
+    lv_obj_set_pos(s_lbl_wtext, 38, 4);
+    lv_obj_set_size(s_lbl_wtext, 42, 18);
+    s_lbl_humidity = make_label(weather, &buddy_font_16, kPhosDim, LV_TEXT_ALIGN_LEFT);
+    lv_obj_set_pos(s_lbl_humidity, 84, 4);
+    lv_obj_set_size(s_lbl_humidity, 58, 18);
+    lv_label_set_long_mode(s_lbl_humidity, LV_LABEL_LONG_MODE_DOTS);
+    s_lbl_wind = make_label(weather, &buddy_font_16, kPhosDim, LV_TEXT_ALIGN_LEFT);
+    lv_obj_set_pos(s_lbl_wind, 145, 4);
+    lv_obj_set_size(s_lbl_wind, 80, 18);
+    lv_label_set_long_mode(s_lbl_wind, LV_LABEL_LONG_MODE_DOTS);
+    lv_label_set_text(s_lbl_temp, "--");
+    lv_label_set_text(s_lbl_wtext, "");
+    lv_label_set_text(s_lbl_humidity, "湿度 --");
+    lv_label_set_text(s_lbl_wind, "风向 --");
+
+    lv_obj_t *quote_zone = px_container(s_screen, 8, 270, 224, 20);
+    s_lbl_quote = make_label(quote_zone, &buddy_font_16, kPhos, LV_TEXT_ALIGN_CENTER);
+    lv_obj_set_pos(s_lbl_quote, 8, 1);
+    lv_obj_set_size(s_lbl_quote, 208, 18);
+    lv_label_set_long_mode(s_lbl_quote, LV_LABEL_LONG_MODE_DOTS);
+
+    create_footer("长按上换句 · 长按下设置");
+}
+
+void create_weather_ui() {
+    create_base_ui();
+
+    s_lbl_date = make_label(s_screen, &buddy_font_16, kPhosDim, LV_TEXT_ALIGN_LEFT);
+    lv_obj_set_pos(s_lbl_date, 12, 31);
+    lv_obj_set_size(s_lbl_date, 132, 18);
+    lv_label_set_long_mode(s_lbl_date, LV_LABEL_LONG_MODE_DOTS);
+
+    s_lbl_clock_text = make_label(s_screen, &lv_font_montserrat_20, kPhos, LV_TEXT_ALIGN_RIGHT);
+    lv_obj_set_pos(s_lbl_clock_text, 168, 28);
+    lv_obj_set_size(s_lbl_clock_text, 62, 24);
+    lv_label_set_long_mode(s_lbl_clock_text, LV_LABEL_LONG_MODE_CLIP);
+
+    s_lbl_city = make_label(s_screen, &buddy_font_16, kPhosDim, LV_TEXT_ALIGN_LEFT);
+    lv_obj_set_pos(s_lbl_city, 12, 53);
+    lv_obj_set_size(s_lbl_city, 112, 18);
+    lv_label_set_long_mode(s_lbl_city, LV_LABEL_LONG_MODE_DOTS);
+
+    s_lbl_temp = make_label(s_screen, &lv_font_montserrat_20, kTemperature, LV_TEXT_ALIGN_LEFT);
+    lv_obj_set_pos(s_lbl_temp, 12, 66);
+    lv_obj_set_size(s_lbl_temp, 44, 30);
+    s_wicon_zone = px_container(s_screen, 60, 72, 22, 22);
+    lv_obj_add_event_cb(s_wicon_zone, draw_weather_icon_event, LV_EVENT_DRAW_MAIN, nullptr);
+    s_lbl_wtext = make_label(s_screen, &buddy_font_16, kWeatherAccent, LV_TEXT_ALIGN_LEFT);
+    lv_obj_set_pos(s_lbl_wtext, 90, 77);
+    lv_obj_set_size(s_lbl_wtext, 56, 18);
+
+    lv_obj_t *weather = px_container(s_screen, 8, 104, 224, 82);
+    lv_obj_set_style_bg_color(weather, lv_color_hex(ui_theme_color_on_dark(UI_COLOR_SURFACE)), 0);
+    lv_obj_set_style_bg_opa(weather, LV_OPA_COVER, 0);
+    lv_obj_set_style_border_width(weather, 1, 0);
+    lv_obj_set_style_border_color(weather, lv_color_hex(kPhosBorder), 0);
+    s_lbl_feels = make_label(weather, &buddy_font_16, kPhosDim, LV_TEXT_ALIGN_LEFT);
+    lv_obj_set_pos(s_lbl_feels, 10, 5);
+    lv_obj_set_size(s_lbl_feels, 202, 18);
+    lv_label_set_long_mode(s_lbl_feels, LV_LABEL_LONG_MODE_DOTS);
+    s_lbl_humidity = make_label(weather, &buddy_font_16, kPhosDim, LV_TEXT_ALIGN_LEFT);
+    lv_obj_set_pos(s_lbl_humidity, 10, 23);
+    lv_obj_set_size(s_lbl_humidity, 202, 18);
+    lv_label_set_long_mode(s_lbl_humidity, LV_LABEL_LONG_MODE_DOTS);
+    s_lbl_wind = make_label(weather, &buddy_font_16, kPhosDim, LV_TEXT_ALIGN_LEFT);
+    lv_obj_set_pos(s_lbl_wind, 10, 41);
+    lv_obj_set_size(s_lbl_wind, 202, 18);
+    lv_label_set_long_mode(s_lbl_wind, LV_LABEL_LONG_MODE_DOTS);
+    s_lbl_stat = make_label(weather, &buddy_font_16, kPhosDim, LV_TEXT_ALIGN_LEFT);
+    lv_obj_set_pos(s_lbl_stat, 10, 59);
+    lv_obj_set_size(s_lbl_stat, 202, 18);
+    lv_label_set_long_mode(s_lbl_stat, LV_LABEL_LONG_MODE_DOTS);
+
+    lv_obj_t *pillars = px_container(s_screen, 8, 192, 224, 52);
+    lv_obj_set_style_bg_color(pillars, lv_color_hex(ui_theme_color_on_dark(UI_COLOR_SURFACE)), 0);
+    lv_obj_set_style_bg_opa(pillars, LV_OPA_COVER, 0);
+    lv_obj_set_style_border_width(pillars, 1, 0);
+    lv_obj_set_style_border_color(pillars, lv_color_hex(kPhosBorder), 0);
+    constexpr int kPillarX[4] = {4, 58, 112, 166};
+    for (int col = 0; col < 4; ++col) {
+        s_pillar_labels[0][col] = make_label(pillars, &buddy_font_16, kPhosDim,
+                                              LV_TEXT_ALIGN_CENTER);
+        lv_obj_set_pos(s_pillar_labels[0][col], kPillarX[col], 2);
+        lv_obj_set_size(s_pillar_labels[0][col], 52, 16);
+        lv_obj_add_flag(s_pillar_labels[0][col], LV_OBJ_FLAG_HIDDEN);
+        s_pillar_labels[1][col] = make_label(pillars, &ganzhi_font_20, kPhos,
+                                              LV_TEXT_ALIGN_CENTER);
+        lv_obj_set_pos(s_pillar_labels[1][col], kPillarX[col], 1);
+        lv_obj_set_size(s_pillar_labels[1][col], 52, 25);
+        lv_label_set_long_mode(s_pillar_labels[1][col], LV_LABEL_LONG_MODE_CLIP);
+        s_pillar_labels[2][col] = make_label(pillars, &ganzhi_font_20, kAccent,
+                                              LV_TEXT_ALIGN_CENTER);
+        lv_obj_set_pos(s_pillar_labels[2][col], kPillarX[col], 26);
+        lv_obj_set_size(s_pillar_labels[2][col], 52, 25);
+        lv_label_set_long_mode(s_pillar_labels[2][col], LV_LABEL_LONG_MODE_CLIP);
+    }
+
+    s_lbl_lunar_date = make_label(s_screen, &buddy_font_16, kPhosDim, LV_TEXT_ALIGN_LEFT);
+    lv_obj_set_pos(s_lbl_lunar_date, 12, 248);
+    lv_obj_set_size(s_lbl_lunar_date, 216, 18);
+    lv_label_set_long_mode(s_lbl_lunar_date, LV_LABEL_LONG_MODE_DOTS);
+    s_lbl_solar_term_today = make_label(s_screen, &buddy_font_16, kPhos, LV_TEXT_ALIGN_LEFT);
+    lv_obj_set_pos(s_lbl_solar_term_today, 12, 248);
+    lv_obj_set_size(s_lbl_solar_term_today, 216, 18);
+    lv_obj_add_flag(s_lbl_solar_term_today, LV_OBJ_FLAG_HIDDEN);
+    s_lbl_next_solar_term = make_label(s_screen, &buddy_font_16, kPhosDim, LV_TEXT_ALIGN_LEFT);
+    lv_obj_set_pos(s_lbl_next_solar_term, 12, 248);
+    lv_obj_set_size(s_lbl_next_solar_term, 216, 18);
+    lv_obj_add_flag(s_lbl_next_solar_term, LV_OBJ_FLAG_HIDDEN);
+
+    lv_label_set_text(s_lbl_temp, "--");
+    lv_label_set_text(s_lbl_wtext, "");
+    lv_label_set_text(s_lbl_feels, "体感 --");
+    lv_label_set_text(s_lbl_humidity, "湿度 --");
+    lv_label_set_text(s_lbl_wind, "风向 --");
+    lv_label_set_text(s_lbl_stat, "PM2.5 --");
+
+    lv_obj_t *quote_zone = px_container(s_screen, 8, 269, 224, 20);
+    s_lbl_quote = make_label(quote_zone, &buddy_font_16, kPhos, LV_TEXT_ALIGN_CENTER);
+    lv_obj_set_pos(s_lbl_quote, 8, 1);
+    lv_obj_set_size(s_lbl_quote, 208, 18);
+    lv_label_set_long_mode(s_lbl_quote, LV_LABEL_LONG_MODE_DOTS);
+
+    create_footer("上天气 · 下详情 · 确定应用");
+}
+
+void create_ui() {
+    s_layout = settings_get_home_layout();
+    if (s_layout == HOME_LAYOUT_MINIMAL) create_minimal_ui();
+    else if (s_layout == HOME_LAYOUT_WEATHER) create_weather_ui();
+    else create_almanac_ui();
 }
 
 void home_task(void *arg) {
@@ -1194,6 +1436,7 @@ void home_stop() {
     }
     s_screen = nullptr;
     s_lbl_date = nullptr;
+    s_lbl_clock_text = nullptr;
     for (lv_obj_t *&bar : s_wifi_bars) bar = nullptr;
     s_batt = {nullptr, nullptr};
     for (auto &row : s_pillar_labels) {

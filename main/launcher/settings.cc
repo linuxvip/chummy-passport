@@ -32,12 +32,13 @@ constexpr char kNvsNamespace[] = "system_prefs";
 constexpr uint8_t kVolumeStep = 10;
 constexpr uint8_t kBrightness[] = {20, 40, 60, 80, 100};
 constexpr uint16_t kTimeouts[] = {0, 15, 30, 60, 120, 300};
-constexpr size_t kRowCount = 10;
+constexpr size_t kRowCount = 11;
 
 uint8_t s_volume = 80;
 uint8_t s_brightness = 80;
 uint16_t s_timeout = 60;
 ui_theme_t s_theme = UI_THEME_CLASSIC;
+home_layout_t s_home_layout = HOME_LAYOUT_ALMANAC;
 bool s_late_zi = false;
 size_t s_selected = 0;
 bool s_volume_editing = false;
@@ -76,6 +77,7 @@ void save_all() {
     if (result == ESP_OK) result = nvs_set_u8(handle, "brightness", s_brightness);
     if (result == ESP_OK) result = nvs_set_u16(handle, "timeout", s_timeout);
     if (result == ESP_OK) result = nvs_set_u8(handle, "theme", static_cast<uint8_t>(s_theme));
+    if (result == ESP_OK) result = nvs_set_u8(handle, "home_layout", static_cast<uint8_t>(s_home_layout));
     if (result == ESP_OK) result = nvs_set_u8(handle, "late_zi", s_late_zi ? 1 : 0);
     if (result == ESP_OK) result = nvs_set_u8(handle, "key_sound", ui_sfx_enabled() ? 1 : 0);
     if (result == ESP_OK) result = nvs_commit(handle);
@@ -98,7 +100,7 @@ void refresh_ui() {
         const size_t first = s_selected < 7 ? 0 : kRowCount - 7;
         lv_obj_set_flag(s_rows[i], LV_OBJ_FLAG_HIDDEN, s_reset_pending || i < first || i >= first + 7);
         if (i >= first) lv_obj_set_y(s_rows[i], 38 + static_cast<int>(i - first) * 29);
-        const uint32_t focus = s_reset_pending && i == 9 ? UI_DANGER : UI_ACCENT;
+        const uint32_t focus = s_reset_pending && i == 10 ? UI_DANGER : UI_ACCENT;
         ui_pixel_bg_color(s_rows[i], selected ? focus : UI_BG);
         ui_pixel_text_color(s_names[i], selected ? UI_ON_ACCENT : UI_TEXT);
         ui_pixel_text_color(s_values[i], selected ? UI_ON_ACCENT : UI_TEXT_DIM);
@@ -117,15 +119,16 @@ void refresh_ui() {
         lv_label_set_text(s_values[2], value);
     }
     lv_label_set_text(s_values[3], ui_theme_name(s_theme));
-    lv_label_set_text(s_values[4], s_late_zi ? "晚子时" : "早子时");
-    lv_label_set_text(s_values[5], ui_sfx_enabled() ? "开" : "关");
-    lv_label_set_text(s_values[6], "打开");
+    lv_label_set_text(s_values[4], home_layout_name(s_home_layout));
+    lv_label_set_text(s_values[5], s_late_zi ? "晚子时" : "早子时");
+    lv_label_set_text(s_values[6], ui_sfx_enabled() ? "开" : "关");
     lv_label_set_text(s_values[7], "打开");
-    lv_label_set_text(s_values[8], "查看");
-    lv_label_set_text(s_values[9], s_reset_pending ? "再次确定" : "恢复");
+    lv_label_set_text(s_values[8], "打开");
+    lv_label_set_text(s_values[9], "查看");
+    lv_label_set_text(s_values[10], s_reset_pending ? "再次确定" : "恢复");
     static const char *hints[kRowCount] = {
         "确定后上下调音量", "长按下键满亮两分钟",
-        "确定切换熄屏时间", "确定切换主题",
+        "确定切换熄屏时间", "确定切换主题", "确定切换首页样式",
         "确定切换干支日子时规则", "轻触反馈",
         "手机配网、资料与城市", "设备选网与已存网络",
         "查看网络、时间与电量", "仅恢复设备设置"
@@ -180,7 +183,7 @@ void create_ui() {
     ui_pixel_battery_set(&s_battery, bsp_battery_soc());
 
     static const char *labels[kRowCount] = {
-        "音量", "屏幕亮度", "自动熄屏", "外观主题", "子时规则",
+        "音量", "屏幕亮度", "自动熄屏", "外观主题", "首页样式", "子时规则",
         "按键音效", "手机设置", "无线网络", "网络与时间", "恢复默认"
     };
     for (size_t i = 0; i < kRowCount; ++i) {
@@ -214,7 +217,7 @@ void create_ui() {
     lv_obj_remove_flag(s_confirm, LV_OBJ_FLAG_SCROLLABLE); lv_obj_set_pos(s_confirm, 12, 42);lv_obj_set_size(s_confirm, 216, 220);
     auto *question = ui_pixel_label(s_confirm, "恢复默认设置？", &ui_font_20, UI_DANGER);
     lv_obj_set_pos(question, 0, 0);lv_obj_set_width(question, 216);
-    auto *consequence = ui_pixel_label(s_confirm, "音量、亮度设为 80%\n60 秒自动熄屏\n主题恢复经典绿\n子时恢复早子时\n按键音效开启\nWi-Fi 与个人资料保留\n上下键取消", &buddy_font_16, UI_TEXT);
+    auto *consequence = ui_pixel_label(s_confirm, "音量、亮度设为 80%\n60 秒自动熄屏\n主题恢复经典绿\n首页恢复命海拾遗\n子时恢复早子时\n按键音效开启\nWi-Fi 与个人资料保留\n上下键取消", &buddy_font_16, UI_TEXT);
     lv_obj_set_pos(consequence, 0, 54);lv_obj_set_width(consequence, 216);
     lv_obj_set_style_text_line_space(consequence, 5, 0);
 
@@ -307,21 +310,25 @@ void settings_on_key(uint8_t btn, app_btn_event_t event, uint16_t) {
                 rebuild = true;
                 break;
             case 4:
-                s_late_zi = !s_late_zi;
+                s_home_layout = static_cast<home_layout_t>(
+                    (static_cast<unsigned>(s_home_layout) + 1) % HOME_LAYOUT_COUNT);
                 break;
             case 5:
-                ui_sfx_set_enabled(!ui_sfx_enabled());
+                s_late_zi = !s_late_zi;
                 break;
             case 6:
+                ui_sfx_set_enabled(!ui_sfx_enabled());
+                break;
+            case 7:
                 app_registry_switch_to(APP_ID_WIFI);
                 return;
-            case 7:
+            case 8:
                 settings_stop();
                 if (!wifi_picker_open()) settings_start();
                 return;
-            case 8:
-                settings_stop(); network_diagnostics_open(); return;
             case 9:
+                settings_stop(); network_diagnostics_open(); return;
+            case 10:
                 if (!s_reset_pending) {
                     s_reset_pending = true;
                     bsp_lvgl_lock(-1);
@@ -334,6 +341,7 @@ void settings_on_key(uint8_t btn, app_btn_event_t event, uint16_t) {
                 s_brightness = 80;
                 s_timeout = 60;
                 s_theme = UI_THEME_CLASSIC;
+                s_home_layout = HOME_LAYOUT_ALMANAC;
                 s_late_zi = false;
                 ui_sfx_set_enabled(true);
                 rebuild = true;
@@ -383,12 +391,17 @@ void settings_bootstrap(void) {
         nvs_get_u8(handle, "brightness", &s_brightness);
         nvs_get_u16(handle, "timeout", &s_timeout);
         uint8_t theme = static_cast<uint8_t>(UI_THEME_CLASSIC);
+        uint8_t home_layout = static_cast<uint8_t>(HOME_LAYOUT_ALMANAC);
         uint8_t key_sound = 1;
         uint8_t late_zi = 0;
         if (nvs_get_u8(handle, "key_sound", &key_sound) == ESP_OK)
             ui_sfx_set_enabled(key_sound != 0);
         if (nvs_get_u8(handle, "theme", &theme) == ESP_OK && theme < UI_THEME_COUNT) {
             s_theme = static_cast<ui_theme_t>(theme);
+        }
+        if (nvs_get_u8(handle, "home_layout", &home_layout) == ESP_OK &&
+            home_layout < HOME_LAYOUT_COUNT) {
+            s_home_layout = static_cast<home_layout_t>(home_layout);
         }
         if (nvs_get_u8(handle, "late_zi", &late_zi) == ESP_OK) s_late_zi = late_zi != 0;
         nvs_close(handle);
@@ -419,6 +432,7 @@ bool save_percent(const char *key, uint8_t percent) {
 uint8_t settings_get_volume(void) { return s_volume; }
 uint8_t settings_get_brightness(void) { return s_brightness; }
 bool settings_get_late_zi(void) { return s_late_zi; }
+home_layout_t settings_get_home_layout(void) { return s_home_layout; }
 bool settings_save_late_zi(bool late_zi) {
     nvs_handle_t handle;
     esp_err_t result = nvs_open(kNvsNamespace, NVS_READWRITE, &handle);

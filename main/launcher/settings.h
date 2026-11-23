@@ -1,6 +1,7 @@
 #pragma once
 
 #include "apps/app_base.h"
+#include "apps/home/home_layout.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -19,6 +20,7 @@ uint8_t settings_get_volume(void);
 uint8_t settings_get_brightness(void);
 bool settings_get_late_zi(void);
 bool settings_save_late_zi(bool late_zi);
+home_layout_t settings_get_home_layout(void);
 
 extern const passport_app_t g_settings_app;
 

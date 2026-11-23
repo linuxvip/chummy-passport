@@ -27,6 +27,7 @@ python3 tools/generate_ui_sfx.py --check
     tests/test_terminal.cc -o "$test_dir/terminal"
 "$test_dir/terminal"
 python3 tests/test_theme_palette.py
+python3 tests/test_home_layout.py
 "${CC:-cc}" -std=c11 -Wall -Wextra -Werror -Itests/audio_mocks -Icomponents/bsp/src \
     tests/test_audio_volume.c components/bsp/src/bsp_audio_volume.c -lm -o "$test_dir/audio-volume"
 "$test_dir/audio-volume"
