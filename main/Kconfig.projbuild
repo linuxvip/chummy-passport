@@ -1,0 +1,19 @@
+menu "Passport OS integrations"
+
+config HOME_DAILY_QUOTE_URL
+    string "Home daily-quote JSON endpoint"
+    default "https://v1.hitokoto.cn/?c=k&min_length=8&max_length=24&encode=json&charset=utf-8"
+    help
+        The endpoint must return JSON. Both the Hitokoto shape
+        ("hitokoto"/"from") and the Xygeng shape
+        ("data.content"/"data.name") are supported.
+        External text is displayed only and is never interpreted as commands.
+
+config HOME_DAILY_QUOTE_FALLBACK_URL
+    string "Home daily-quote fallback endpoint"
+    default "https://api.xygeng.cn/one"
+    help
+        Tried once if the primary endpoint fails. The same two JSON shapes are
+        accepted. Text outside 8..24 UTF-8 characters is rejected.
+
+endmenu

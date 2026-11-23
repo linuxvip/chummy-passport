@@ -1,0 +1,30 @@
+build/
+build-public/
+sdkconfig
+sdkconfig.old
+managed_components/
+.vscode/
+.idea/
+__pycache__/
+*.pyc
+*.log
+*.bin
+*.elf
+*.map
+dist/
+.cache/
+build-diag/
+build-*/
+output/
+release/
+all_chars.txt
+ui_chars.txt
+tests/font_report.txt
+.impeccable/
+
+# Generated firmware and local validation artifacts
+*.uf2
+*.hex
+
+# Frozen local binary; inspect only when needed
+firmware/
