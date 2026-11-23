@@ -17,6 +17,7 @@ static const char *TAG = "home_photo";
 #endif
 static const char *const kPath = HOME_PHOTO_BASE_PATH "/profile-photo.rgb565";
 static const char *const kTmpPath = HOME_PHOTO_BASE_PATH "/profile-photo.tmp";
+static const char *const kScaledPath = HOME_PHOTO_BASE_PATH "/profile-photo.scaled";
 static const char *const kBackupPath = HOME_PHOTO_BASE_PATH "/profile-photo.backup";
 
 static StaticSemaphore_t s_mutex_storage;
@@ -24,6 +25,7 @@ static SemaphoreHandle_t s_mutex;
 static bool s_mounted;
 static FILE *s_upload;
 static size_t s_written;
+static size_t s_total_bytes;
 static uint32_t s_version;
 
 static SemaphoreHandle_t lock(void) {
@@ -37,12 +39,66 @@ static void abort_upload_locked(void) {
         s_upload = NULL;
     }
     remove(kTmpPath);
+    remove(kScaledPath);
     s_written = 0;
+    s_total_bytes = 0;
+}
+
+static bool file_has_size(const char *path, size_t expected) {
+    struct stat info = {0};
+    return stat(path, &info) == 0 && info.st_size == (off_t)expected;
 }
 
 static bool file_has_expected_size(const char *path) {
-    struct stat info = {0};
-    return stat(path, &info) == 0 && info.st_size == (off_t)HOME_PROFILE_PHOTO_BYTES;
+    return file_has_size(path, HOME_PROFILE_PHOTO_BYTES);
+}
+
+static esp_err_t scale_legacy_upload_locked(void) {
+    FILE *source = fopen(kTmpPath, "rb");
+    if (!source) return ESP_FAIL;
+    FILE *target = fopen(kScaledPath, "wb");
+    if (!target) {
+        fclose(source);
+        return ESP_FAIL;
+    }
+
+    const size_t source_row = HOME_PROFILE_PHOTO_LEGACY_W * 2;
+    uint8_t source_pixels[HOME_PROFILE_PHOTO_LEGACY_W * 2];
+    uint8_t target_pixels[HOME_PROFILE_PHOTO_W * 2];
+    bool ok = true;
+    for (int y = 0; y < HOME_PROFILE_PHOTO_H && ok; ++y) {
+        const int source_y = y * HOME_PROFILE_PHOTO_LEGACY_H / HOME_PROFILE_PHOTO_H;
+        if (fseek(source, (long)(source_y * source_row), SEEK_SET) != 0 ||
+            fread(source_pixels, 1, sizeof(source_pixels), source) != sizeof(source_pixels)) {
+            ok = false;
+            break;
+        }
+        for (int x = 0; x < HOME_PROFILE_PHOTO_W; ++x) {
+            const int source_x = x * HOME_PROFILE_PHOTO_LEGACY_W / HOME_PROFILE_PHOTO_W;
+            memcpy(target_pixels + x * 2, source_pixels + source_x * 2, 2);
+        }
+        if (fwrite(target_pixels, 1, sizeof(target_pixels), target) != sizeof(target_pixels))
+            ok = false;
+    }
+    if (fclose(source) != 0) ok = false;
+    if (fclose(target) != 0) ok = false;
+    if (!ok || !file_has_expected_size(kScaledPath)) {
+        remove(kScaledPath);
+        return ESP_FAIL;
+    }
+    return ESP_OK;
+}
+
+static esp_err_t commit_upload_locked(const char *source) {
+    remove(kBackupPath);
+    if (access(kPath, F_OK) == 0 && rename(kPath, kBackupPath) != 0)
+        return ESP_FAIL;
+    if (rename(source, kPath) != 0) {
+        rename(kBackupPath, kPath);
+        return ESP_FAIL;
+    }
+    remove(kBackupPath);
+    return ESP_OK;
 }
 
 static esp_err_t mount_locked(void) {
@@ -72,6 +128,7 @@ static esp_err_t mount_locked(void) {
         rename(kBackupPath, kPath);
     }
     if (file_has_expected_size(kPath)) remove(kBackupPath);
+    remove(kScaledPath);
     return err;
 }
 
@@ -140,7 +197,9 @@ void home_photo_abort_upload(void) {
 
 esp_err_t home_photo_write_chunk(const uint8_t *data, size_t length,
                                  bool first, bool last, size_t total_bytes) {
-    if (total_bytes != HOME_PROFILE_PHOTO_BYTES || (!data && length))
+    const bool supported_size = total_bytes == HOME_PROFILE_PHOTO_BYTES ||
+        total_bytes == HOME_PROFILE_PHOTO_LEGACY_BYTES;
+    if (!supported_size || (!data && length))
         return ESP_ERR_INVALID_ARG;
     SemaphoreHandle_t guard = lock();
     if (!guard) return ESP_ERR_NO_MEM;
@@ -148,10 +207,14 @@ esp_err_t home_photo_write_chunk(const uint8_t *data, size_t length,
     esp_err_t err = mount_locked();
     if (err == ESP_OK && first) {
         abort_upload_locked();
+        s_total_bytes = total_bytes;
         s_upload = fopen(kTmpPath, "wb");
         if (!s_upload) err = ESP_FAIL;
     }
-    if (err == ESP_OK && (!s_upload || length > HOME_PROFILE_PHOTO_BYTES - s_written)) {
+    if (err == ESP_OK && total_bytes != s_total_bytes) {
+        abort_upload_locked();
+        err = ESP_ERR_INVALID_ARG;
+    } else if (err == ESP_OK && (!s_upload || length > s_total_bytes - s_written)) {
         abort_upload_locked();
         err = ESP_ERR_INVALID_SIZE;
     } else if (err == ESP_OK && length && fwrite(data, 1, length, s_upload) != length) {
@@ -161,7 +224,7 @@ esp_err_t home_photo_write_chunk(const uint8_t *data, size_t length,
         s_written += length;
     }
     if (err == ESP_OK && last) {
-        if (s_written != HOME_PROFILE_PHOTO_BYTES) {
+        if (s_written != s_total_bytes) {
             abort_upload_locked();
             err = ESP_ERR_INVALID_SIZE;
         } else {
@@ -172,20 +235,21 @@ esp_err_t home_photo_write_chunk(const uint8_t *data, size_t length,
                 abort_upload_locked();
                 err = ESP_FAIL;
             } else {
-                if (!file_has_expected_size(kTmpPath)) {
+                if (!file_has_size(kTmpPath, s_total_bytes)) {
                     abort_upload_locked();
                     err = ESP_ERR_INVALID_SIZE;
                 } else {
-                    remove(kBackupPath);
-                    if (access(kPath, F_OK) == 0 && rename(kPath, kBackupPath) != 0) {
+                    const char *source = kTmpPath;
+                    if (s_total_bytes == HOME_PROFILE_PHOTO_LEGACY_BYTES) {
+                        err = scale_legacy_upload_locked();
+                        if (err == ESP_OK) source = kScaledPath;
+                    }
+                    if (err != ESP_OK) {
                         abort_upload_locked();
-                        err = ESP_FAIL;
-                    } else if (rename(kTmpPath, kPath) != 0) {
-                        rename(kBackupPath, kPath);
+                    } else if (commit_upload_locked(source) != ESP_OK) {
                         abort_upload_locked();
                         err = ESP_FAIL;
                     } else {
-                        remove(kBackupPath);
                         ++s_version;
                         ESP_LOGI(TAG, "Profile photo stored: %u bytes",
                                  (unsigned)HOME_PROFILE_PHOTO_BYTES);
@@ -193,6 +257,7 @@ esp_err_t home_photo_write_chunk(const uint8_t *data, size_t length,
                 }
             }
             s_written = 0;
+            s_total_bytes = 0;
         }
     }
     xSemaphoreGive(guard);

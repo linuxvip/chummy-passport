@@ -105,7 +105,7 @@ a{color:var(--green)}
 <div class="field">
 <div class="row"><div class="field-title">人物志照片<span class="optional">彩色 · 自动裁成 3:4</span></div><span id="photoBadge" class="photo-badge" data-state="empty">未设置</span></div>
 <div class="photo-layout">
-<div class="photo-stage"><canvas id="photoCanvas" width="90" height="120" aria-label="人物志照片预览"></canvas><div id="photoEmpty" class="photo-empty">选择一张<br>彩色照片</div></div>
+<div class="photo-stage"><canvas id="photoCanvas" width="108" height="144" aria-label="人物志照片预览"></canvas><div id="photoEmpty" class="photo-empty">选择一张<br>彩色照片</div></div>
 <div class="photo-tools">
 <label id="choosePhoto" class="secondary photo-picker">选择照片<input id="photoInput" class="vh" type="file" accept="image/jpeg,image/png,image/webp,image/heic,image/heif"></label>
 <label class="photo-zoom" for="photoZoom">缩放 <span id="photoZoomValue">100%</span><input id="photoZoom" type="range" min="100" max="300" value="100" disabled></label>
@@ -419,7 +419,7 @@ async function save(){
   }
   completeSave(profile);
  }catch(e){
-  const message=stage==='photo'?'人物志照片没有保存完成；连接恢复后可再次保存，原照片会保留。'
+  const message=stage==='photo'?(e.network?'照片传输中断；连接恢复后可再次保存，原照片会保留。':e.message)
    :stage==='finish'?'资料已保存，但设备未确认完成。请长按确定返回首页后再检查。'
    :e.network?'与设备的连接中断。请重新连接设备热点后再保存，已填写内容仍在当前页面。':e.message;
   say('saveStatus',message,true);

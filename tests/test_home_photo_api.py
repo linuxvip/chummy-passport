@@ -23,12 +23,16 @@ assert "uint8_t chunk[512]" in upload
 assert "#define HOME_PROFILE_PHOTO_BYTES" in header
 assert "#define HOME_PROFILE_PHOTO_W 108" in header
 assert "#define HOME_PROFILE_PHOTO_H 144" in header
+assert "#define HOME_PROFILE_PHOTO_LEGACY_W 90" in header
+assert "#define HOME_PROFILE_PHOTO_LEGACY_H 120" in header
 assert "home_photo_read_range" in header
 assert "home_photo_delete" in header
 assert "profile-photo.tmp" in photo
 assert "profile-photo.backup" in photo
-assert "rename(kTmpPath, kPath)" in photo
+assert "rename(source, kPath)" in photo
 assert "info.st_size != (off_t)HOME_PROFILE_PHOTO_BYTES" not in photo
-assert "file_has_expected_size(kTmpPath)" in photo
+assert "file_has_size(kTmpPath, s_total_bytes)" in photo
+assert "scale_legacy_upload_locked" in photo
+assert "profile-photo.scaled" in photo
 
 print("Profile photo API: authenticated GET/POST/DELETE, exact size and staged replacement PASS")

@@ -202,7 +202,8 @@ static esp_err_t handler_profile_photo_get(httpd_req_t *req) {
 static esp_err_t handler_profile_photo_post(httpd_req_t *req) {
     if (!token_ok(req)) return send_json(req, 401, "{\"error\":\"unauthorized\"}");
     const size_t total = static_cast<size_t>(req->content_len);
-    if (total != HOME_PROFILE_PHOTO_BYTES)
+    if (total != HOME_PROFILE_PHOTO_BYTES &&
+        total != HOME_PROFILE_PHOTO_LEGACY_BYTES)
         return send_json(req, 400, "{\"error\":\"photo_size\"}");
 
     uint8_t chunk[512];

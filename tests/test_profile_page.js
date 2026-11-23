@@ -15,6 +15,7 @@ for (const required of ['/api/profile-photo', 'photoCanvas', 'PHOTO_BYTES', 'RGB
 }
 assert.match(html, /<label id="choosePhoto"[^>]*>[\s\S]*?<input id="photoInput"[^>]*type="file"/);
 assert.ok(!html.includes("$('choosePhoto').onclick"), 'file picker must use native label activation');
+assert.match(html, /<canvas id="photoCanvas" width="108" height="144"/);
 assert.match(html, /id="previewNotice"/);
 assert.match(html, /本地页面预览，不能保存/);
 assert.ok(!/<(?:script|img|link)\b[^>]*(?:src|href)=["']https?:|url\(["']?https?:/i.test(html),
