@@ -115,10 +115,18 @@ uint32_t element_color(uint8_t element) {
     static constexpr uint32_t playful[5] = {
         0x2F7D52, 0xB4463B, 0x8A5A13, 0x4B5563, 0x246B91,
     };
+    static constexpr uint32_t paper[5] = {
+        0x47745A, 0xB43B2D, 0x946528, 0x5B5145, 0x3F6078,
+    };
+    static constexpr uint32_t night[5] = {
+        0x72B6A1, 0xCF5B4D, 0xD1A75B, 0xD7D6CB, 0x67A9C4,
+    };
     if (element >= 5) return UI_TEXT_DIM;
     const ui_theme_t theme = ui_theme_get();
     if (theme == UI_THEME_NEON) return neon[element];
     if (theme == UI_THEME_PLAYFUL) return playful[element];
+    if (theme == UI_THEME_PAPER) return paper[element];
+    if (theme == UI_THEME_NIGHT) return night[element];
     return classic[element];
 }
 

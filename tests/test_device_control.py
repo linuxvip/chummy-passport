@@ -28,7 +28,7 @@ static int mock_soc=80;
 static int bsp_battery_soc(){return mock_soc;}
 uint8_t bsp_display_get_master_brightness(){return static_cast<uint8_t>(master_brightness);}
 static constexpr int NVS_READONLY=1;
-static constexpr int UI_THEME_CLASSIC=0,UI_THEME_COUNT=4;
+static constexpr int UI_THEME_CLASSIC=0,UI_THEME_COUNT=6;
 using ui_theme_t=int;
 static ui_theme_t s_theme=UI_THEME_CLASSIC;
 static constexpr uint16_t kTimeouts[]={0,15,30,60,120,300};

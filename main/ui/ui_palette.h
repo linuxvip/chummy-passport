@@ -12,6 +12,8 @@ typedef enum {
     UI_THEME_TRAVEL = 1,
     UI_THEME_PLAYFUL = 2,
     UI_THEME_NEON = 3,
+    UI_THEME_PAPER = 4,
+    UI_THEME_NIGHT = 5,
     UI_THEME_COUNT,
 } ui_theme_t;
 

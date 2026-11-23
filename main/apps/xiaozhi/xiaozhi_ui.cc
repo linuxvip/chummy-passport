@@ -86,12 +86,14 @@ face::Palette face_palette() {
     face::Palette p{};
     p.shell = UI_SURFACE;
     p.edge = UI_BORDER;
-    // The light theme gets a dark visor so the eyes still glow.
-    p.screen = theme == UI_THEME_PLAYFUL ? UI_TEXT : UI_BG;
+    // Light themes get a dark visor so the eyes still glow.
+    p.screen = (theme == UI_THEME_PLAYFUL || theme == UI_THEME_PAPER) ? UI_TEXT : UI_BG;
     p.eye = s_face_state == State::Error ? UI_DANGER : UI_ACCENT;
     p.glint = classic ? UI_TEXT : 0xFFFFFF;
-    p.blush = classic ? UI_ACCENT : theme == UI_THEME_NEON ? UI_SECONDARY : UI_DANGER;
-    p.tear = classic ? UI_TEXT : theme == UI_THEME_PLAYFUL ? UI_SECONDARY : 0x8FC7EF;
+    p.blush = classic ? UI_ACCENT : (theme == UI_THEME_NEON || theme == UI_THEME_NIGHT)
+        ? UI_SECONDARY : UI_DANGER;
+    p.tear = classic ? UI_TEXT : (theme == UI_THEME_PLAYFUL || theme == UI_THEME_PAPER)
+        ? UI_SECONDARY : 0x8FC7EF;
     p.warn = UI_WARNING;
     return p;
 }

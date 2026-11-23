@@ -28,6 +28,16 @@ static const uint32_t s_palettes[UI_THEME_COUNT][UI_COLOR_COUNT] = {
         0xA4AFC0, 0x38E8E1, 0xFF747D, 0x10131A, 0xAAEE6D, 0xFFD45A,
         0xFF78CA, 0xFFB75E,
     },
+    [UI_THEME_PAPER] = {
+        0xF2E8D5, 0xE8DAC1, 0xDFCCB0, 0x78664E, 0x29231D,
+        0x71675A, 0xB43B2D, 0xC74E3E, 0xF7EEDD, 0x526B68, 0x9A6A28,
+        0x526B68, 0x9A6A28,
+    },
+    [UI_THEME_NIGHT] = {
+        0x0B1420, 0x142335, 0x1C3044, 0x31465A, 0xE8E2D4,
+        0xA7B2B4, 0xD1A75B, 0xCF5B4D, 0x101722, 0x72B6A1, 0xD1A75B,
+        0x72B6A1, 0xD1A75B,
+    },
 };
 
 static const uint32_t s_playful_dark[UI_COLOR_COUNT] = {
@@ -45,7 +55,8 @@ ui_theme_t ui_theme_get(void) { return s_ui_theme; }
 bool ui_theme_is_classic(void) { return s_ui_theme == UI_THEME_CLASSIC; }
 bool ui_theme_is_multicolor(void)
 {
-    return s_ui_theme == UI_THEME_PLAYFUL || s_ui_theme == UI_THEME_NEON;
+    return s_ui_theme == UI_THEME_PLAYFUL || s_ui_theme == UI_THEME_NEON ||
+           s_ui_theme == UI_THEME_PAPER || s_ui_theme == UI_THEME_NIGHT;
 }
 uint32_t ui_theme_color(ui_color_role_t role)
 {
@@ -76,6 +87,8 @@ uint32_t ui_theme_portrait_subject_color(uint8_t level)
         {0x484D43, 0x797D69, 0xB6B7A0, 0xEEE7D6},
         {0x374543, 0x637771, 0xADBFB1, 0xF1EEE6},
         {0x343C55, 0x657593, 0xB3C5D8, 0xF4F4F6},
+        {0x5A4D3C, 0x8E765A, 0xBE9867, 0xE5C184},
+        {0x263A4B, 0x476A82, 0x789BAE, 0xD2DDDA},
     };
     return colors[s_ui_theme][level > 3 ? 3 : level];
 }
@@ -85,6 +98,8 @@ const char *ui_theme_name(ui_theme_t theme)
         case UI_THEME_TRAVEL: return "旅行仪器";
         case UI_THEME_PLAYFUL: return "像素白";
         case UI_THEME_NEON: return "霓虹黑";
+        case UI_THEME_PAPER: return "宣纸朱砂";
+        case UI_THEME_NIGHT: return "青金守夜";
         default: return "经典绿";
     }
 }

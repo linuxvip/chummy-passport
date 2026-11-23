@@ -68,20 +68,21 @@ namespace {
 
 constexpr char kTag[] = "app_home";
 
-// Home keeps a dark information surface even in the light theme.
+// Playful supplies a dark variant for Home's artwork; Paper intentionally
+// keeps its warm light surface.
 #define kBg (ui_theme_color_on_dark(UI_COLOR_BG))
 #define kPhos (ui_theme_color_on_dark(UI_COLOR_TEXT))
 #define kPhosDim (ui_theme_color_on_dark(UI_COLOR_TEXT_DIM))
 #define kPhosBorder (ui_theme_color_on_dark(UI_COLOR_BORDER))
-#define kClock (ui_theme_get() == UI_THEME_NEON ? UI_ACCENT : ui_theme_get() == UI_THEME_PLAYFUL ? ui_theme_color_on_dark(UI_COLOR_SECONDARY) : kPhos)
-#define kTemperature (ui_theme_is_multicolor() ? ui_theme_color_on_dark(UI_COLOR_TERTIARY) : kPhos)
-#define kWeatherAccent (ui_theme_color_on_dark(ui_theme_get() == UI_THEME_NEON ? UI_COLOR_SUCCESS : UI_COLOR_ACCENT))
+#define kClock ((ui_theme_get() == UI_THEME_NEON || ui_theme_get() == UI_THEME_NIGHT) ? UI_ACCENT : ui_theme_get() == UI_THEME_PLAYFUL ? ui_theme_color_on_dark(UI_COLOR_SECONDARY) : kPhos)
+#define kTemperature (ui_theme_get() == UI_THEME_NIGHT ? UI_ACCENT : ui_theme_get() == UI_THEME_PAPER ? kPhos : ui_theme_is_multicolor() ? ui_theme_color_on_dark(UI_COLOR_TERTIARY) : kPhos)
+#define kWeatherAccent (ui_theme_color_on_dark((ui_theme_get() == UI_THEME_NEON || ui_theme_get() == UI_THEME_NIGHT) ? UI_COLOR_SUCCESS : ui_theme_get() == UI_THEME_PAPER ? UI_COLOR_SUCCESS : UI_COLOR_ACCENT))
 
 // 兼容既有更新函数的语义色:磷光风格里"强调/在线"都是亮绿,弱化都是暗绿。
 #define kText (kPhos)
 #define kSub (kPhosDim)
 #define kMuted (kPhosDim)
-#define kAccent (kPhos)
+#define kAccent (UI_ACCENT)
 #define kOnline (kPhos)
 #define kOffline (kPhosDim)
 
@@ -680,10 +681,18 @@ uint32_t five_element_color(FiveElement element) {
     static constexpr uint32_t kPlayful[5] = {
         0x2F7D52, 0xB4463B, 0x8A5A13, 0x4B5563, 0x246B91,
     };
+    static constexpr uint32_t kPaper[5] = {
+        0x47745A, 0xB43B2D, 0x946528, 0x5B5145, 0x3F6078,
+    };
+    static constexpr uint32_t kNight[5] = {
+        0x72B6A1, 0xCF5B4D, 0xD1A75B, 0xD7D6CB, 0x67A9C4,
+    };
     const int index = static_cast<int>(element);
     if (index < 0 || index >= 5) return kPhos;
     const uint32_t *palette = ui_theme_get() == UI_THEME_PLAYFUL ? kPlayful
-        : ui_theme_get() == UI_THEME_NEON ? kNeon : kClassic;
+        : ui_theme_get() == UI_THEME_NEON ? kNeon
+        : ui_theme_get() == UI_THEME_PAPER ? kPaper
+        : ui_theme_get() == UI_THEME_NIGHT ? kNight : kClassic;
     return palette[index];
 }
 
