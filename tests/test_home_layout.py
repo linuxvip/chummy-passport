@@ -33,4 +33,6 @@ assert "HOME_LAYOUT_MINIMAL" in home
 assert "HOME_LAYOUT_WEATHER" in home
 assert "HOME_LAYOUT_PROFILE" in home
 assert "sync_profile_photo();" in home
+assert "一页人物志" not in home
+assert "一张彩色相片" not in home
 print("Home layouts: four presets, settings cycling and NVS selection PASS")

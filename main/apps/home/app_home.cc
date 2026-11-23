@@ -1376,17 +1376,6 @@ void create_profile_ui() {
     lv_obj_set_size(stamp_text, 14, 19);
     lv_label_set_text(stamp_text, "印");
 
-    lv_obj_t *caption = make_label(s_screen, &buddy_font_16, kPhosDim,
-                                   LV_TEXT_ALIGN_CENTER);
-    lv_obj_set_pos(caption, 4, 157);
-    lv_obj_set_size(caption, 102, 18);
-    lv_label_set_text(caption, "一页人物志");
-    lv_obj_t *caption2 = make_label(s_screen, &buddy_font_16, kPhosDim,
-                                    LV_TEXT_ALIGN_CENTER);
-    lv_obj_set_pos(caption2, 4, 174);
-    lv_obj_set_size(caption2, 102, 18);
-    lv_label_set_text(caption2, "一张彩色相片");
-
     lv_obj_t *kicker = make_label(s_screen, &buddy_font_16, kAccent, LV_TEXT_ALIGN_LEFT);
     lv_obj_set_pos(kicker, 112, 31);
     lv_obj_set_size(kicker, 116, 18);
