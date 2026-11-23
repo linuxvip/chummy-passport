@@ -17,10 +17,10 @@
 ## 当前版本
 
 - 版本：`0.2.0-rc.59-custom1`
-- 应用镜像：3,305,984 字节
-- 应用 SHA256：`c5a41722de0cae3fe763fea87d284b09b24cda0bbbb4aae7559afbda28e55eb1`
-- 完整镜像：3,371,520 字节
-- 完整镜像 SHA256：`2d99ea0de1328f1aeb43e4bc1e0a41e949d99c394c5b2fa092e2b730d4a94a40`
+- 应用镜像：3,371,840 字节
+- 应用 SHA256：`2cb9266bee9a545ff41368f0e7fe793e1add9c84b6b3e3934930ee7cb2a59cad`
+- 完整镜像：3,437,376 字节
+- 完整镜像 SHA256：`075d909f1f1be007eec7bb74fc569b93c96c64151081afd1e5b3dbfed9d8e199`
 
 ## 验收状态
 

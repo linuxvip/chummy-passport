@@ -218,9 +218,17 @@ static esp_err_t handler_profile_photo_post(httpd_req_t *req) {
         }
         received += static_cast<size_t>(got);
         const bool last = received == total;
-        if (home_photo_write_chunk(chunk, static_cast<size_t>(got), first, last, total) != ESP_OK) {
+        const esp_err_t write_error =
+            home_photo_write_chunk(chunk, static_cast<size_t>(got), first, last, total);
+        if (write_error != ESP_OK) {
+            ESP_LOGE(TAG, "Profile photo write failed at %s: %s",
+                     home_photo_last_error(), esp_err_to_name(write_error));
             home_photo_abort_upload();
-            return send_json(req, 400, "{\"error\":\"photo_store\"}");
+            char response[128];
+            std::snprintf(response, sizeof(response),
+                          "{\"error\":\"photo_store\",\"stage\":\"%s\",\"code\":%d}",
+                          home_photo_last_error(), static_cast<int>(write_error));
+            return send_json(req, 400, response);
         }
         first = false;
     }

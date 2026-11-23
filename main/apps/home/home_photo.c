@@ -27,6 +27,7 @@ static FILE *s_upload;
 static size_t s_written;
 static size_t s_total_bytes;
 static uint32_t s_version;
+static const char *s_error_stage = "none";
 
 static SemaphoreHandle_t lock(void) {
     if (!s_mutex) s_mutex = xSemaphoreCreateMutexStatic(&s_mutex_storage);
@@ -55,10 +56,14 @@ static bool file_has_expected_size(const char *path) {
 
 static esp_err_t scale_legacy_upload_locked(void) {
     FILE *source = fopen(kTmpPath, "rb");
-    if (!source) return ESP_FAIL;
+    if (!source) {
+        s_error_stage = "legacy_scale_open";
+        return ESP_FAIL;
+    }
     FILE *target = fopen(kScaledPath, "wb");
     if (!target) {
         fclose(source);
+        s_error_stage = "legacy_scale_create";
         return ESP_FAIL;
     }
 
@@ -84,16 +89,27 @@ static esp_err_t scale_legacy_upload_locked(void) {
     if (fclose(target) != 0) ok = false;
     if (!ok || !file_has_expected_size(kScaledPath)) {
         remove(kScaledPath);
+        s_error_stage = "legacy_scale_write";
         return ESP_FAIL;
     }
     return ESP_OK;
 }
 
 static esp_err_t commit_upload_locked(const char *source) {
+    // SPIFFS can replace an existing object directly. This is the smallest
+    // transaction and avoids a second rename on firmware that supports it.
+    if (rename(source, kPath) == 0) {
+        remove(kBackupPath);
+        return ESP_OK;
+    }
+    s_error_stage = "commit_direct";
     remove(kBackupPath);
-    if (access(kPath, F_OK) == 0 && rename(kPath, kBackupPath) != 0)
+    if (access(kPath, F_OK) == 0 && rename(kPath, kBackupPath) != 0) {
+        s_error_stage = "commit_backup";
         return ESP_FAIL;
+    }
     if (rename(source, kPath) != 0) {
+        s_error_stage = "commit_replace";
         rename(kBackupPath, kPath);
         return ESP_FAIL;
     }
@@ -116,6 +132,7 @@ static esp_err_t mount_locked(void) {
         err = esp_vfs_spiffs_register(&config);
     }
     if (err != ESP_OK) {
+        s_error_stage = "storage_mount";
         ESP_LOGE(TAG, "SPIFFS unavailable: %s", esp_err_to_name(err));
         return err;
     }
@@ -207,18 +224,25 @@ esp_err_t home_photo_write_chunk(const uint8_t *data, size_t length,
     esp_err_t err = mount_locked();
     if (err == ESP_OK && first) {
         abort_upload_locked();
+        s_error_stage = "none";
         s_total_bytes = total_bytes;
         s_upload = fopen(kTmpPath, "wb");
-        if (!s_upload) err = ESP_FAIL;
+        if (!s_upload) {
+            s_error_stage = "tmp_open";
+            err = ESP_FAIL;
+        }
     }
     if (err == ESP_OK && total_bytes != s_total_bytes) {
         abort_upload_locked();
+        s_error_stage = "chunk_total";
         err = ESP_ERR_INVALID_ARG;
     } else if (err == ESP_OK && (!s_upload || length > s_total_bytes - s_written)) {
         abort_upload_locked();
+        s_error_stage = "chunk_size";
         err = ESP_ERR_INVALID_SIZE;
     } else if (err == ESP_OK && length && fwrite(data, 1, length, s_upload) != length) {
         abort_upload_locked();
+        s_error_stage = "tmp_write";
         err = ESP_FAIL;
     } else if (err == ESP_OK) {
         s_written += length;
@@ -226,6 +250,7 @@ esp_err_t home_photo_write_chunk(const uint8_t *data, size_t length,
     if (err == ESP_OK && last) {
         if (s_written != s_total_bytes) {
             abort_upload_locked();
+            s_error_stage = "upload_size";
             err = ESP_ERR_INVALID_SIZE;
         } else {
             const int flush_err = fflush(s_upload);
@@ -233,10 +258,12 @@ esp_err_t home_photo_write_chunk(const uint8_t *data, size_t length,
             s_upload = NULL;
             if (flush_err || close_err) {
                 abort_upload_locked();
+                s_error_stage = "tmp_close";
                 err = ESP_FAIL;
             } else {
                 if (!file_has_size(kTmpPath, s_total_bytes)) {
                     abort_upload_locked();
+                    s_error_stage = "tmp_stat";
                     err = ESP_ERR_INVALID_SIZE;
                 } else {
                     const char *source = kTmpPath;
@@ -250,6 +277,7 @@ esp_err_t home_photo_write_chunk(const uint8_t *data, size_t length,
                         abort_upload_locked();
                         err = ESP_FAIL;
                     } else {
+                        s_error_stage = "none";
                         ++s_version;
                         ESP_LOGI(TAG, "Profile photo stored: %u bytes",
                                  (unsigned)HOME_PROFILE_PHOTO_BYTES);
@@ -277,4 +305,8 @@ esp_err_t home_photo_delete(void) {
     }
     xSemaphoreGive(guard);
     return err;
+}
+
+const char *home_photo_last_error(void) {
+    return s_error_stage ? s_error_stage : "unknown";
 }

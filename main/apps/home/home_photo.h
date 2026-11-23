@@ -32,6 +32,7 @@ esp_err_t home_photo_write_chunk(const uint8_t *data, size_t length,
                                  bool first, bool last, size_t total_bytes);
 void home_photo_abort_upload(void);
 esp_err_t home_photo_delete(void);
+const char *home_photo_last_error(void);
 
 #ifdef __cplusplus
 }
