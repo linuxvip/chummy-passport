@@ -15,11 +15,6 @@ static const char *const kBranches[] = {
     "午", "未", "申", "酉", "戌", "亥",
 };
 
-static const char *const kZodiac[] = {
-    "鼠", "牛", "虎", "兔", "龙", "蛇",
-    "马", "羊", "猴", "鸡", "狗", "猪",
-};
-
 static const char *const kSolarTerms[] = {
     "小寒", "大寒", "立春", "雨水", "惊蛰", "春分",
     "清明", "谷雨", "立夏", "小满", "芒种", "夏至",
@@ -191,32 +186,43 @@ bool home_almanac_calculate_ex(int year, int month, int day, int hour, int minut
     const int day_stem = day_cycle % 10;
     make_ganzhi((day_stem % 5 * 2 + hour_branch) % 10, hour_branch, out->hour);
 
-    const int lunar_year = calculate_lunar_date(year, absolute_day, out);
+    calculate_lunar_date(year, absolute_day, out);
     if (!out->valid && out->lunar_month == 0) {
         // calculate_lunar_date cannot reach here for the supported range; keep
         // this guard explicit so a future table edit fails closed.
         return false;
     }
 
-    const int lunar_year_cycle = positive_mod(lunar_year - 4, 60);
-    snprintf(out->lunar_year, sizeof(out->lunar_year), "%s%s%s年",
-             kStems[lunar_year_cycle % 10], kBranches[lunar_year_cycle % 12],
-             kZodiac[lunar_year_cycle % 12]);
-
-    int term = 23;
-    for (int i = 0; i < 24; ++i) {
-        if (local_minute >= solar_term_minute(year, i)) term = i;
-    }
-    // Almanac pages label the whole civil day with its solar term, even before
-    // the exact astronomical instant. Pillar boundaries above remain exact.
+    int term_today = -1;
     for (int i = 0; i < 24; ++i) {
         if ((int)(solar_term_minute(year, i) / 1440U) == doy) {
-            term = i;
+            term_today = i;
             break;
         }
     }
-    out->solar_term_index = (uint8_t)term;
-    snprintf(out->solar_term, sizeof(out->solar_term), "%s", kSolarTerms[term]);
+    if (term_today >= 0)
+        snprintf(out->solar_term_today, sizeof(out->solar_term_today), "%s",
+                 kSolarTerms[term_today]);
+
+    int next_term = -1;
+    int next_term_year = year;
+    for (int i = 0; i < 24; ++i) {
+        if ((int)(solar_term_minute(year, i) / 1440U) > doy) {
+            next_term = i;
+            break;
+        }
+    }
+    if (next_term < 0) {
+        next_term = 0;
+        next_term_year = year + 1;
+    }
+    const int64_t next_term_day =
+        days_from_civil(next_term_year, 1, 1) +
+        (int)(solar_term_minute(next_term_year, next_term) / 1440U);
+    out->days_to_next_solar_term =
+        (uint8_t)(next_term_day - absolute_day);
+    snprintf(out->next_solar_term, sizeof(out->next_solar_term), "%s",
+             kSolarTerms[next_term]);
     out->valid = true;
     return true;
 }

@@ -19,11 +19,11 @@ typedef struct {
     char day[7];               // 日柱, e.g. "庚子"
     char hour[7];              // 时柱, e.g. "辛巳"
     char lunar_month_day[20];  // "十月十四"; leap month includes "闰"
-    char lunar_year[16];       // "丙午马年"
-    char solar_term[10];       // latest term, e.g. "小雪"
+    char solar_term_today[10]; // non-empty only when the term starts today
+    char next_solar_term[10];  // next upcoming term
     uint8_t lunar_month;       // 1..12
     uint8_t lunar_day;         // 1..30
-    uint8_t solar_term_index;  // 0=小寒 ... 23=冬至
+    uint8_t days_to_next_solar_term;
     bool lunar_month_leap;
 } home_almanac_t;
 

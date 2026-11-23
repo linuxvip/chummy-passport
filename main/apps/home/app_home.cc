@@ -19,7 +19,7 @@
 //   底部:名牌卡 = 姓名(20px 标题字) + 个性签名,浮在天空上,草地只留按键提示。
 //
 // 2026-11-22 · 四柱历与每日一句:
-//   左卡:离线四柱(年/月/日/时) + 农历日期、农历年与节气;
+//   左卡:离线四柱(年/月/日/时) + 农历日期、当日交节与下一节气;
 //   右列(120 宽):点阵时钟卡(5×7 字模,每格画 4×4 光点) / 日期+城市+Wi-Fi 卡 /
 //                天气卡(单色图标 + 温度 + 短语 + 分隔线 + 风向·风级);
 //   底部:联网获取并缓存的每日一句;外部文本只显示,不执行其中内容。
@@ -153,8 +153,8 @@ uint8_t s_share_index = 0;
 // 四柱按三个严格对齐的行绘制:列头、天干、地支。
 lv_obj_t *s_pillar_labels[3][4] = {};
 lv_obj_t *s_lbl_lunar_date = nullptr;
-lv_obj_t *s_lbl_lunar_year = nullptr;
-lv_obj_t *s_lbl_solar_term = nullptr;
+lv_obj_t *s_lbl_solar_term_today = nullptr;
+lv_obj_t *s_lbl_next_solar_term = nullptr;
 int64_t s_almanac_key = -1;
 
 lv_obj_t *s_lbl_quote = nullptr;
@@ -716,8 +716,8 @@ void update_almanac_labels() {
             for (lv_obj_t *label : row) lv_label_set_text(label, "--");
         }
         lv_label_set_text(s_lbl_lunar_date, "等待校时");
-        lv_label_set_text(s_lbl_lunar_year, "");
-        lv_label_set_text(s_lbl_solar_term, "");
+        lv_label_set_text(s_lbl_solar_term_today, "");
+        lv_label_set_text(s_lbl_next_solar_term, "");
         return;
     }
 
@@ -735,8 +735,8 @@ void update_almanac_labels() {
             for (lv_obj_t *label : row) lv_label_set_text(label, "--");
         }
         lv_label_set_text(s_lbl_lunar_date, "历法超出范围");
-        lv_label_set_text(s_lbl_lunar_year, "");
-        lv_label_set_text(s_lbl_solar_term, "");
+        lv_label_set_text(s_lbl_solar_term_today, "");
+        lv_label_set_text(s_lbl_next_solar_term, "");
         return;
     }
     const char *headers[] = {"年", "月", "日", "时"};
@@ -755,10 +755,16 @@ void update_almanac_labels() {
                             five_element_color(five_element_for_glyph(branch)));
     }
     lv_label_set_text(s_lbl_lunar_date, almanac.lunar_month_day);
-    lv_label_set_text(s_lbl_lunar_year, almanac.lunar_year);
-    char term[20];
-    std::snprintf(term, sizeof(term), "节气 %s", almanac.solar_term);
-    lv_label_set_text(s_lbl_solar_term, term);
+    char term_today[20] = {};
+    if (almanac.solar_term_today[0])
+        std::snprintf(term_today, sizeof(term_today), "今日交%s",
+                      almanac.solar_term_today);
+    lv_label_set_text(s_lbl_solar_term_today, term_today);
+    char next_term[24];
+    std::snprintf(next_term, sizeof(next_term), "距%s %u天",
+                  almanac.next_solar_term,
+                  (unsigned)almanac.days_to_next_solar_term);
+    lv_label_set_text(s_lbl_next_solar_term, next_term);
 }
 
 void update_daily_quote_labels() {
@@ -887,13 +893,13 @@ void create_ui() {
     lv_obj_set_size(s_lbl_lunar_date, 122, 18);
     lv_label_set_long_mode(s_lbl_lunar_date, LV_LABEL_LONG_MODE_DOTS);
 
-    s_lbl_lunar_year = make_label(almanac, &buddy_font_16, kPhosDim, LV_TEXT_ALIGN_CENTER);
-    lv_obj_set_pos(s_lbl_lunar_year, 0, 143);
-    lv_obj_set_size(s_lbl_lunar_year, 122, 18);
+    s_lbl_solar_term_today = make_label(almanac, &buddy_font_16, kPhos, LV_TEXT_ALIGN_CENTER);
+    lv_obj_set_pos(s_lbl_solar_term_today, 0, 143);
+    lv_obj_set_size(s_lbl_solar_term_today, 122, 18);
 
-    s_lbl_solar_term = make_label(almanac, &buddy_font_16, kPhosDim, LV_TEXT_ALIGN_CENTER);
-    lv_obj_set_pos(s_lbl_solar_term, 0, 169);
-    lv_obj_set_size(s_lbl_solar_term, 122, 18);
+    s_lbl_next_solar_term = make_label(almanac, &buddy_font_16, kPhosDim, LV_TEXT_ALIGN_CENTER);
+    lv_obj_set_pos(s_lbl_next_solar_term, 0, 169);
+    lv_obj_set_size(s_lbl_next_solar_term, 122, 18);
 
     // Clock sits 14px below the status bar; date and city form a compact group.
     for (int i = 0; i < 5; ++i) {
@@ -1380,8 +1386,8 @@ void home_stop() {
         for (lv_obj_t *&label : row) label = nullptr;
     }
     s_lbl_lunar_date = nullptr;
-    s_lbl_lunar_year = nullptr;
-    s_lbl_solar_term = nullptr;
+    s_lbl_solar_term_today = nullptr;
+    s_lbl_next_solar_term = nullptr;
     s_lbl_quote = nullptr;
     s_almanac_key = -1;
     for (lv_obj_t *&slot : s_clk_slots) slot = nullptr;
