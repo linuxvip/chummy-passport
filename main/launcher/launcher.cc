@@ -273,6 +273,25 @@ constexpr IconGlyph kIconGlyphs[] = {
         ".................",
         ".................",
     }},
+    {APP_ID_CALENDAR, {  // calendar grid
+        ".................",
+        "..############...",
+        "..#...#...#...#..",
+        "..#...#...#...#..",
+        "..############...",
+        "..#...#...#...#..",
+        "..#...#...#...#..",
+        "..#...#...#...#..",
+        "..############...",
+        "..#...#...#...#..",
+        "..#...#...#...#..",
+        "..#...#...#...#..",
+        "..#...#...#...#..",
+        "..############...",
+        ".................",
+        ".................",
+        ".................",
+    }},
     {APP_ID_SETTINGS, {  // sliders
         ".................",
         ".................",
@@ -322,7 +341,8 @@ void draw_app_icon(passport_app_id_t id, uint32_t color) {
 void update_card_content() {
     const passport_app_t *app = app_registry_get_by_index(s_selected_index);
     if (!app) return;
-    lv_obj_set_style_text_font(s_app_title, &ui_font_20, 0);
+    lv_obj_set_style_text_font(s_app_title,
+        app->id == APP_ID_CALENDAR ? &calendar_title_font_20 : &ui_font_20, 0);
     ui_pixel_text_color(s_app_title, UI_TEXT);
     lv_label_set_text(s_app_title, app_chinese_name(app->id));
     lv_label_set_text_fmt(s_page_number, "%02u / %02u", (unsigned)s_selected_index + 1,
@@ -335,6 +355,7 @@ void update_card_content() {
             case APP_ID_REMINDERS: color = UI_WARNING; break;
             case APP_ID_NETEASE: color = UI_DANGER; break;
             case APP_ID_BAZI: color = UI_WARNING; break;
+            case APP_ID_CALENDAR: color = UI_TERTIARY; break;
             default: break;
         }
     }

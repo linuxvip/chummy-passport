@@ -21,6 +21,10 @@ LV_FONT_DECLARE(ganzhi_font_20);
 LV_FONT_DECLARE(ganzhi_font_13);
 // Compact Bazi table: stems, branches and the small set of fixed UI labels.
 LV_FONT_DECLARE(ganzhi_font_12);
+// Dense calendar cells: ASCII, lunar days, solar terms and earthly branches.
+LV_FONT_DECLARE(calendar_font_9);
+// Three extra title glyphs used only by the Calendar launcher card.
+LV_FONT_DECLARE(calendar_title_font_20);
 // Title (标题): shared SourceHanSansSC 20px/4bpp subset for static titles.
 // Missing glyphs fall back to the 16px body font, so new title text must add
 // its glyphs; regenerate with:

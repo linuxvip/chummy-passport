@@ -4,13 +4,13 @@
 
 **A small device worth keeping in your daily routine.**
 
-Community firmware for the FoloToy AI Passport, based on ESP32-C3 with 8 MB Flash. It brings nine apps together with shared settings, Wi-Fi setup, themes, audio, battery reporting, and power management.
+Community firmware for the FoloToy AI Passport, based on ESP32-C3 with 8 MB Flash. It brings ten apps together with shared settings, Wi-Fi setup, themes, audio, battery reporting, and power management.
 
 **Ask Xiaozhi to adjust the volume, play music or radio, and set reminders on the device.**
 
 ## Why this project exists
 
-Thank you to everyone who has enjoyed the project and shared feedback. I started Passport OS to make a small device I would use regularly, then selected nine functions and apps through repeated experiments.
+Thank you to everyone who has enjoyed the project and shared feedback. I started Passport OS to make a small device I would use regularly, then selected ten functions and apps through repeated experiments.
 
 One part I especially enjoy is letting Xiaozhi connect these functions. While chatting, you can ask to hear music, save a task, or start a focus session, and Xiaozhi calls the device's functions to carry out the request.
 
@@ -34,7 +34,7 @@ You can also ask for today's AI news. Robot expressions and an audio waveform fo
 
 Voice tools require a network connection and Xiaozhi configuration. NetEase playback also depends on your account and available tracks; radio depends on the online directory. Opening another app or starting media playback ends the current Xiaozhi conversation. Double-press OK again for further voice control. The device must remain powered on for reminders to trigger.
 
-## Nine apps
+## Ten apps
 
 | App | What it does | Requirements |
 | --- | --- | --- |
@@ -47,6 +47,7 @@ Voice tools require a network connection and Xiaozhi configuration. NetEase play
 | Stopwatch | Timing, splits, pause, and resume | Works offline |
 | Pomodoro | Focus sessions, breaks, and completion chimes | Works offline |
 | Bazi chart | Four pillars, a horizontal luck-cycle row, and vertically scrolling flow years | Works offline; supports birth dates from 1900 to 2100 |
+| Perpetual calendar | Month grid with lunar dates, solar terms and each day's Ganzhi; day details and year/month jump | Works offline; supports 1900–2100 |
 
 ## FoloToy official firmware
 

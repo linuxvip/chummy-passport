@@ -6,7 +6,8 @@ root=Path(__file__).resolve().parents[1]
 registry=(root/'main/launcher/app_registry.cc').read_text(encoding='utf-8')
 array=registry.split('const passport_app_t *s_apps[] = {',1)[1].split('};',1)[0]
 registered=re.findall(r'&g_(\w+)_app',array)
-glyphs={chr(int(c,16)) for c in re.findall(r'/\* U\+([0-9A-Fa-f]{4,6})',(root/'main/fonts/ui_font_20.c').read_text(encoding='utf-8'))}
+default_glyphs={chr(int(c,16)) for c in re.findall(r'/\* U\+([0-9A-Fa-f]{4,6})',(root/'main/fonts/ui_font_20.c').read_text(encoding='utf-8'))}
+calendar_glyphs={chr(int(c,16)) for c in re.findall(r'/\* U\+([0-9A-Fa-f]{4,6})',(root/'main/fonts/calendar_title_font_20.c').read_text(encoding='utf-8'))}
 apps={}
 for path in (root/'main').rglob('*.cc'):
     source=path.read_text(encoding='utf-8')
@@ -15,6 +16,7 @@ for path in (root/'main').rglob('*.cc'):
         if name:apps[match[1]]=name[1]
 for key in registered:
     assert key in apps,key+' has no app title'
+    glyphs=calendar_glyphs if key=='calendar' else default_glyphs
     missing=set(apps[key])-glyphs
     assert not missing,(apps[key],'missing 20px glyphs',''.join(sorted(missing)))
 print(f'Launcher: all {len(registered)} registered titles have native 20px glyph coverage: PASS')

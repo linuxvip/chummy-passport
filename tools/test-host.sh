@@ -93,6 +93,12 @@ python3 tests/test_home_element_colors.py
     main/apps/bazi/bazi_almanac.c -lm -o "$test_dir/bazi-core"
 "$test_dir/bazi-core"
 python3 tests/test_bazi_ui.py
+"${CC:-cc}" -std=c11 -Wall -Wextra -Werror -fsanitize=address,undefined \
+    -Imain tests/test_calendar_core.c main/apps/calendar/calendar_core.c \
+    main/apps/bazi/bazi_almanac.c main/apps/bazi/bazi_core.c \
+    -lm -o "$test_dir/calendar-core"
+"$test_dir/calendar-core"
+python3 tests/test_calendar_ui.py
 python3 tests/test_radio_catalog.py
 "${CXX:-c++}" -std=c++17 -Wall -Wextra -Werror -fsanitize=address,undefined -g \
     -Imain tests/test_radio_hls.cc -o "$test_dir/radio-hls"
