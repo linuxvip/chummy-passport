@@ -13,6 +13,8 @@ for (const forbidden of ['/api/avatar', '/api/share', '/api/cards', 'portraitSec
 for (const required of ['/api/profile-photo', 'photoCanvas', 'PHOTO_BYTES', 'RGB565']) {
   assert.ok(html.toLowerCase().includes(required.toLowerCase()), `profile photo UI missing: ${required}`);
 }
+assert.match(html, /<label id="choosePhoto"[^>]*>[\s\S]*?<input id="photoInput"[^>]*type="file"/);
+assert.ok(!html.includes("$('choosePhoto').onclick"), 'file picker must use native label activation');
 assert.ok(!/<(?:script|img|link)\b[^>]*(?:src|href)=["']https?:|url\(["']?https?:/i.test(html),
   'the captive page must not load internet resources');
 

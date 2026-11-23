@@ -61,6 +61,8 @@ a{color:var(--green)}
 .photo-empty{position:absolute;inset:0;display:grid;place-content:center;text-align:center;color:#7e7565;font-size:13px;line-height:1.5;pointer-events:none}
 .photo-tools>*+*{margin-top:10px}
 .photo-tools .secondary{min-height:44px;padding:9px 12px;font-size:14px}
+.photo-picker{display:flex;align-items:center;justify-content:center;text-align:center;cursor:pointer}
+.photo-picker:focus-within{outline:3px solid #4b8a62;outline-offset:2px}
 .photo-zoom{display:block;font-size:12.5px;color:var(--muted);margin-top:10px}.photo-zoom input{width:100%;margin-top:5px}
 .photo-badge{font-size:12px;color:var(--green);background:var(--tint);border-radius:999px;padding:3px 9px;white-space:nowrap}
 .photo-badge[data-state=empty]{color:var(--muted);background:var(--field)}
@@ -103,8 +105,7 @@ a{color:var(--green)}
 <div class="photo-layout">
 <div class="photo-stage"><canvas id="photoCanvas" width="90" height="120" aria-label="人物志照片预览"></canvas><div id="photoEmpty" class="photo-empty">选择一张<br>彩色照片</div></div>
 <div class="photo-tools">
-<button id="choosePhoto" class="secondary" type="button">选择照片</button>
-<input id="photoInput" class="vh" type="file" accept="image/jpeg,image/png,image/webp,image/heic,image/heif">
+<label id="choosePhoto" class="secondary photo-picker">选择照片<input id="photoInput" class="vh" type="file" accept="image/jpeg,image/png,image/webp,image/heic,image/heif"></label>
 <label class="photo-zoom" for="photoZoom">缩放 <span id="photoZoomValue">100%</span><input id="photoZoom" type="range" min="100" max="300" value="100" disabled></label>
 <button id="removePhoto" class="text-button" type="button" disabled>删除照片</button>
 <p class="help">选好后可拖动照片调整位置。只保存显示用的小图，不会把手机原图留在设备上。</p>
@@ -305,7 +306,6 @@ async function loadSavedPhoto(quiet=false){
   if(!quiet)say('photoStatus','暂时无法读取照片；不影响其他设置。',true);
  }
 }
-$('choosePhoto').onclick=()=>$('photoInput').click();
 $('photoInput').onchange=async()=>{
  const file=$('photoInput').files?.[0];if(!file)return;
  if(!file.type.startsWith('image/')){say('photoStatus','请选择图片文件。',true);return}
