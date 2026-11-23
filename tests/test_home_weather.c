@@ -1,7 +1,6 @@
 #include "apps/home/home_profile.h"
 #include "apps/home/home_weather.h"
 #include "esp_http_client.h"
-#include "esp_spiffs.h"
 #include "esp_partition.h"
 #include "nvs.h"
 #include "cJSON.h"
@@ -46,10 +45,6 @@ NVS_NUMBER(uint16_t,u16)
 NVS_NUMBER(uint32_t,u32)
 static int tz_minutes=480,tz_writes;
 esp_err_t time_sync_set_tz_offset_min(int minutes) { if(minutes!=tz_minutes){tz_minutes=minutes;++tz_writes;}return ESP_OK; }
-esp_err_t esp_vfs_spiffs_register(const esp_vfs_spiffs_conf_t *c) { (void)c;return ESP_FAIL; }
-const esp_partition_t *esp_partition_find_first(int type,int subtype,const char *label) { (void)type;(void)subtype;(void)label;return NULL; }
-esp_err_t esp_partition_read(const esp_partition_t *p,size_t offset,void *out,size_t size) { (void)p;(void)offset;(void)out;(void)size;assert(!"no storage partition in weather fixture");return ESP_FAIL; }
-esp_err_t esp_spiffs_info(const char *label,size_t *total,size_t *used) { (void)label;*total=2*1024*1024;*used=0;return ESP_OK; }
 esp_err_t esp_crt_bundle_attach(void *p) { (void)p;return ESP_OK; }
 struct TestHttp { size_t offset; const char *body; bool air,connected; esp_http_client_config_t config; };
 static const char response[]="{\"utc_offset_seconds\":28800,\"current\":{\"temperature_2m\":26.1,\"weather_code\":2,\"relative_humidity_2m\":77,\"wind_speed_10m\":11,\"wind_direction_10m\":180}}";

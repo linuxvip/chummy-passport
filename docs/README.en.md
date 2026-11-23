@@ -38,7 +38,7 @@ Voice tools require a network connection and Xiaozhi configuration. NetEase play
 
 | App | What it does | Requirements |
 | --- | --- | --- |
-| Home | Four pillars and lunar date (early/late Zi setting), clock, short reflective daily quote, auto-updating weather, and air quality; UP still opens uploaded cards | Network for the daily quote, weather, and air quality; Beijing is the initial default city |
+| Home | Four pillars and lunar date (early/late Zi setting), clock, short reflective daily quote, auto-updating weather, and air quality; UP refreshes the weather | Network for the daily quote, weather, and air quality; Beijing is the initial default city |
 | Radio | City and station selection, playback, and sleep timer | Wi-Fi and available online stations |
 | Xiaozhi AI | Voice conversations, volume and brightness control, app opening, music and radio requests, timers, reminders, and lists | Network and Xiaozhi configuration; media needs its corresponding service |
 | NetEase Music | Search songs, play playlists and daily recommendations | Wi-Fi, your own NetEase account, and available APIs |

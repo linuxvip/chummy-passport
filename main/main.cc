@@ -8,7 +8,6 @@
 #include "launcher/settings.h"
 #include "launcher/wifi_setup.h"
 #include "launcher/power.h"
-#include "apps/home/home_profile.h"
 #include "wifi_manager.h"
 #include "ssid_manager.h"
 #include "bsp_battery.h"
@@ -417,13 +416,6 @@ extern "C" void app_main(void) {
     reminders::initialize();
     lists::initialize();
 
-    // 头像/名片分区在后台挂载;残留其他固件时在此格式化(十余秒),
-    // 不让手机上传请求承担这段耗时。堆此时最完整,SPIFFS 缓冲也放在低地址。
-    xTaskCreate([](void *) {
-        home_profile_storage_prepare();
-        vTaskDelete(nullptr);
-    }, "storage_prep", 3584, nullptr, tskIDLE_PRIORITY + 1, nullptr);
-
     // 2. 硬件总线与外设初始化
     ESP_ERROR_CHECK(bsp_i2c_init());
     ESP_ERROR_CHECK(bsp_display_init());
@@ -480,10 +472,7 @@ extern "C" void app_main(void) {
     if (chime) boot_chime_start();
 
     // 5. 创建按键事件队列与输入分发任务 (系统就绪后正式接收用户输入)
-    //    input_disp 保留 8192，串口命令也由它执行 app_registry_switch_to()；
-    //    应用启动里最深的是 Home 天气图标 JPEG 解码 —— LVGL TJPEG
-    //    decoder_info(文件源)在栈上放 4KB 工作缓冲(lv_tjpgd.c:110),
-    //    3584/4096 栈实测爆栈(Stack protection fault,2026-09-13)。
+    // input_disp 保留 8192：串口命令也由它执行应用切换，涉及较深的 LVGL 调用链。
     s_key_queue = xQueueCreateStatic(16, sizeof(KeyMessage), s_key_queue_storage, &s_key_queue_control);
     xTaskCreateStatic(button_task, "btn_poll", sizeof(s_button_stack), NULL, 6,
                       s_button_stack, &s_system_tasks[0]);

@@ -108,7 +108,6 @@ idf_component_register(
         spi_flash
         esp_driver_usb_serial_jtag
         esp_http_server
-        spiffs
         lwip
 )
 target_link_options(${COMPONENT_LIB} INTERFACE

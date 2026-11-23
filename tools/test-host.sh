@@ -65,14 +65,6 @@ python3 tests/test_wifi_internet.py
     tests/test_captive_setup.cc -o "$test_dir/captive-setup"
 "$test_dir/captive-setup"
 node tests/test_profile_page.js
-node tests/test_portrait_pixels.js
-python3 tests/test_card_gallery.py
-python3 tests/test_avatar_upload.py
-"${CC:-cc}" -std=c11 -D_POSIX_C_SOURCE=200809L -Wall -Wextra -Werror -Wno-unused-variable \
-    -fsanitize=address,undefined -g -ffunction-sections -fdata-sections \
-    -Itests/home_mocks -Itests/radio_mocks -Imain \
-    tests/test_home_storage.c "$section_gc_flag" -lm -o "$test_dir/home-storage"
-"$test_dir/home-storage"
 "${CC:-cc}" -std=c11 -Wall -Wextra -Werror -Wno-deprecated-declarations \
     -fsanitize=address,undefined -g \
     -c tests/vendor/cjson/cJSON.c -o "$test_dir/cjson.o"

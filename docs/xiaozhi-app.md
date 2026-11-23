@@ -88,7 +88,7 @@ xzg_audio (常驻, 22KB栈) ── 录音编码 / 播放解码（半双工，共
   （`enc_dropped_for_playback_`），播完 `StopPlayback()/AbortPlayback()` 立即补回。
   解码器收尾未确认 idle 时保留句柄（旧代码置空 = 永久泄漏 ~13KB）。
 - **配套的全局内存腾挪**（否则常驻编码器会把 TLS 握手饿死
-  `Dynamic Impl: alloc(3778) failed`）：首页 `s_portrait_a8`（14.4KB A8 人像缓冲）
+  `Dynamic Impl: alloc(3778) failed`）：历史首页 `s_portrait_a8`（14.4KB A8 人像缓冲，后续已随头像功能移除）
   与开机铃 `s_note`（3.2KB）从 .bss 改为用时分配、用完归还；小机会话内
   free 由 ~30KB 升至 ~48KB。真机验证：3 轮对话录音/播放全通，退出后
   free=99.5KB/largest=51.2KB 无泄漏（`_diag/xz_memfix4.log`）。

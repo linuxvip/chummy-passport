@@ -1,20 +1,16 @@
 // 首页(个人主页)应用。
 //
-// 小内存约束下的三条硬规矩(改动时请保持):
-//   1. 头像索引静态存放；显示缓冲仅在首页分配，离开首页即释放;
-//   2. 文件 IO(读头像)与网络 IO(拉天气)一律在**不持 LVGL 锁**时完成;
-//   3. stop() 必须删屏,与 Launcher 的 launcher_ui_hide() 同理,C3 内部堆没有余量
-//      同时容纳两个应用的界面。
+// 小内存约束下，网络 IO 一律在不持 LVGL 锁时完成；stop() 必须删屏，
+// 因为 C3 内部堆没有余量同时容纳两个应用的界面。
 //
 // 2026-09-13 视觉精致化(全部为"对象拼画 + 低频动画",无 canvas/图片资源):
 //   - 昼夜主题:任务里每小时核对,19 点~次日 6 点切夜景(ui_pixel 主题系统);
 //   - 天气卡左侧画像素天气图标(晴/少云/阴/雾/雨/雪/雷),拉取中显示四点 spinner;
-//   - 无头像空态换全机吉祥物(会眨眼的像素小电视),替代灰色剪影;
 //   - 底部白字加墨色错位硬阴影,压在草地上也清晰。
 //
 // 2026-09-13 晚 · 首页版式重构(上中下三层,用户定稿):
 //   顶部:像素块大时钟(5×7 字模拼块,真·像素粗体,直接画在天空上)+ 日期行;
-//   中部:组合卡 = 左头像(橙框) + 右侧 天气图标/短语 + 城市 + 温度 + 湿度·风级一行
+//   中部:右侧 天气图标/短语 + 城市 + 温度 + 湿度·风级一行
 //        (原两张统计卡降维合并进这一行);
 //   底部:名牌卡 = 姓名(20px 标题字) + 个性签名,浮在天空上,草地只留按键提示。
 //
@@ -23,8 +19,6 @@
 //   右列(120 宽):点阵时钟卡(5×7 字模,每格画 4×4 光点) / 日期+城市+Wi-Fi 卡 /
 //                天气卡(单色图标 + 温度 + 短语 + 分隔线 + 风向·风级);
 //   底部:联网获取并缓存的每日一句;外部文本只显示,不执行其中内容。
-//   美术显示走 LVGL A8 快速路径(alpha 蒙版 + image_recolor 纯色),已核对
-//   lv_draw_sw_img.c:233 与 lv_draw_sw_blend_to_rgb565.c。
 #include "apps/home/app_home.h"
 
 #include "apps/home/home_almanac.h"
@@ -37,9 +31,6 @@
 #include "launcher/app_registry.h"
 #include "launcher/settings.h"
 #include "bsp_display.h"
-#include "esp_lcd_panel_io.h"
-#include "esp_lcd_panel_ops.h"
-#include "src/libs/tjpgd/tjpgd.h"
 #include "fonts/app_fonts.h"   // buddy_font_16:首页中文动态文本全靠它
 #include "ui_pixel.h"
 #include "ui/pixel_scene.h"
@@ -148,9 +139,6 @@ lv_obj_t *s_screen = nullptr;
 lv_obj_t *s_lbl_date = nullptr;
 lv_obj_t *s_wifi_bars[3] = {nullptr, nullptr, nullptr};
 ui_pixel_battery_t s_batt = {nullptr, nullptr};
-bool s_share_visible = false;
-uint8_t s_share_index = 0;
-
 // 四柱按三个严格对齐的行绘制:列头、天干、地支。
 lv_obj_t *s_pillar_labels[3][4] = {};
 lv_obj_t *s_lbl_lunar_date = nullptr;
@@ -997,185 +985,6 @@ void create_ui() {
     lv_label_set_text(s_lbl_footer, "上干支 · 下名言 · 确定应用");
 }
 
-constexpr uint16_t kJpegMcuHeight = 16;
-constexpr std::size_t kJpegWorkSize = 4096;
-
-struct ShareJpegContext {
-    FILE *fp;
-    uint16_t *stripe;
-    uint16_t width;
-    uint16_t height;
-    bool color_pending;
-    bool failed;
-};
-
-std::size_t share_jpeg_input(JDEC *decoder, uint8_t *buffer, std::size_t requested) {
-    auto *context = static_cast<ShareJpegContext *>(decoder->device);
-    if (!context || !context->fp) return 0;
-    if (buffer) {
-        return std::fread(buffer, 1, requested, context->fp);
-    } else {
-        return std::fseek(context->fp, static_cast<long>(requested), SEEK_CUR) == 0 ? requested : 0;
-    }
-}
-
-int share_jpeg_output(JDEC *decoder, void *bitmap, JRECT *rectangle) {
-    auto *context = static_cast<ShareJpegContext *>(decoder->device);
-    if (!context || !bitmap || !rectangle || context->failed) return 0;
-
-    const uint16_t block_width = rectangle->right - rectangle->left + 1;
-    const uint16_t block_height = rectangle->bottom - rectangle->top + 1;
-    if (rectangle->right >= context->width || rectangle->bottom >= context->height) {
-        context->failed = true;
-        return 0;
-    }
-
-    if (rectangle->left == 0 && context->color_pending) {
-        if (bsp_display_io()) {
-            esp_lcd_panel_io_tx_param(bsp_display_io(), 0x00, nullptr, 0);
-        }
-        context->color_pending = false;
-    }
-
-    uint16_t *target = context->stripe;
-    if (!target) {
-        context->failed = true;
-        return 0;
-    }
-
-    // TJPGD 输出格式为 BGR888
-    const auto *bgr = static_cast<const uint8_t *>(bitmap);
-    for (uint16_t y = 0; y < block_height; ++y) {
-        uint16_t *row = target + static_cast<std::size_t>(y) * context->width;
-        for (uint16_t x = 0; x < block_width; ++x) {
-            const std::size_t input = (static_cast<std::size_t>(y) * block_width + x) * 3U;
-            const uint16_t color = static_cast<uint16_t>(
-                ((bgr[input + 2] & 0xf8U) << 8U) |
-                ((bgr[input + 1] & 0xfcU) << 3U) |
-                (bgr[input] >> 3U));
-            row[rectangle->left + x] = __builtin_bswap16(color);
-        }
-    }
-
-    if (rectangle->right + 1U == context->width) {
-        const uint16_t panel_top = rectangle->top;
-        const uint16_t panel_bottom = rectangle->bottom + 1U;
-        if (esp_lcd_panel_draw_bitmap(bsp_display_panel(), 0, panel_top,
-                                      context->width, panel_bottom, target) != ESP_OK) {
-            context->failed = true;
-            return 0;
-        }
-        context->color_pending = true;
-    }
-    return 1;
-}
-
-bool home_show_share_image() {
-    char path[HOME_SHARE_PATH_MAX];
-    if (!home_profile_share_path_at(s_share_index, path, sizeof(path))) return false;
-    FILE *fp = std::fopen(path, "rb");
-    if (!fp) {
-        ESP_LOGW(kTag, "Cannot open share image: %s", path);
-        return false;
-    }
-
-    auto *work = static_cast<uint8_t *>(std::malloc(kJpegWorkSize));
-    auto *stripe = static_cast<uint16_t *>(
-        std::malloc(HOME_SHARE_W * kJpegMcuHeight * sizeof(uint16_t)));
-    if (!work || !stripe) {
-        ESP_LOGE(kTag, "Alloc failed for share JPEG decoding");
-        if (work) std::free(work);
-        if (stripe) std::free(stripe);
-        std::fclose(fp);
-        return false;
-    }
-
-    ShareJpegContext context = {
-        .fp = fp,
-        .stripe = stripe,
-        .width = HOME_SHARE_W,
-        .height = HOME_SHARE_H,
-        .color_pending = false,
-        .failed = false,
-    };
-
-    JDEC decoder;
-    JRESULT res = jd_prepare(&decoder, share_jpeg_input, work, kJpegWorkSize, &context);
-    if (res != JDR_OK) {
-        ESP_LOGW(kTag, "jd_prepare failed: %d", res);
-        std::free(work);
-        std::free(stripe);
-        std::fclose(fp);
-        return false;
-    }
-
-    if (decoder.width > HOME_SHARE_W || decoder.height > HOME_SHARE_H) {
-        ESP_LOGW(kTag, "Share image dimensions (%ux%u) exceed max (%ux%u)",
-                 decoder.width, decoder.height, HOME_SHARE_W, HOME_SHARE_H);
-        std::free(work);
-        std::free(stripe);
-        std::fclose(fp);
-        return false;
-    }
-    context.width = decoder.width;
-    context.height = decoder.height;
-
-    res = jd_decomp(&decoder, share_jpeg_output, 0);
-    std::fclose(fp);
-
-    if (context.color_pending && bsp_display_io()) {
-        esp_lcd_panel_io_tx_param(bsp_display_io(), 0x00, nullptr, 0);
-    }
-
-    std::free(work);
-    std::free(stripe);
-
-    if (res != JDR_OK || context.failed) {
-        ESP_LOGW(kTag, "jd_decomp failed: %d (failed=%d)", res, context.failed);
-        return false;
-    }
-
-    ESP_LOGI(kTag, "Wallet card displayed: %ux%u color JPEG index=%u free=%u largest=%u",
-        decoder.width, decoder.height, s_share_index, (unsigned)esp_get_free_heap_size(),
-        (unsigned)heap_caps_get_largest_free_block(MALLOC_CAP_INTERNAL));
-    return true;
-}
-
-void toggle_share_view() {
-    if (s_share_visible) {
-        bsp_lvgl_lock(-1);
-        s_share_visible = false;
-        lv_display_t *disp = lv_display_get_default();
-        if (disp) lv_display_enable_invalidation(disp, true);
-        if (s_screen) lv_obj_invalidate(s_screen);
-        bsp_lvgl_unlock();
-        return;
-    }
-
-    if (!home_profile_has_share_image()) {
-        ESP_LOGW(kTag, "UP: no valid wallet card file");
-        // 尚未上传随身名片时保留原有的手动天气刷新能力。
-        s_force_weather.store(true);
-        return;
-    }
-
-    bsp_lvgl_lock(-1);
-    s_share_index = 0;
-    s_share_visible = true;
-    lv_display_t *disp = lv_display_get_default();
-    if (disp) lv_display_enable_invalidation(disp, false);
-    bsp_lvgl_unlock();
-
-    // 在锁外执行文件读取与分块直推屏幕
-    if (!home_show_share_image()) {
-        bsp_lvgl_lock(-1);
-        s_share_visible = false;
-        if (disp) lv_display_enable_invalidation(disp, true);
-        if (s_screen) lv_obj_invalidate(s_screen);
-        bsp_lvgl_unlock();
-    }
-}
-
 void home_task(void *arg) {
     (void)arg;
     const int64_t start_ms = esp_timer_get_time() / 1000;
@@ -1190,7 +999,7 @@ void home_task(void *arg) {
         const int64_t now_ms = esp_timer_get_time() / 1000;
 
         if (bsp_lvgl_lock(1000)) {
-            if (s_ui_alive.load() && app_registry_screen_is_on() && !s_share_visible) {
+            if (s_ui_alive.load() && app_registry_screen_is_on()) {
                 update_clock_labels();
                 update_almanac_labels();
                 update_battery_label();
@@ -1323,7 +1132,6 @@ void home_start() {
     s_home_active.store(true);
     s_ui_alive.store(true);
     s_detail_mode = 0;
-    s_share_visible = false;
 
     home_profile_t prof;
     home_profile_get(&prof);
@@ -1342,10 +1150,7 @@ void home_start() {
     lv_scr_load(s_screen);
     bsp_lvgl_unlock();
 
-    // 栈给 8192 而不是文档里的 4096:本任务内会跑 HTTPS(mbedTLS 握手调用链很深),
-    // 4KB 栈在证书校验阶段有溢出风险;另外天气图标走 LVGL TJPEG decoder_info
-    // (文件源),它把 4KB 的 TJPGD_WORKBUFF_SIZE 放在栈上(lv_tjpgd.c:110),
-    // 6144 在换工具链后实测爆栈(Stack protection fault,2026-09-13)。
+    // 栈给 8192：本任务内会跑 HTTPS，mbedTLS 握手调用链较深。
     s_worker_running.store(true);
     BaseType_t created = xTaskCreate(home_task, "home_app", 8192, NULL, 4, &s_task_handle);
     if (created != pdPASS) {
@@ -1413,11 +1218,6 @@ void home_stop() {
     s_lbl_feels = nullptr;
     s_lbl_stat = nullptr;
     s_lbl_footer = nullptr;
-    if (s_share_visible) {
-        lv_display_t *disp = lv_display_get_default();
-        if (disp) lv_display_enable_invalidation(disp, true);
-        s_share_visible = false;
-    }
     bsp_lvgl_unlock();
     ESP_LOGI(kTag, "Home app stopped. Free heap: %u KB",
              (unsigned)(esp_get_free_heap_size() / 1024));
@@ -1433,7 +1233,6 @@ void home_on_key(uint8_t btn, app_btn_event_t event, uint16_t mv) {
     }
 
     if (btn == BSP_BTN_UP && event == BTN_EVT_LONG) {
-        if (s_share_visible) return;
         uint32_t quote_day = 0;
         bsp_lvgl_lock(-1);
         if (!WifiManager::GetInstance().IsConnected()) {
@@ -1448,25 +1247,8 @@ void home_on_key(uint8_t btn, app_btn_event_t event, uint16_t mv) {
 
     if (event != BTN_EVT_CLICK) return;
 
-    if (s_share_visible && (btn == BSP_BTN_UP || btn == BSP_BTN_DOWN)) {
-        home_share_gallery_t gallery;
-        if (home_profile_gallery_get(&gallery) == ESP_OK && gallery.count > 1) {
-            const uint8_t previous = s_share_index;
-            s_share_index = (s_share_index + gallery.count + (btn == BSP_BTN_UP ? -1 : 1)) % gallery.count;
-            if (!home_show_share_image()) {
-                s_share_index = previous;
-                if (!home_show_share_image()) toggle_share_view();
-            }
-        }
-        return;
-    }
-
     // OK 短按 = 打开应用板块。
     if (btn == BSP_BTN_OK) {
-        if (s_share_visible) {
-            toggle_share_view();
-            return;
-        }
         if (s_detail_mode == 2) {
             const int64_t now = esp_timer_get_time() / 1000;
             bsp_lvgl_lock(-1);
@@ -1486,13 +1268,16 @@ void home_on_key(uint8_t btn, app_btn_event_t event, uint16_t mv) {
     }
 
     if (btn == BSP_BTN_UP) {
-        toggle_share_view();
+        bsp_lvgl_lock(-1);
+        if (WifiManager::GetInstance().IsConnected()) {
+            s_force_weather.store(true);
+            footer_set("正在更新天气", &buddy_font_16, kPhos);
+        } else {
+            footer_set("未连接无线网络", &buddy_font_16, kPhosDim);
+        }
+        bsp_lvgl_unlock();
         return;
     } else if (btn == BSP_BTN_DOWN) {
-        if (s_share_visible) {
-            toggle_share_view();
-            return;
-        }
         // 操作提示、手势、网络/天气、PM2.5 单位及数据来源。
         s_detail_mode = static_cast<uint8_t>((s_detail_mode + 1) % 5);
     } else {
@@ -1510,7 +1295,7 @@ const passport_app_t g_home_app = {
     .id = APP_ID_HOME,
     .name = "首页",
     .en_name = "HOME",
-    .desc = "四柱 · 天气 · 每日一句 · 名片",
+    .desc = "四柱 · 天气 · 每日一句",
     .tag = "直连",
     .theme_color = 0xDDB36C,
     .init = home_init,
