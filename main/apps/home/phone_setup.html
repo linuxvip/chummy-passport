@@ -254,7 +254,7 @@ async function photoRequest(method='GET',body){
 async function photoJsonError(response){
  let data={};try{data=await response.json()}catch(e){}
  const messages={photo_size:'照片尺寸不正确，请重新选择。',photo_recv:'照片传输中断，请保持连接后重试。',photo_store:'设备存储失败，原照片未改变。',photo_delete:'照片删除失败，请重试。',unauthorized:'设置页面已失效，请刷新后重试。'};
- const stages={storage_mount:'存储分区未就绪',tmp_open:'无法创建临时文件',tmp_write:'写入临时文件失败',tmp_close:'保存临时文件失败',tmp_stat:'临时文件大小校验失败',legacy_scale_open:'读取旧照片失败',legacy_scale_create:'创建缩放文件失败',legacy_scale_write:'旧照片转换失败',commit_direct:'无法替换原照片',commit_backup:'无法备份原照片',commit_replace:'无法安装新照片',chunk_total:'上传尺寸不稳定',chunk_size:'上传数据超出照片容量',upload_size:'上传照片不完整'};
+ const stages={storage_mount:'存储分区未就绪',tmp_open:'无法创建临时文件',tmp_write:'写入临时文件失败',tmp_close:'保存临时文件失败',tmp_stat:'临时文件大小校验失败',legacy_scale_open:'读取旧照片失败',legacy_scale_create:'创建缩放文件失败',legacy_scale_write:'旧照片转换失败',commit_backup:'无法备份原照片',commit_copy_open_source:'无法读取新照片',commit_copy_open_target:'无法创建正式照片',commit_copy_write:'复制新照片失败',chunk_total:'上传尺寸不稳定',chunk_size:'上传数据超出照片容量',upload_size:'上传照片不完整'};
  const detail=data.stage?stages[data.stage]||data.stage:'';
  return new Error((messages[data.error]||'照片处理失败，请重试。')+(detail?'（'+detail+'）':''));
 }

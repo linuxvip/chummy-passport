@@ -95,24 +95,59 @@ static esp_err_t scale_legacy_upload_locked(void) {
     return ESP_OK;
 }
 
+static esp_err_t copy_upload_locked(const char *source) {
+    FILE *input = fopen(source, "rb");
+    if (!input) {
+        s_error_stage = "commit_copy_open_source";
+        return ESP_FAIL;
+    }
+    FILE *output = fopen(kPath, "wb");
+    if (!output) {
+        fclose(input);
+        s_error_stage = "commit_copy_open_target";
+        return ESP_FAIL;
+    }
+
+    uint8_t buffer[512];
+    bool ok = true;
+    size_t copied = 0;
+    while (ok) {
+        const size_t got = fread(buffer, 1, sizeof(buffer), input);
+        if (got == 0) break;
+        if (fwrite(buffer, 1, got, output) != got) {
+            ok = false;
+            break;
+        }
+        copied += got;
+    }
+    if (ferror(input) || copied != HOME_PROFILE_PHOTO_BYTES) ok = false;
+    if (fclose(input) != 0) ok = false;
+    if (fclose(output) != 0) ok = false;
+    if (!ok || !file_has_expected_size(kPath)) {
+        s_error_stage = "commit_copy_write";
+        remove(kPath);
+        return ESP_FAIL;
+    }
+    return ESP_OK;
+}
+
 static esp_err_t commit_upload_locked(const char *source) {
-    // SPIFFS can replace an existing object directly. This is the smallest
-    // transaction and avoids a second rename on firmware that supports it.
-    if (rename(source, kPath) == 0) {
+    const bool had_previous = access(kPath, F_OK) == 0;
+    if (!had_previous && rename(source, kPath) == 0) {
         remove(kBackupPath);
         return ESP_OK;
     }
-    s_error_stage = "commit_direct";
+
+    s_error_stage = "commit_backup";
     remove(kBackupPath);
-    if (access(kPath, F_OK) == 0 && rename(kPath, kBackupPath) != 0) {
-        s_error_stage = "commit_backup";
+    if (had_previous && rename(kPath, kBackupPath) != 0)
         return ESP_FAIL;
-    }
-    if (rename(source, kPath) != 0) {
-        s_error_stage = "commit_replace";
+
+    if (copy_upload_locked(source) != ESP_OK) {
         rename(kBackupPath, kPath);
         return ESP_FAIL;
     }
+    remove(source);
     remove(kBackupPath);
     return ESP_OK;
 }
