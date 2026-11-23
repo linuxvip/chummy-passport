@@ -15,6 +15,8 @@ for (const required of ['/api/profile-photo', 'photoCanvas', 'PHOTO_BYTES', 'RGB
 }
 assert.match(html, /<label id="choosePhoto"[^>]*>[\s\S]*?<input id="photoInput"[^>]*type="file"/);
 assert.ok(!html.includes("$('choosePhoto').onclick"), 'file picker must use native label activation');
+assert.match(html, /id="previewNotice"/);
+assert.match(html, /本地页面预览，不能保存/);
 assert.ok(!/<(?:script|img|link)\b[^>]*(?:src|href)=["']https?:|url\(["']?https?:/i.test(html),
   'the captive page must not load internet resources');
 
@@ -101,7 +103,7 @@ const phoneWindow = {
   isSecureContext: false,
   crypto: require('node:crypto').webcrypto,
   createImageBitmap: async () => ({ width: 90, height: 120 }),
-  location: { origin: 'http://192.168.4.1' },
+  location: { origin: 'http://192.168.4.1', protocol: 'http:' },
 };
 
 const context = vm.createContext({

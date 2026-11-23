@@ -66,6 +66,7 @@ a{color:var(--green)}
 .photo-zoom{display:block;font-size:12.5px;color:var(--muted);margin-top:10px}.photo-zoom input{width:100%;margin-top:5px}
 .photo-badge{font-size:12px;color:var(--green);background:var(--tint);border-radius:999px;padding:3px 9px;white-space:nowrap}
 .photo-badge[data-state=empty]{color:var(--muted);background:var(--field)}
+.preview-notice{background:#fff4d8;border:1px solid #e7cb88;color:#684b13;border-radius:var(--r-s);padding:12px 14px;margin:14px 0 0;font-size:13.5px;line-height:1.55}.preview-notice strong{display:block;font-size:15px;margin-bottom:2px;color:#4b3508}
 @media(min-width:760px){.shell{padding-top:48px}}
 @media(max-width:380px){.photo-layout{grid-template-columns:132px minmax(0,1fr);gap:12px}.photo-stage{width:132px}}
 @media(prefers-reduced-motion:no-preference){.primary,.secondary{transition:background .15s ease-out}}
@@ -74,6 +75,7 @@ a{color:var(--green)}
 <body><main class="shell">
 <header class="brand"><svg viewBox="0 0 16 16" aria-hidden="true"><path fill="#1f5c3f" d="M3 1h10v1h1v12h-1v1H3v-1H2V2h1z"/><path fill="#e6efe6" d="M5 4h6v1h1v4h-1v1H5V9H4V5h1z"/><path fill="#1f5c3f" d="M6 6h1v1H6zm3 0h1v1H9zM5 12h6v1H5z"/></svg>AI 护照
 <ol class="steps" aria-label="设置进度"><li id="progress1" aria-current="step">1 连接网络</li><li id="progress2">2 个人资料</li><li id="progress3">3 完成</li></ol></header>
+<div id="previewNotice" class="preview-notice" hidden><strong>当前是电脑页面预览</strong>这里可以查看界面和选择照片，但无法连接设备或保存。请让手机连接设备热点，并在手机浏览器打开 http://192.168.4.1。</div>
 
 <section id="step1" aria-labelledby="title1">
 <h1 id="title1" tabindex="-1">连接 Wi-Fi</h1>
@@ -145,6 +147,7 @@ const say=(id,text,error=false)=>{const el=$(id);el.textContent=text;el.dataset.
 const bytes=s=>new TextEncoder().encode(s).length;
 let page=1,manual=false,busy=false,hasSaved=false,verified=false,pollTimer=null,polls=0;
 let scanTimer=null,scanRound=0,scanning=false;
+const localPreview=window.location.protocol==='file:';
 // Directory is served from this device, including while the phone has no Internet.
 let cities=[],loadedProfile={},cityCatalogLoaded=false;
 let locatedProfile=null,locationRequest=null,locationTimer=null,locationGeneration=0;
@@ -394,6 +397,7 @@ async function connect(saved=false){const ssid=manual?$('ssid').value:$('network
 $('connect').onclick=()=>connect();$('reuse').onclick=()=>connect(true);$('keepSaved').onclick=()=>{$('connectionSummary').textContent='仅修改资料，完成后自动重连已保存网络';step(2)};$('back').onclick=()=>step(1);
 function completeSave(profile,summary='个人资料已保存'){$('doneName').textContent=profile.name||'AI 护照';$('doneSummary').textContent=summary;step(3)}
 async function save(){
+ if(localPreview){say('saveStatus','这是本地页面预览，不能保存。请让手机连接设备热点，再打开 http://192.168.4.1。',true);return}
  if(!verified&&!hasSaved){step(1);say('networkStatus','请先连接 Wi-Fi，再完成设置。',true);return}
  let selected;
  try{selected=selectedCityProfile()}catch(e){say('saveStatus',e.message,true);return}
@@ -424,5 +428,10 @@ async function save(){
 $('save').onclick=()=>{cancelLocation();return save()};
 async function load(){try{const [profile,state]=await Promise.all([api('/api/profile'),api('/api/setup')]);await Promise.all([loadCities(),loadSavedPhoto(true)]);for(const [id,key] of [['name','name'],['sig','signature']])$(id).value=profile[key]||'';restoreCity(profile);hasSaved=state.saved_network;$('reuse').hidden=!hasSaved;$('keepSaved').hidden=!hasSaved;$('savedField').hidden=!hasSaved;const selected=$('savedNetwork').value;$('savedNetwork').replaceChildren(new Option('自动选择附近已保存的网络',''));for(const name of state.saved_networks||[])$('savedNetwork').add(new Option(name,name));if((state.saved_networks||[]).includes(selected))$('savedNetwork').value=selected;$('connect').disabled=false;say('networkStatus','');if(state.finishing){step(3);return}if(state.state==='connected')networkReady('已连接 '+state.ssid);else if(state.state==='connecting'){lockNetwork(true);polls=0;pollTimer=setTimeout(poll,1000)}await scan()}catch(e){say('networkStatus','无法读取设备。请确认手机已连接设备热点，然后刷新页面。',true)}}
 updatePhotoUi();
-load();
+if(localPreview){
+ $('previewNotice').hidden=false;
+ say('networkStatus','本地预览模式：请让手机连接设备热点，再打开 http://192.168.4.1 完成设置。');
+}else{
+ load();
+}
 </script></body></html>
