@@ -34,7 +34,6 @@ bool radio_player_is_playing();
 bool radio_player_wait_idle(uint32_t timeout_ms);
 void radio_player_select_relative(int delta);
 void radio_player_set_station(std::size_t index);
-std::size_t radio_player_station_index();
 std::size_t radio_player_station_count();
 RadioStation radio_player_station(std::size_t index);
 bool radio_player_replace_stations(const RadioStation *stations, std::size_t count);

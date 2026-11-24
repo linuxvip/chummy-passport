@@ -4,25 +4,15 @@
 
 # Support
 
-FoloToy AI Passport is open-source hardware and firmware. The community can help
-confirm reproducible issues and discuss improvements, but one-to-one
-troubleshooting for every custom hardware setup or commercial support is not
-guaranteed.
+This is community firmware for matching FoloToy AI Passport hardware. Start
+with [README.md](../README.md) for installation, capabilities and configuration.
+Use [docs/CURRENT.md](../docs/CURRENT.md) for the exact version and known
+limitations, and [docs/MAINTENANCE.md](../docs/MAINTENANCE.md) for build,
+upgrade and recovery procedures.
 
-## Where to start
+For a reproducible bug, open a GitHub issue with the firmware version, hardware
+revision, reproduction steps and sanitized logs. Hardware revisions with a
+different display, audio codec, pin map or Flash layout are not interchangeable.
 
-- Hardware facts, wiring, and known traps: read
-  [`README.md`](../docs/README.md) and the
-  [AI Hardware Development Guide](../docs/hardware-design/AI_HARDWARE_DEVELOPMENT_GUIDE.md).
-- AI agent workflow and engineering rules: read
-  [`AGENTS.md`](../AGENTS.md) and its rule index.
-- Security vulnerabilities, credentials, or exploitable details: follow
-  [`SECURITY.md`](SECURITY.md) and report privately.
-- Ordinary bugs: open a GitHub issue with the board revision, firmware version,
-  and reproduction steps.
-- Feature requests: use the feature request template and describe the use case
-  and expected outcome.
-- Usage questions: open an issue with the usage question template.
-
-Do not post real user data, access tokens, private keys, or internal addresses
-in public issues, discussions, or logs.
+Security vulnerabilities must use [SECURITY.md](SECURITY.md), not a public
+issue. Never post credentials, personal data, device backups or private logs.

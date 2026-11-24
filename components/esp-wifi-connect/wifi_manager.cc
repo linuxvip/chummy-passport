@@ -231,7 +231,7 @@ std::string WifiManager::GetMacAddress() const {
 
 // ==================== Config AP Mode ====================
 
-void WifiManager::StartConfigAp(bool external_portal, bool device_only) {
+void WifiManager::StartConfigAp(bool device_only) {
     std::unique_lock<std::mutex> lock(mutex_);
 
     if (!initialized_) {
@@ -258,17 +258,7 @@ void WifiManager::StartConfigAp(bool external_portal, bool device_only) {
 
     config_ap_->SetSsidPrefix(config_.ssid_prefix);
     config_ap_->SetFixedSsid(config_.fixed_ap_ssid);
-    config_ap_->SetLanguage(config_.language);
-    config_ap_->SetShowOtaConfig(config_.show_ota_config);
-    config_ap_->SetShowSleepConfig(config_.show_sleep_config);
-
-    // Web handler calls this when user submits config
-    config_ap_->OnExitRequested([this]() {
-        ESP_LOGI(TAG, "Config exit requested from web");
-        StopConfigAp();
-    });
-
-    config_ap_->Start(external_portal, device_only);
+    config_ap_->Start(device_only);
     config_mode_active_ = true;
 
     lock.unlock();
@@ -301,12 +291,6 @@ std::string WifiManager::GetApSsid() const {
     std::lock_guard<std::mutex> lock(mutex_);
     if (!config_mode_active_ || !config_ap_) return "";
     return config_ap_->GetSsid();
-}
-
-std::string WifiManager::GetApWebUrl() const {
-    std::lock_guard<std::mutex> lock(mutex_);
-    if (!config_mode_active_ || !config_ap_) return "";
-    return config_ap_->GetWebServerUrl();
 }
 
 std::vector<wifi_ap_record_t> WifiManager::GetConfigAccessPoints() {

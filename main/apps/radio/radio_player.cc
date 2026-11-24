@@ -745,10 +745,6 @@ void radio_player_set_station(std::size_t index) {
     }
 }
 
-std::size_t radio_player_station_index() {
-    return s_station_index.load(std::memory_order_acquire);
-}
-
 std::size_t radio_player_station_count() {
     return std::max<std::size_t>(s_station_count.load(std::memory_order_acquire), 1);
 }

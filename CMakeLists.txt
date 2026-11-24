@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.16)
-set(PROJECT_VER "0.2.0-rc.59-custom1")
+set(PROJECT_VER "1.0.0")
 option(PASSPORT_RADIO_HLS_TEST "Use curated HLS/global radio test stations" OFF)
 option(PASSPORT_PUBLIC_RELEASE "Build with distribution-safe defaults and no personal configuration" OFF)
 

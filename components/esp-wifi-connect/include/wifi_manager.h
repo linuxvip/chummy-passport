@@ -49,7 +49,6 @@ struct WifiManagerConfig {
     std::string ssid_prefix = "ESP32";    // AP mode SSID prefix
     // Optional exact AP name. When empty, ssid_prefix plus a MAC suffix is used.
     std::string fixed_ap_ssid;
-    std::string language = "zh-CN";       // Web UI language
 
     // Station mode scan interval with exponential backoff
     int station_scan_min_interval_seconds = 10;   // Initial scan interval (fast retry)
@@ -61,12 +60,6 @@ struct WifiManagerConfig {
     // remember_bssid is off). 0 = driver default (one attempt only).
     uint8_t station_failure_retry_cnt = 3;
 
-    // Whether to show the OTA URL field in the config portal advanced tab.
-    // Defaults to false so the field is hidden unless explicitly enabled.
-    bool show_ota_config = false;
-
-    // Whether to show the sleep mode toggle in the config portal advanced tab.
-    bool show_sleep_config = false;
 };
 
 /**
@@ -99,12 +92,11 @@ public:
 
     // ==================== Config AP Mode ====================
 
-    void StartConfigAp(bool external_portal = false, bool device_only = false);
+    void StartConfigAp(bool device_only = false);
     void StopConfigAp();   // Non-blocking
 
     bool IsConfigMode() const;
     std::string GetApSsid() const;
-    std::string GetApWebUrl() const;
 
     // Device-side configuration UI support. The captive portal remains active
     // while these methods expose its scan results and verified connection flow.

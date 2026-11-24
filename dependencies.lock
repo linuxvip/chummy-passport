@@ -20,7 +20,7 @@ dependencies:
       require: private
       version: '>=4.1'
     source:
-      registry_url: https://components.espressif.com
+      registry_url: https://components.espressif.com/
       type: service
     version: 1.1.1
   espressif/esp_audio_codec:
@@ -80,12 +80,13 @@ dependencies:
     version: 9.5.0
 direct_dependencies:
 - espressif/button
+- espressif/cmake_utilities
 - espressif/esp_audio_codec
 - espressif/esp_codec_dev
 - espressif/esp_lvgl_port
 - espressif/esp_websocket_client
 - idf
 - lvgl/lvgl
-manifest_hash: 47d76842a1bfb6957cddef8498c41cef5679cc2b7c065f84fdbb2de15531e63d
+manifest_hash: 6efbc43379e7616aeba21b731295873926eeed0046f94548ea6f6efddbe89d76
 target: esp32c3
 version: 2.0.0

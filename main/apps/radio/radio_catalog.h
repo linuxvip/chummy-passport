@@ -24,12 +24,6 @@ std::size_t radio_catalog_discover(RadioStation *stations, std::size_t capacity,
 // the directory search understands; used to validate voice requests.
 bool radio_catalog_known_place(const char *name);
 
-// Loads the most popular playable stations for a user-selected Chinese city.
-// This skips IP geolocation and is used by the on-device city selector.
-std::size_t radio_catalog_discover_city(const char *city, RadioStation *stations,
-                                        std::size_t capacity,
-                                        RadioLocation *location);
-
 // Preferred profile location skips IP geolocation; empty city uses IP instead.
 // Sparse local results are topped up with province results and curated presets.
 // Voice requests may pass station keywords (including "" for any local station):

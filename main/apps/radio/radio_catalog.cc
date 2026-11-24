@@ -608,10 +608,3 @@ std::size_t radio_catalog_discover_location(const RadioLocation &preferred,
 bool radio_catalog_known_place(const char *name) {
     return name && name[0] && (find_city(name, "") || find_province(name));
 }
-
-std::size_t radio_catalog_discover_city(const char *city, RadioStation *stations,
-                                      std::size_t capacity, RadioLocation *location) {
-    RadioLocation preferred = {};
-    if (city) copy_text(preferred.city, sizeof(preferred.city), city);
-    return radio_catalog_discover_location(preferred, stations, capacity, location);
-}

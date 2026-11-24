@@ -106,28 +106,8 @@ lv_obj_t *cell(lv_obj_t *parent, int x, int y, int w, int h) {
 }
 
 uint32_t element_color(uint8_t element) {
-    static constexpr uint32_t classic[5] = {
-        0x82C89A, 0xE28A72, 0xDDB36C, 0xE2DED0, 0x79B8D8,
-    };
-    static constexpr uint32_t neon[5] = {
-        0x5EF29E, 0xFF6B7A, 0xFFD25A, 0xEAF4FF, 0x54C8FF,
-    };
-    static constexpr uint32_t playful[5] = {
-        0x2F7D52, 0xB4463B, 0x8A5A13, 0x4B5563, 0x246B91,
-    };
-    static constexpr uint32_t paper[5] = {
-        0x47745A, 0xB43B2D, 0x946528, 0x5B5145, 0x3F6078,
-    };
-    static constexpr uint32_t night[5] = {
-        0x72B6A1, 0xCF5B4D, 0xD1A75B, 0xD7D6CB, 0x67A9C4,
-    };
     if (element >= 5) return UI_TEXT_DIM;
-    const ui_theme_t theme = ui_theme_get();
-    if (theme == UI_THEME_NEON) return neon[element];
-    if (theme == UI_THEME_PLAYFUL) return playful[element];
-    if (theme == UI_THEME_PAPER) return paper[element];
-    if (theme == UI_THEME_NIGHT) return night[element];
-    return classic[element];
+    return ui_theme_element_color(static_cast<ui_element_t>(element));
 }
 
 void ganzhi_text(bazi_ganzhi_t value, char out[7]) {

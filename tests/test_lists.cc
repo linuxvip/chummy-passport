@@ -1,50 +1,157 @@
 #include "platform.h"
+
 #include "../main/apps/reminders/reminder_core.cc"
 #include "../main/apps/lists/list_service.cc"
 #include "../main/apps/lists/list_mcp.cc"
-static std::string invoke(const char *name,const char *args){auto *j=cJSON_Parse(args);auto r=lists::call(name,j);cJSON_Delete(j);return r;}
-int main(){
-    using namespace lists;initialize();const char *error=nullptr;uint32_t id=0;
-    const char *items[]={"牛奶两盒","鸡蛋十个","雨伞"};
-    fail_write=true;assert(!create("购物清单",items,3,&id,&error));fail_write=false;
-    Summary summaries[kLists]{};size_t count=0;assert(catalog(summaries,&count,&error)&&count==0);
-    assert(create("购物清单",items,3,&id,&error));const auto first=id;
-    List r{};assert(read(id,&r,&error)&&r.count==3&&r.revision==1);
-    assert(create("购物清单",items,3,&id,&error)&&id==first);
-    assert(!create("购物清单",items,1,&id,&error)); // never replace existing content
-    const auto item=r.items[0].id;
-    assert(modify(id,r.revision,Action::Set,item,nullptr,1,nullptr,0,&error));
-    assert(!modify(id,1,Action::Remove,item,nullptr,-1,nullptr,0,&error)); // stale operation
-    assert(read(id,&r,&error)&&r.items[0].done==1&&r.count==3);
-    const char *append_items[]={"牛奶两盒","充电器"};
-    assert(modify(id,r.revision,Action::Add,0,nullptr,-1,append_items,2,&error));
-    assert(read(id,&r,&error)&&r.count==4&&r.items[0].done==1);
-    const auto before=disk;
-    const char *bad[]={"应整体失败","换行\n内容"};
-    assert(!modify(id,r.revision,Action::Add,0,nullptr,-1,bad,2,&error)&&disk==before);
-    fail_write=true;assert(!modify(id,r.revision,Action::Set,item,"不得保存",0,nullptr,0,&error));fail_write=false;
-    assert(disk==before);
-    // Reboot reconstructs records from NVS, without a permanent RAM copy.
-    mutex=nullptr;initialize();assert(read(first,&r,&error)&&r.items[0].done==1&&!strcmp(r.items[0].text,"牛奶两盒"));
-    assert(modify(first,r.revision,Action::Set,item,"牛奶三盒",0,nullptr,0,&error));
-    assert(read(first,&r,&error)&&!strcmp(r.items[0].text,"牛奶三盒")&&!r.items[0].done);
-    const auto removed=r.items[1].id;
-    assert(modify(first,r.revision,Action::Remove,removed,nullptr,-1,nullptr,0,&error));
-    assert(read(first,&r,&error)&&r.count==3&&r.items[1].id!=removed);
-    while(r.count<kItems){std::string text="extra"+std::to_string(r.count);const char *v[]={text.c_str()};
-        assert(modify(first,r.revision,Action::Add,0,nullptr,-1,v,1,&error));assert(read(first,&r,&error));}
-    const char *overflow[]={"overflow"};assert(!modify(first,r.revision,Action::Add,0,nullptr,-1,overflow,1,&error));
-    for(unsigned i=1;i<kLists;++i){auto title="list"+std::to_string(i);assert(create(title.c_str(),nullptr,0,&id,&error));}
-    assert(!create("too many",nullptr,0,&id,&error));
-    assert(!modify(first,r.revision,Action::Rename,0,"list1",-1,nullptr,0,&error));
-    auto out=invoke("self.list.read",("{\"list_id\":"+std::to_string(first)+",\"offset\":4}").c_str());
-    assert(out.find("next_offset")!=std::string::npos&&out.find("extra")!=std::string::npos);
-    for(auto args:{R"({"title":"bad","items":[1]})",R"({"title":"bad","items":["1","2","3","4"]})",R"({"title":"bad","audio":"x"})"})
-        assert(invoke("self.list.create",args).find("\"isError\":true")!=std::string::npos);
-    assert(invoke("self.list.update",R"({"list_id":1,"revision":1,"action":"set","item_id":1,"done":"yes"})").find("\"isError\":true")!=std::string::npos);
-    assert(modify(first,r.revision,Action::Delete,0,nullptr,-1,nullptr,0,&error));assert(!read(first,&r,&error));
-    assert(create("replacement",nullptr,0,&id,&error)&&id>first);
-    // Corrupt storage is reported instead of treated as a free slot.
-    disk["list0"][0]^=1;assert(!catalog(summaries,&count,&error));
-    puts("Lists: transactional batch validation, failure, reboot, revisions, stable IDs, done/edit/delete, pagination, capacity and corruption PASS");
+
+struct LegacyList {
+    uint32_t magic;
+    uint32_t id;
+    uint32_t revision;
+    uint32_t next_item;
+    uint32_t count;
+    char title[48];
+    lists::Item items[12];
+};
+static_assert(sizeof(LegacyList) == 1316, "legacy fixture layout changed");
+
+static LegacyList legacy(uint32_t id, const char *title) {
+    LegacyList value{};
+    value.magic = 0x3154534c;
+    value.id = id;
+    value.revision = 3;
+    value.next_item = 1;
+    std::snprintf(value.title, sizeof(value.title), "%s", title);
+    return value;
+}
+
+static void add_legacy(LegacyList &list, const char *text, bool done) {
+    auto &item = list.items[list.count++];
+    item = {};
+    item.id = list.next_item++;
+    item.done = done;
+    std::snprintf(item.text, sizeof(item.text), "%s", text);
+}
+
+static void store_legacy(unsigned slot, const LegacyList &list) {
+    auto *raw = reinterpret_cast<const unsigned char *>(&list);
+    disk["list" + std::to_string(slot)] = {raw, raw + sizeof(list)};
+}
+
+static std::string invoke(const char *name, const char *args) {
+    auto *json = cJSON_Parse(args);
+    auto result = lists::call(name, json);
+    cJSON_Delete(json);
+    return result;
+}
+
+static std::string answer(const char *name, const char *args) {
+    auto outer_text = invoke(name, args);
+    cJSON *outer = cJSON_Parse(outer_text.c_str());
+    cJSON *content = cJSON_GetObjectItemCaseSensitive(outer, "content");
+    cJSON *item = cJSON_GetArrayItem(content, 0);
+    cJSON *text = cJSON_GetObjectItemCaseSensitive(item, "text");
+    std::string result =
+        cJSON_IsString(text) ? text->valuestring : std::string();
+    cJSON_Delete(outer);
+    return result;
+}
+
+int main() {
+    using namespace lists;
+    auto first = legacy(1, "旧购物清单");
+    add_legacy(first, "牛奶", true);
+    add_legacy(first, "鸡蛋", false);
+    auto second = legacy(4, "旧出门清单");
+    add_legacy(second, "牛奶", false);
+    add_legacy(second, "雨伞", true);
+    store_legacy(0, first);
+    store_legacy(1, second);
+    auto empty = legacy(3, "空清单");
+    store_legacy(2, empty);
+
+    initialize();
+    Checklist checklist{};
+    const char *error = nullptr;
+    assert(snapshot(&checklist, &error));
+    assert(checklist.revision == 1 && checklist.count == 3);
+    assert(completed_count(checklist) == 1);
+    assert(!strcmp(checklist.items[0].text, "牛奶") &&
+           checklist.items[0].done == 0);  // pending copy wins
+    assert(!strcmp(checklist.items[1].text, "鸡蛋"));
+    assert(!strcmp(checklist.items[2].text, "雨伞"));
+    assert(!disk.count("list0") && !disk.count("list1") && !disk.count("list2"));
+    assert(disk.count("items") && disk.count("schema"));
+
+    const auto before = disk;
+    fail_write = true;
+    const char *failed[] = {"不得保存"};
+    assert(!modify(checklist.revision, Action::Add, 0, nullptr, -1,
+                   failed, 1, &error));
+    fail_write = false;
+    assert(disk == before);
+
+    const char *milk = "牛奶";
+    assert(!modify(checklist.revision - 1, Action::Add, 0, nullptr, -1,
+                   &milk, 1, &error));
+    assert(modify(checklist.revision, Action::Add, 0, nullptr, -1,
+                  &milk, 1, &error));
+    assert(snapshot(&checklist, &error) && checklist.count == 3);  // duplicate
+
+    const auto milk_id = checklist.items[0].id;
+    assert(modify(checklist.revision, Action::Set, milk_id, nullptr, 1,
+                  nullptr, 0, &error));
+    assert(snapshot(&checklist, &error) && checklist.items[0].done == 1);
+    const auto egg_id = checklist.items[1].id;
+    assert(modify(checklist.revision, Action::Remove, egg_id, nullptr, -1,
+                  nullptr, 0, &error));
+    assert(snapshot(&checklist, &error) && checklist.count == 2);
+
+    assert(modify(checklist.revision, Action::ClearDone, 0, nullptr, -1,
+                  nullptr, 0, &error));
+    assert(snapshot(&checklist, &error));
+    assert(checklist.count == 0 && completed_count(checklist) == 0);
+    assert(!modify(checklist.revision, Action::ClearDone, 0, nullptr, -1,
+                   nullptr, 0, &error));
+
+    const char *incoming[] = {"检查夜间主题", "更新截图", "复查布局"};
+    assert(modify(checklist.revision, Action::Add, 0, nullptr, -1,
+                  incoming, 3, &error));
+    assert(snapshot(&checklist, &error) && checklist.count == 3);
+    const auto check_id = checklist.items[0].id;
+    assert(modify(checklist.revision, Action::Set, check_id, nullptr, 1,
+                  nullptr, 0, &error));
+
+    // Simulated reboot reloads the same singleton checklist.
+    mutex = nullptr;
+    initialize();
+    assert(snapshot(&checklist, &error) && checklist.count == 3);
+    assert(completed_count(checklist) == 1);
+
+    auto read = answer("self.list.read", "{}");
+    assert(read.find("\"total\":3") != std::string::npos);
+    assert(read.find("\"list_id\"") == std::string::npos);
+    assert(read.find("\"title\"") == std::string::npos);
+    auto add = answer("self.list.add",
+        ("{\"revision\":" + std::to_string(checklist.revision) +
+         ",\"items\":[\"检查夜间主题\",\"补充真机记录\"]}").c_str());
+    assert(add.find("\"saved\":true") != std::string::npos);
+    assert(snapshot(&checklist, &error) && checklist.count == 4);
+    auto past_end = answer("self.list.read", R"({"offset":60})");
+    assert(past_end.find("\"items\":[]") != std::string::npos);
+
+    for (auto args : {
+             R"({"revision":1,"action":"set","item_id":1,"done":"yes"})",
+             R"({"revision":1,"action":"remove","item_id":1,"text":"x"})",
+             R"({"revision":1,"action":"clear_done","item_id":1})",
+             R"({"list_id":1,"revision":1,"action":"remove","item_id":1})",
+         }) {
+        assert(invoke("self.list.update", args).find("\"isError\":true") !=
+               std::string::npos);
+    }
+
+    disk["items"][0] ^= 1;
+    assert(!snapshot(&checklist, &error));
+    puts("Checklist: singleton migration, add/toggle/remove/clear, revision, "
+         "reboot, voice tools and corruption recovery PASS");
 }

@@ -123,13 +123,6 @@ void home_air_quality_label(bool connected, char *out, size_t capacity) {
     }
 }
 
-uint32_t home_weather_version(void) {
-    portENTER_CRITICAL(&s_weather_mux);
-    uint32_t v = s_version;
-    portEXIT_CRITICAL(&s_weather_mux);
-    return v;
-}
-
 const char *home_weather_code_text(uint16_t code) {
     // 短语只由 buddy 字体已有的字组成(雨雪雾雷冰雹晴阴多云大小中等均已验证)
     if (code == 0 || code == 1) return "晴";

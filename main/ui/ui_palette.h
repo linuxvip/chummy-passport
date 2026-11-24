@@ -34,11 +34,21 @@ typedef enum {
     UI_COLOR_COUNT,
 } ui_color_role_t;
 
+typedef enum {
+    UI_ELEMENT_WOOD = 0,
+    UI_ELEMENT_FIRE,
+    UI_ELEMENT_EARTH,
+    UI_ELEMENT_METAL,
+    UI_ELEMENT_WATER,
+    UI_ELEMENT_COUNT,
+} ui_element_t;
+
 void ui_theme_set(ui_theme_t theme);
 ui_theme_t ui_theme_get(void);
 bool ui_theme_is_classic(void);
 bool ui_theme_is_multicolor(void);
 uint32_t ui_theme_color(ui_color_role_t role);
+uint32_t ui_theme_element_color(ui_element_t element);
 // Dark artwork scenes keep the same hues with foregrounds suited to a dark ground.
 uint32_t ui_theme_color_on_dark(ui_color_role_t role);
 const char *ui_theme_name(ui_theme_t theme);

@@ -87,4 +87,4 @@ with tempfile.TemporaryDirectory() as tmp:
     p=Path(tmp)/'input.cpp';p.write_text(code)
     subprocess.run(['c++','-std=c++17','-Wall','-Wextra','-Werror','-Wno-misleading-indentation','-fsanitize=address,undefined',str(p),'-o',str(p.with_suffix(''))],check=True)
     subprocess.run([str(p.with_suffix(''))],check=True)
-print('Unified input: serial producer isolation, mixed FIFO order, bounded overflow, power routing, offline key rescan: PASS')
+print('Unified input: serial isolation, FIFO order, overflow, power routing, offline key rescan: PASS')

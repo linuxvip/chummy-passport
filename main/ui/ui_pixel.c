@@ -46,6 +46,15 @@ static const uint32_t s_playful_dark[UI_COLOR_COUNT] = {
     0x86C9FF, 0xFFAD78,
 };
 
+static const uint32_t s_element_colors[UI_THEME_COUNT][UI_ELEMENT_COUNT] = {
+    [UI_THEME_CLASSIC] = {0x82C89A, 0xE28A72, 0xDDB36C, 0xE2DED0, 0x79B8D8},
+    [UI_THEME_TRAVEL] = {0x82C89A, 0xE28A72, 0xDDB36C, 0xE2DED0, 0x79B8D8},
+    [UI_THEME_PLAYFUL] = {0x2F7D52, 0xB4463B, 0x8A5A13, 0x4B5563, 0x246B91},
+    [UI_THEME_NEON] = {0x5EF29E, 0xFF6B7A, 0xFFD25A, 0xEAF4FF, 0x54C8FF},
+    [UI_THEME_PAPER] = {0x47745A, 0xB43B2D, 0x946528, 0x5B5145, 0x3F6078},
+    [UI_THEME_NIGHT] = {0x72B6A1, 0xCF5B4D, 0xD1A75B, 0xD7D6CB, 0x67A9C4},
+};
+
 void ui_theme_set(ui_theme_t theme)
 {
     s_ui_theme = (unsigned)theme < UI_THEME_COUNT ? theme : UI_THEME_CLASSIC;
@@ -68,6 +77,11 @@ uint32_t ui_theme_color_on_dark(ui_color_role_t role)
     if ((unsigned)role >= UI_COLOR_COUNT) role = UI_COLOR_TEXT;
     return s_ui_theme == UI_THEME_PLAYFUL ? s_playful_dark[role] : ui_theme_color(role);
 }
+uint32_t ui_theme_element_color(ui_element_t element)
+{
+    if ((unsigned)element >= UI_ELEMENT_COUNT) return ui_theme_color(UI_COLOR_TEXT);
+    return s_element_colors[s_ui_theme][element];
+}
 const char *ui_theme_name(ui_theme_t theme)
 {
     switch (theme) {
@@ -79,8 +93,6 @@ const char *ui_theme_name(ui_theme_t theme)
         default: return "经典绿";
     }
 }
-
-static void start_blink(lv_obj_t *eye);
 
 static lv_obj_t *block(lv_obj_t *parent, int x, int y, int w, int h, uint32_t color)
 {
@@ -169,16 +181,6 @@ lv_obj_t *ui_pixel_footer(lv_obj_t *parent, const char *action, const char *navi
     return primary;
 }
 
-// Preserve the clock-theme API without retaining pointers to deleted screens.
-static bool s_night;
-bool ui_pixel_theme_is_night(void) { return s_night; }
-bool ui_pixel_set_hour_theme(int hour)
-{
-    const bool night = hour >= 0 && hour < 24 && (hour >= 19 || hour < 6);
-    if (night == s_night) return false;
-    s_night = night;
-    return true;
-}
 void ui_pixel_background(lv_obj_t *scr)
 {
     lv_obj_set_style_bg_color(scr, lv_color_hex(UI_BG), 0);
@@ -188,105 +190,6 @@ void ui_pixel_background(lv_obj_t *scr)
     lv_obj_set_style_radius(scr, 0, 0);
     lv_obj_remove_flag(scr, LV_OBJ_FLAG_SCROLLABLE);
 }
-bool ui_pixel_theme_apply(lv_obj_t *scr)
-{
-    if (!scr) return false;
-    lv_obj_set_style_bg_color(scr, lv_color_hex(UI_BG), 0);
-    return true;
-}
-
-lv_obj_t *ui_pixel_screen_create(const char *title)
-{
-    lv_obj_t *scr = lv_obj_create(NULL);
-    lv_obj_remove_flag(scr, LV_OBJ_FLAG_SCROLLABLE);
-    ui_pixel_background(scr);
-
-    ui_pixel_title_plate(scr, 10, title, &lv_font_montserrat_20);
-    return scr;
-}
-
-lv_obj_t *ui_pixel_panel_create(lv_obj_t *parent, int x, int y, int w, int h,
-                                uint32_t color)
-{
-    lv_obj_t *panel = block(parent, x, y, w, h, color);
-    lv_obj_set_style_border_color(panel, lv_color_hex(UI_BORDER), 0);
-    lv_obj_set_style_border_width(panel, ui_theme_is_classic() ? 1 : 0, 0);
-    lv_obj_set_style_pad_all(panel, 7, 0);
-    return panel;
-}
-
-lv_obj_t *ui_pixel_mascot_create(lv_obj_t *parent, int x, int y)
-{
-    lv_obj_t *m = lv_obj_create(parent);
-    lv_obj_remove_flag(m, LV_OBJ_FLAG_SCROLLABLE);
-    lv_obj_set_pos(m, x, y);
-    lv_obj_set_size(m, 38, 48);
-    lv_obj_set_style_bg_opa(m, LV_OPA_TRANSP, 0);
-    lv_obj_set_style_border_width(m, 0, 0);
-    lv_obj_set_style_pad_all(m, 0, 0);
-
-    /* 原创“小电视机器人”：天线、发光屏幕脸、橙色围巾与履带脚。 */
-    block(m, 18, 0, 3, 6, UI_INK);
-    block(m, 16, 0, 7, 3, UI_ORANGE);
-    block(m, 3, 6, 32, 24, UI_INK);
-    block(m, 0, 12, 5, 10, 0x7557D9);
-    block(m, 33, 12, 5, 10, 0x7557D9);
-    block(m, 7, 10, 24, 16, 0xB9F3FF);
-    lv_obj_t *left_eye = block(m, 11, 14, 4, 6, 0x294B7A);
-    lv_obj_t *right_eye = block(m, 23, 14, 4, 6, 0x294B7A);
-    block(m, 16, 22, 7, 2, 0x7557D9);
-    block(m, 10, 29, 18, 4, UI_ORANGE);
-    block(m, 8, 33, 22, 11, 0x7557D9);
-    block(m, 3, 35, 5, 7, 0xB9F3FF);
-    block(m, 30, 35, 5, 7, 0xB9F3FF);
-    block(m, 8, 44, 9, 4, UI_INK);
-    block(m, 21, 44, 9, 4, UI_INK);
-    start_blink(left_eye);
-    start_blink(right_eye);
-    return m;
-}
-
-static void jump_y(void *obj, int32_t value)
-{
-    lv_obj_set_y((lv_obj_t *)obj, value);
-}
-
-static void blink_eye(void *obj, int32_t value)
-{
-    lv_obj_set_style_opa((lv_obj_t *)obj, (lv_opa_t)value, 0);
-}
-
-static void start_blink(lv_obj_t *eye)
-{
-    lv_anim_t anim;
-    lv_anim_init(&anim);
-    lv_anim_set_var(&anim, eye);
-    lv_anim_set_exec_cb(&anim, blink_eye);
-    lv_anim_set_values(&anim, LV_OPA_COVER, LV_OPA_20);
-    lv_anim_set_duration(&anim, 70);
-    lv_anim_set_playback_duration(&anim, 70);
-    lv_anim_set_repeat_delay(&anim, 1700);
-    lv_anim_set_repeat_count(&anim, LV_ANIM_REPEAT_INFINITE);
-    lv_anim_set_path_cb(&anim, lv_anim_path_step);
-    lv_anim_start(&anim);
-}
-
-void ui_pixel_mascot_jump(lv_obj_t *mascot)
-{
-    if (!mascot) return;
-    int y = lv_obj_get_y(mascot);
-    lv_anim_delete(mascot, jump_y);
-    lv_anim_t anim;
-    lv_anim_init(&anim);
-    lv_anim_set_var(&anim, mascot);
-    lv_anim_set_exec_cb(&anim, jump_y);
-    lv_anim_set_values(&anim, y, y - 5);
-    lv_anim_set_duration(&anim, 110);
-    lv_anim_set_playback_duration(&anim, 140);
-    lv_anim_set_path_cb(&anim, lv_anim_path_step);
-    lv_anim_start(&anim);
-}
-
 void ui_pixel_set_selected(lv_obj_t *panel, bool selected, bool enabled)
 {
     uint32_t color = selected && enabled ? UI_SURFACE_ALT : UI_SURFACE;
@@ -316,19 +219,6 @@ lv_obj_t *ui_pixel_title_plate(lv_obj_t *parent, int y, const char *text,
     lv_obj_set_style_text_align(t, LV_TEXT_ALIGN_LEFT, 0);
     lv_obj_align(t, LV_ALIGN_LEFT_MID, 0, -2);
     return plate;
-}
-
-lv_obj_t *ui_pixel_hint_pill(lv_obj_t *parent, const char *text,
-                             const lv_font_t *font)
-{
-    // A single label can be updated safely; no stale duplicate shadow text.
-    lv_obj_t *t = ui_pixel_label(parent, text, font, UI_TEXT_DIM);
-    lv_obj_set_width(t, 224);
-    lv_obj_set_style_text_letter_space(t, 0, 0);
-    lv_obj_set_style_text_align(t, LV_TEXT_ALIGN_CENTER, 0);
-    lv_label_set_long_mode(t, LV_LABEL_LONG_MODE_DOTS);
-    lv_obj_align(t, LV_ALIGN_BOTTOM_MID, 0, -6);
-    return t;
 }
 
 lv_obj_t *ui_pixel_top_bar(lv_obj_t *parent)

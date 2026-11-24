@@ -71,43 +71,6 @@ bool radio_sleep_timer_init() {
     return true;
 }
 
-void radio_sleep_timer_set_minutes(uint16_t minutes) {
-    std::size_t selection = 0;
-    for (std::size_t i = 0; i < sizeof(kChoices) / sizeof(kChoices[0]); ++i) {
-        if (kChoices[i] == minutes) {
-            selection = i;
-            break;
-        }
-    }
-    s_selection.store(selection, std::memory_order_release);
-    s_deadline_ticks.store(0, std::memory_order_release);
-
-    if (!s_timer && !radio_sleep_timer_init()) {
-        ESP_LOGE(kTag, "Unable to initialize timer");
-        return;
-    }
-    esp_timer_stop(s_timer);
-    if (minutes == 0) {
-        ESP_LOGI(kTag, "Sleep timer cancelled");
-        return;
-    }
-
-    const uint64_t delay_us = static_cast<uint64_t>(minutes) * 60ULL * 1000000ULL;
-    const esp_err_t error = esp_timer_start_once(s_timer, delay_us);
-    if (error != ESP_OK) {
-        s_selection.store(0, std::memory_order_release);
-        ESP_LOGE(kTag, "Unable to start %u-minute timer: %s",
-                 static_cast<unsigned>(minutes), esp_err_to_name(error));
-        return;
-    }
-    s_deadline_ticks.store(
-        xTaskGetTickCount() +
-            pdMS_TO_TICKS(static_cast<uint32_t>(minutes) * 60U * 1000U),
-        std::memory_order_release);
-    ESP_LOGI(kTag, "Sleep timer set to %u minutes",
-             static_cast<unsigned>(minutes));
-}
-
 std::size_t radio_sleep_timer_selection() {
     return s_selection.load(std::memory_order_acquire);
 }

@@ -42,7 +42,7 @@ esp_err_t bsp_audio_read(void *pcm, size_t bytes);
 
 // 输出音量 0..100(%)。
 void bsp_audio_set_volume(uint8_t percent);
-// 仅 bsp_audio_init_feedback() 期间有效：番茄钟/提醒用固定输出音量，不随
+// 仅 bsp_audio_init_feedback() 期间有效：定时器和提醒用固定输出音量，不随
 // 主音量缩小（主音量 0 也照常响）；deinit 或 set_volume 后恢复正常缩放。
 void bsp_audio_set_alert_volume(uint8_t percent);
 

@@ -11,7 +11,7 @@
 extern "C" {
 #endif
 
-// 启动配置服务(幂等)。需先 StartConfigAp(true)，返回后可获取热点地址。
+// 启动配置服务(幂等)。需先进入配置 AP 模式。
 esp_err_t home_upload_start(void);
 
 // 停止服务并回收 httpd 内存(退出上传模式/离开首页时必须调用)。

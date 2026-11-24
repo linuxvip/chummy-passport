@@ -93,7 +93,6 @@ public:
 
     // 交互操作（控制任务调用）
     bool TriggerStartListen();
-    bool TriggerStopListen();
     bool TriggerAbort();
     // Process at most one queued tool request on the control task. NVS work
     // must never run inside a WebSocket callback.

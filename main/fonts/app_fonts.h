@@ -26,8 +26,6 @@ LV_FONT_DECLARE(launcher_font_12);
 LV_FONT_DECLARE(launcher_title_20);
 // Dense calendar cells: ASCII, lunar days, solar terms and earthly branches.
 LV_FONT_DECLARE(calendar_font_9);
-// Three extra title glyphs used only by the Calendar launcher card.
-LV_FONT_DECLARE(calendar_title_font_20);
 // Title (标题): shared SourceHanSansSC 20px/4bpp subset for static titles.
 // Missing glyphs fall back to the 16px body font, so new title text must add
 // its glyphs; regenerate with:

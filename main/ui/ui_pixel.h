@@ -17,9 +17,6 @@ extern "C" {
 
 // Terminal background; no decorative objects or continuously running timers.
 void ui_pixel_background(lv_obj_t *scr);
-lv_obj_t *ui_pixel_screen_create(const char *title);
-lv_obj_t *ui_pixel_panel_create(lv_obj_t *parent, int x, int y, int w, int h,
-                                uint32_t color);
 lv_obj_t *ui_pixel_label(lv_obj_t *parent, const char *text,
                          const lv_font_t *font, uint32_t color);
 lv_obj_t *ui_pixel_label_ls(lv_obj_t *parent, const char *text,
@@ -35,8 +32,6 @@ void ui_pixel_focus_feedback(lv_obj_t *obj);
 // Two bounded footer lines: current action, then navigation/secondary action.
 lv_obj_t *ui_pixel_footer(lv_obj_t *parent, const char *action, const char *navigation,
                           const lv_font_t *font);
-lv_obj_t *ui_pixel_mascot_create(lv_obj_t *parent, int x, int y);
-void ui_pixel_mascot_jump(lv_obj_t *mascot);
 void ui_pixel_set_selected(lv_obj_t *panel, bool selected, bool enabled);
 
 // ---- 2026-09-13 新增共享构件 ----
@@ -45,10 +40,6 @@ void ui_pixel_set_selected(lv_obj_t *panel, bool selected, bool enabled);
 // 返回牌对象(可继续改 y 或加子对象)。
 lv_obj_t *ui_pixel_title_plate(lv_obj_t *parent, int y, const char *text,
                                const lv_font_t *font);
-
-// Single, dynamically editable footer label with a bounded width.
-lv_obj_t *ui_pixel_hint_pill(lv_obj_t *parent, const char *text,
-                             const lv_font_t *font);
 
 // 26px shared status bar. Use LEFT_MID/RIGHT_MID
 // 对齐即垂直居中。
@@ -82,12 +73,6 @@ void ui_pixel_battery_set_on_dark(ui_pixel_battery_t *batt, int soc);
 void ui_pixel_wifi_bars_create(lv_obj_t *parent, int x, int y,
                                lv_obj_t *bars[3]);
 void ui_pixel_wifi_bars_set(lv_obj_t *bars[3], int level, uint32_t color);
-
-// Clock-theme compatibility. The terminal palette stays dark in both modes;
-// no screen pointers are retained and no decorative timers are started.
-bool ui_pixel_set_hour_theme(int hour);
-bool ui_pixel_theme_is_night(void);
-bool ui_pixel_theme_apply(lv_obj_t *scr);
 
 #ifdef __cplusplus
 }

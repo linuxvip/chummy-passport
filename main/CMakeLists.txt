@@ -39,12 +39,10 @@ idf_component_register(
         "fonts/launcher_font_12.c"
         "fonts/launcher_title_20.c"
         "fonts/calendar_font_9.c"
-        "fonts/calendar_title_font_20.c"
         "fonts/ui_font_20.c"
         "fonts/ui_digits_32.c"
         "apps/radio/app_radio.cc"
         "apps/radio/radio_catalog.cc"
-        "apps/radio/radio_display_settings.cc"
         "apps/radio/radio_player.cc"
         "apps/radio/radio_source.cc"
         "apps/radio/radio_sleep_timer.cc"
@@ -73,7 +71,6 @@ idf_component_register(
         "apps/home/home_almanac.c"
         "apps/home/home_weather.c"
         "apps/home/home_daily_quote.c"
-        "apps/home/band_art.c"
         "apps/home/home_upload.cc"
         "apps/home/app_home.cc"
     INCLUDE_DIRS
@@ -104,9 +101,11 @@ idf_component_register(
         spi_flash
         esp_driver_usb_serial_jtag
         esp_http_server
+        esp_app_format
         spiffs
         lwip
 )
+
 target_link_options(${COMPONENT_LIB} INTERFACE
     "-Wl,--undefined=__wrap_opus_encoder_create,--undefined=__wrap_opus_encoder_destroy"
     "-Wl,--wrap=opus_encoder_create,--wrap=opus_encoder_destroy")

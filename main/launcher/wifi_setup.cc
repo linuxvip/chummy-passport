@@ -40,7 +40,7 @@ void wifi_setup_start(void) {
     home_profile_init();
     if (SsidManager::GetInstance().GetSsidList().empty()) s_required = true;
     auto &wifi = WifiManager::GetInstance();
-    wifi.StartConfigAp(true); // DNS/AP only; one shared HTTP server owns the full flow.
+    wifi.StartConfigAp(); // Shared phone setup server owns the HTTP flow.
     const auto err = home_upload_start();
     bsp_lvgl_lock(-1);
     s_screen = lv_obj_create(nullptr);

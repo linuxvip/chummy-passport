@@ -1,5 +1,8 @@
 # 小智 AI 对话应用（passport-os/main/apps/xiaozhi）改造记录
 
+> 状态：历史故障复盘。当前功能和配置边界以 `README.md`、`docs/CURRENT.md`
+> 与源码为准；本文用于解释资源生命周期和故障修复原因，不作为接口契约。
+
 本文记录把 FoloToy `folo-ai-passport-xiaozhi` 的对话能力并进 Passport OS 之后，
 针对「服务跑不通（对话没有返回）」和「对话后不稳定、闪退」两个问题的定位与修复。
 

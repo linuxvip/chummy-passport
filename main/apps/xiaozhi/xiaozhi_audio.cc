@@ -579,14 +579,6 @@ bool AudioService::PopEncodedFrame(uint8_t *out, size_t out_cap, size_t *out_len
     return n > 0;
 }
 
-bool AudioService::HasPendingEncoded() const {
-    return RingCount(tx_ring_) > 0;
-}
-
-void AudioService::ResetEncodedQueue() {
-    RingReset(tx_ring_);
-}
-
 // -------------------------------------------------------------------- playback
 
 void AudioService::SetPlaybackSampleRate(int hz) {

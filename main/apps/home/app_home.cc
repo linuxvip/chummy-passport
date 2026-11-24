@@ -700,28 +700,9 @@ FiveElement five_element_for_glyph(const char *glyph) {
 }
 
 uint32_t five_element_color(FiveElement element) {
-    static constexpr uint32_t kClassic[5] = {
-        0x82C89A, 0xE28A72, 0xDDB36C, 0xE2DED0, 0x79B8D8,
-    };
-    static constexpr uint32_t kNeon[5] = {
-        0x5EF29E, 0xFF6B7A, 0xFFD25A, 0xEAF4FF, 0x54C8FF,
-    };
-    static constexpr uint32_t kPlayful[5] = {
-        0x2F7D52, 0xB4463B, 0x8A5A13, 0x4B5563, 0x246B91,
-    };
-    static constexpr uint32_t kPaper[5] = {
-        0x47745A, 0xB43B2D, 0x946528, 0x5B5145, 0x3F6078,
-    };
-    static constexpr uint32_t kNight[5] = {
-        0x72B6A1, 0xCF5B4D, 0xD1A75B, 0xD7D6CB, 0x67A9C4,
-    };
     const int index = static_cast<int>(element);
     if (index < 0 || index >= 5) return kPhos;
-    const uint32_t *palette = ui_theme_get() == UI_THEME_PLAYFUL ? kPlayful
-        : ui_theme_get() == UI_THEME_NEON ? kNeon
-        : ui_theme_get() == UI_THEME_PAPER ? kPaper
-        : ui_theme_get() == UI_THEME_NIGHT ? kNight : kClassic;
-    return palette[index];
+    return ui_theme_element_color(static_cast<ui_element_t>(index));
 }
 
 // Network text is untrusted UI data. Keep only code points present in the

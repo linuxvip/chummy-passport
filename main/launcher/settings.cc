@@ -433,21 +433,6 @@ uint8_t settings_get_volume(void) { return s_volume; }
 uint8_t settings_get_brightness(void) { return s_brightness; }
 bool settings_get_late_zi(void) { return s_late_zi; }
 home_layout_t settings_get_home_layout(void) { return s_home_layout; }
-bool settings_save_late_zi(bool late_zi) {
-    nvs_handle_t handle;
-    esp_err_t result = nvs_open(kNvsNamespace, NVS_READWRITE, &handle);
-    if (result == ESP_OK) {
-        result = nvs_set_u8(handle, "late_zi", late_zi ? 1 : 0);
-        if (result == ESP_OK) result = nvs_commit(handle);
-        nvs_close(handle);
-    }
-    if (result != ESP_OK) {
-        ESP_LOGW(kTag, "Failed to save late_zi: %s", esp_err_to_name(result));
-        return false;
-    }
-    s_late_zi = late_zi;
-    return true;
-}
 bool settings_save_volume(uint8_t percent) {
     if (percent > 100 || !save_percent("volume", percent)) return false;
     s_volume = percent;

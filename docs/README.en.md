@@ -4,15 +4,15 @@
 
 **A small device worth keeping in your daily routine.**
 
-Community firmware for the FoloToy AI Passport, based on ESP32-C3 with 8 MB Flash. It brings eight apps together with shared settings, Wi-Fi setup, themes, audio, battery reporting, and power management.
+Community firmware for the FoloToy AI Passport, based on ESP32-C3 with 8 MB Flash. Version `1.0.0` brings eight launchable apps together with the Home dashboard, shared settings, Wi-Fi setup, themes, audio, battery reporting, and power management.
 
 **Ask Xiaozhi to adjust the volume, play music or radio, and set reminders on the device.**
 
 ## Why this project exists
 
-Thank you to everyone who has enjoyed the project and shared feedback. I started Passport OS to make a small device I would use regularly, then selected ten functions and apps through repeated experiments.
+Thank you to everyone who has enjoyed the project and shared feedback. I started Passport OS to make a small device I would use regularly, then reduced it to the functions that matter most in daily use.
 
-One part I especially enjoy is letting Xiaozhi connect these functions. While chatting, you can ask to hear music, save a task, or start a focus session, and Xiaozhi calls the device's functions to carry out the request.
+One part I especially enjoy is letting Xiaozhi connect these functions. While chatting, you can ask to hear music, save a task, or create a reminder, and Xiaozhi calls the device's functions to carry out the request.
 
 People have suggested many personal improvements. Because everyone uses the hardware differently, sharing the source lets you add what you need, remove what you do not, and make a version that fits you. Have fun using and modifying it.
 
@@ -26,33 +26,34 @@ People have suggested many personal improvements. Because everyone uses the hard
 | “Play my liked songs and stop in half an hour” | Open NetEase Music, play your favorites, and set a stop timer |
 | “Play traffic radio from Shenzhen” | Find a station by city and keywords, then open Radio to play it |
 | “Remind me to drink water in ten minutes” or “Remind me to read every day at 9 pm” | Save a one-time or recurring reminder with an on-device alert and chime |
-| “Create a packing list: keys, phone, umbrella” or “Mark umbrella as done” | Save a checklist, then read and update its items and completion state |
+| “Add checklist items: keys, phone, umbrella” or “Mark umbrella as done” | Operate the device's single shared checklist and its item completion state |
 | “Open Bazi” or “Go to Home” | Open the requested app or screen |
 
 You can also ask for today's AI news. Robot expressions and an audio waveform follow listening and speech, longer text expands into a reading area, and all six themes are supported.
 
 Voice tools require a network connection and Xiaozhi configuration. NetEase playback also depends on your account and available tracks; radio depends on the online directory. Opening another app or starting media playback ends the current Xiaozhi conversation. Double-press OK again for further voice control. The device must remain powered on for reminders to trigger.
 
-## Eight apps
+## Home and eight apps
 
-The launcher uses a phone-style 3 × 4 grid that shows all apps at once. Short Up/Down presses move one app, long presses move by row, and OK opens the highlighted app. Long-press OK to return Home.
+Home is the system's base screen. Press OK to enter the application picker, which uses the **Passport Flow** full-page carousel. Each page focuses on one app inside a large icon ring, with a position rail and indicators for the device's Up, Down, and OK buttons. Short Up/Down presses move one app, long presses move by four, and OK opens the focused app. Long-press OK to return Home.
 
 | App | What it does | Requirements |
 | --- | --- | --- |
 | Home | Four selectable layouts: almanac, minimal four pillars, weather life, and a colorful personal profile with name, introduction, weather, lunar date, and Ganzhi | Network for the daily quote and weather; Beijing is the initial default city |
 | Radio | City and station selection, playback, and sleep timer | Wi-Fi and available online stations |
-| Xiaozhi AI | Voice conversations, volume and brightness control, app opening, music and radio requests, timers, reminders, and lists | Network and Xiaozhi configuration; media needs its corresponding service |
+| Xiaozhi AI | Voice conversations, volume and brightness control, app opening, music and radio requests, timers, reminders, and the shared checklist | Network and Xiaozhi configuration; media needs its corresponding service |
 | NetEase Music | Search songs, play playlists and daily recommendations | Wi-Fi, your own NetEase account, and available APIs |
 | Reminders | One-time and recurring reminders, chimes, and snooze | Works offline; uses the device clock |
 | Lists | View, check off, and manage tasks | Works offline |
 | Bazi chart | Four pillars, a horizontal luck-cycle row, and vertically scrolling flow years | Works offline; supports birth dates from 1900 to 2100 |
 | Perpetual calendar | Month grid with lunar dates, solar terms and each day's Ganzhi; day details include a 6 × 2 twelve-shichen hour-stem table and year/month jump | Works offline; supports 1900–2100 |
+| Settings | Volume, brightness, screen timeout, themes, late-Zi rule, Wi-Fi, key sounds, diagnostics, and restoring defaults | Wi-Fi settings require network configuration |
 
 ## FoloToy official firmware
 
 [Get the latest firmware](https://ai-passport.folotoy.cn/plays/438/?v=5579-4)
 
-This page hosts FoloToy's official firmware and may not include the `custom1` home screen or Bazi app from this workspace. Build and flash this source tree to use the current custom firmware.
+This page hosts FoloToy's official firmware and may not include the home screen or Bazi app from this workspace. Build and flash this source tree to use the current custom firmware.
 
 ## Install
 
@@ -62,10 +63,12 @@ Use only the matching FoloToy AI Passport hardware revision with ESP32-C3 and 8 
 
 | Situation | Image | Address |
 | --- | --- | --- |
-| First installation or a fresh start | `*-full.bin` | `0x0` |
-| Existing Passport OS with a verified identical partition layout | `*-app.bin` | `0x10000` |
+| First installation or a fresh start | `FoloToy-AI-Passport-full.bin` | `0x0` |
+| Existing Passport OS with a verified identical partition layout | `passport-os.bin` | `0x10000` |
 
 **Back up first.** A full image overwrites configuration in its written range. A complete reset also requires erasing flash. To preserve settings and images, verify the partition layout and use the application image without erasing the whole flash.
+
+The source tree identifies itself as `1.0.0`; this does not mean a matching binary has already been published. Rebuild and verify the exact source revision before flashing it.
 
 On first boot, connect your phone to the device's password-free `Passport-WiFi-xxxx` hotspot and open `http://192.168.4.1`. Follow the setup page to select Wi-Fi, city, and personal details. The profile layout can also use one color photo, cropped by the phone to a 3:4, 108×144 RGB565 image; replacing it is transactional and an interrupted upload keeps the previous photo. Xiaozhi needs your own service configuration.
 

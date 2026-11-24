@@ -1,4 +1,4 @@
-"""Verify the two added themes are complete, visible and consistently wired."""
+"""Verify all themes and the shared five-element palette are consistently wired."""
 
 from pathlib import Path
 import re
@@ -9,6 +9,7 @@ header = (ROOT / "main/ui/ui_palette.h").read_text()
 pixel = (ROOT / "main/ui/ui_pixel.c").read_text()
 home = (ROOT / "main/apps/home/app_home.cc").read_text()
 bazi = (ROOT / "main/apps/bazi/app_bazi.cc").read_text()
+calendar = (ROOT / "main/apps/calendar/app_calendar.cc").read_text()
 
 for declaration in (
     "UI_THEME_PAPER = 4",
@@ -60,10 +61,16 @@ for theme in ("UI_THEME_PAPER", "UI_THEME_NIGHT"):
     assert contrast(bg, dim) >= 4.5
     assert contrast(bg, accent) >= 4.5
     assert contrast(accent, on_accent) >= 4.5
-    assert theme in home
-    assert theme in bazi
 
 assert "s_ui_theme == UI_THEME_PAPER" in pixel
 assert "s_ui_theme == UI_THEME_NIGHT" in pixel
-assert "kPaper[5]" in home and "kNight[5]" in home
-print("Theme palettes: six themes, names, Home/Bazi mappings and contrast PASS")
+assert "ui_theme_element_color" in home
+assert "ui_theme_element_color" in bazi
+assert "ui_theme_element_color" in calendar
+for theme in names:
+    entries = re.findall(
+        rf"\[{theme}\]\s*=\s*\{{([^{{}}]*)\}}",
+        pixel,
+    )
+    assert any(len(re.findall(r"0x([0-9A-Fa-f]{6})", entry)) == 5 for entry in entries)
+print("Theme palettes: six themes, shared five-element colors and contrast PASS")

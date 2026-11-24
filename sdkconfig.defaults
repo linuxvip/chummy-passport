@@ -26,8 +26,8 @@ CONFIG_ESP_SYSTEM_EVENT_TASK_STACK_SIZE=4096
 CONFIG_LV_COLOR_DEPTH_16=y
 CONFIG_LV_FONT_MONTSERRAT_14=y
 CONFIG_LV_FONT_MONTSERRAT_20=y
-# 32px and 48px readouts use digit-only subsets (main/fonts/ui_digits_32.c,
-# pomodoro_digits_48.c); the full fonts would add ~46 KB / ~90 KB of flash.
+# Large readouts use digit-only subsets such as main/fonts/ui_digits_32.c;
+# full-size fonts would add tens of kilobytes of unnecessary glyphs.
 # CONFIG_LV_FONT_MONTSERRAT_32 is not set
 # CONFIG_LV_FONT_MONTSERRAT_48 is not set
 # CONFIG_LV_FONT_UNSCII_8 is not set

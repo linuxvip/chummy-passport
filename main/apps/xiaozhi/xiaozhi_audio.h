@@ -85,8 +85,6 @@ public:
 
     // ---- 控制任务调用：取出已编码的音频帧并发送 ----
     bool PopEncodedFrame(uint8_t *out, size_t out_cap, size_t *out_len);
-    bool HasPendingEncoded() const;
-    void ResetEncodedQueue();
 
     // ---- 控制任务调用：播放生命周期 ----
     void SetPlaybackSampleRate(int hz);

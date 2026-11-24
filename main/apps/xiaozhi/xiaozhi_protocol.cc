@@ -271,16 +271,6 @@ bool Protocol::TriggerStartListen() {
     return true;
 }
 
-bool Protocol::TriggerStopListen() {
-    if (!IsConnected()) return false;
-    std::string msg = "{\"session_id\":\"" + session_id_ +
-                      "\",\"type\":\"listen\",\"state\":\"stop\"}";
-    if (!SendJson(msg)) return false;
-    ESP_LOGI(TAG, "listen/stop sent");
-    SetState(State::Thinking);
-    return true;
-}
-
 bool Protocol::TriggerAbort() {
     if (!IsConnected()) return false;
     std::string msg = "{\"session_id\":\"" + session_id_ +

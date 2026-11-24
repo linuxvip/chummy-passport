@@ -1,29 +1,21 @@
 #include "radio_ui.h"
 
-#include "radio_display_settings.h"
 #include "radio_sleep_timer.h"
 #include "bsp_battery.h"
 #include "bsp_display.h"
-#include "esp_log.h"
-#include "esp_lcd_panel_io.h"
-#include "esp_lcd_panel_ops.h"
-#include "esp_timer.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "lvgl.h"
-#include "src/libs/tjpgd/tjpgd.h"
 #include "app_fonts.h"
 #include "ui_pixel.h"
 #include "ui/pixel_scene.h"
 #include "ui/ssid_text.h"
-#include "apps/home/home_clock.h"
 #include "launcher/app_registry.h"
 
 #include <algorithm>
 #include <atomic>
 #include <cmath>
 #include <cstdio>
-#include <cstdlib>
 #include <cstring>
 #include <ctime>
 
@@ -53,20 +45,13 @@ constexpr int kDialNeedleHome = (kDialTrackLeft + kDialTrackRight) / 2;
 constexpr std::size_t kMeterCount = 18;
 constexpr std::size_t kWifiVisibleRows = 6;
 constexpr std::size_t kWifiMaxKeys = 35;
-constexpr uint16_t kVideoWidth = 240;
-constexpr uint16_t kVideoHeight = 320;
-constexpr uint16_t kJpegMcuHeight = 16;
-constexpr uint8_t kMaxVideoScale = 2;
-constexpr std::size_t kJpegWorkSize = 4096;
 
 enum class Page {
     Main,
     Settings,
-    Config,
     WifiList,
     WifiKeyboard,
     WifiConnecting,
-    EasterEgg,
 };
 
 lv_obj_t *s_screen;
@@ -79,13 +64,10 @@ lv_obj_t *s_play_icon;
 lv_obj_t *s_main_hint;
 lv_obj_t *s_status;
 lv_obj_t *s_location;
-lv_obj_t *s_clock;
 ui_pixel_battery_t s_battery = {nullptr, nullptr};
 lv_obj_t *s_sleep_timer;
 lv_obj_t *s_wifi_bars[3];
 lv_obj_t *s_meter[kMeterCount];
-lv_obj_t *s_volume_value;
-lv_obj_t *s_volume_bar;
 lv_obj_t *s_settings_rows[8];
 lv_obj_t *s_settings_labels[8];
 lv_obj_t *s_pair_dot;
@@ -100,27 +82,12 @@ lv_obj_t *s_wifi_row_bars[kWifiVisibleRows][3];
 lv_obj_t *s_wifi_keyboard_network;
 lv_obj_t *s_wifi_password_mask;
 lv_obj_t *s_wifi_keyboard_status;
-lv_obj_t *s_easter_message;
 lv_obj_t *s_wifi_key_box[kWifiMaxKeys];
 lv_obj_t *s_wifi_key_label[kWifiMaxKeys];
-uint8_t *s_jpeg_work;
-uint16_t *s_video_stripe;
-bool s_video_color_pending;
-
-struct DirectJpegContext {
-    const uint8_t *data;
-    std::size_t size;
-    std::size_t position;
-    uint16_t source_width;
-    uint16_t source_height;
-    uint8_t scale;
-    bool failed;
-};
 
 Page s_page = Page::Main;
 bool s_network_connected;
 uint8_t s_volume = 55;
-RadioSettingsPage s_settings_page = RadioSettingsPage::Menu;
 std::size_t s_settings_selected;
 std::size_t s_settings_row_count;
 std::size_t s_station_index;
@@ -136,129 +103,11 @@ uint8_t s_levels[kMeterCount] = {};
 uint32_t s_last_level_generation;
 uint8_t s_animation;
 uint32_t s_battery_ticks;
-uint32_t s_clock_tick;
+uint32_t s_status_tick;
 uint32_t s_last_sleep_seconds = UINT32_MAX;
 uint32_t s_volume_until;
 uint16_t s_station_frequency;
 int32_t s_needle_x = kDialNeedleHome;
-
-bool drain_video_color_transfers() {
-    if (!bsp_display_io()) return true;
-    const esp_err_t result =
-        esp_lcd_panel_io_tx_param(bsp_display_io(), 0x00, nullptr, 0);
-    if (result != ESP_OK) {
-        ESP_LOGE("radio_ui", "Panel color drain failed: %s",
-                 esp_err_to_name(result));
-        return false;
-    }
-    return true;
-}
-
-std::size_t direct_jpeg_input(JDEC *decoder, uint8_t *buffer,
-                              std::size_t requested) {
-    auto *context = static_cast<DirectJpegContext *>(decoder->device);
-    if (!context || context->position >= context->size) return 0;
-    const std::size_t count =
-        std::min(requested, context->size - context->position);
-    if (buffer) std::memcpy(buffer, context->data + context->position, count);
-    context->position += count;
-    return count;
-}
-
-int direct_jpeg_output(JDEC *decoder, void *bitmap, JRECT *rectangle) {
-    auto *context = static_cast<DirectJpegContext *>(decoder->device);
-    if (!context || !bitmap || !rectangle || context->failed) return 0;
-
-    const uint16_t block_width = rectangle->right - rectangle->left + 1;
-    const uint16_t block_height = rectangle->bottom - rectangle->top + 1;
-    if (rectangle->right >= context->source_width ||
-        rectangle->bottom >= context->source_height) {
-        context->failed = true;
-        return 0;
-    }
-
-    if (rectangle->left == 0 && s_video_color_pending) {
-        // The shared stripe is still owned by the previous color transfer.
-        // A parameter command drains every queued color transaction before we
-        // overwrite it with the next band.
-        if (!drain_video_color_transfers()) {
-            context->failed = true;
-            return 0;
-        }
-        s_video_color_pending = false;
-    }
-    uint16_t *target = s_video_stripe;
-    if (!target) {
-        context->failed = true;
-        return 0;
-    }
-
-    // TJPGD's JD_FORMAT=0 output is stored as B, G, R bytes (matching
-    // LVGL's little-endian RGB888 layout), not conventional R, G, B.
-    const auto *bgr = static_cast<const uint8_t *>(bitmap);
-    for (uint16_t y = 0; y < block_height; ++y) {
-        for (uint16_t x = 0; x < block_width; ++x) {
-            const std::size_t input =
-                (static_cast<std::size_t>(y) * block_width + x) * 3U;
-            const uint16_t color =
-                static_cast<uint16_t>(((bgr[input + 2] & 0xf8U) << 8U) |
-                                      ((bgr[input + 1] & 0xfcU) << 3U) |
-                                      (bgr[input] >> 3U));
-            const uint16_t panel_color = __builtin_bswap16(color);
-            const uint16_t output_x =
-                static_cast<uint16_t>((rectangle->left + x) * context->scale);
-            const uint16_t output_y = static_cast<uint16_t>(y * context->scale);
-            for (uint8_t repeat_y = 0; repeat_y < context->scale; ++repeat_y) {
-                uint16_t *row = target +
-                    static_cast<std::size_t>(output_y + repeat_y) * kVideoWidth;
-                for (uint8_t repeat_x = 0; repeat_x < context->scale; ++repeat_x) {
-                    row[output_x + repeat_x] = panel_color;
-                }
-            }
-        }
-    }
-
-    if (rectangle->right + 1U == context->source_width) {
-        const uint16_t panel_top = rectangle->top * context->scale;
-        const uint16_t panel_bottom =
-            static_cast<uint16_t>((rectangle->bottom + 1U) * context->scale);
-        if (esp_lcd_panel_draw_bitmap(bsp_display_panel(), 0, panel_top,
-                                      kVideoWidth, panel_bottom, target) != ESP_OK) {
-            context->failed = true;
-            return 0;
-        }
-        s_video_color_pending = true;
-    }
-    return 1;
-}
-
-bool ensure_direct_video_buffers() {
-    if (!s_jpeg_work) {
-        s_jpeg_work = static_cast<uint8_t *>(std::malloc(kJpegWorkSize));
-    }
-    constexpr std::size_t kStripePixels =
-        static_cast<std::size_t>(kVideoWidth) * kJpegMcuHeight * kMaxVideoScale;
-    if (!s_video_stripe) {
-        s_video_stripe = static_cast<uint16_t *>(
-            std::malloc(kStripePixels * sizeof(uint16_t)));
-    }
-    return s_jpeg_work && s_video_stripe;
-}
-
-void release_direct_video_buffers() {
-    // Color transfers are queued by the SPI panel driver. A parameter command
-    // first drains every in-flight color transaction, so the buffers are no
-    // longer owned by DMA when they are released below. ST7789 command 0x00 is
-    // NOP and does not alter the visible frame.
-    if (bsp_display_io()) {
-        esp_lcd_panel_io_tx_param(bsp_display_io(), 0x00, nullptr, 0);
-    }
-    std::free(s_jpeg_work);
-    s_jpeg_work = nullptr;
-    std::free(s_video_stripe);
-    s_video_stripe = nullptr;
-    s_video_color_pending = false;
-}
 
 lv_obj_t *make_box(lv_obj_t *parent, int x, int y, int width, int height,
                    uint32_t color, int radius = 0) {
@@ -292,11 +141,6 @@ lv_obj_t *make_label(lv_obj_t *parent, const char *text, int x, int y, int width
 
 void set_centered(lv_obj_t *object) {
     lv_obj_set_style_text_align(object, LV_TEXT_ALIGN_CENTER, 0);
-}
-
-static inline lv_obj_t *make_taskbar(lv_obj_t *parent) {
-    (void)parent;
-    return nullptr;
 }
 
 const char *playback_text() {
@@ -489,14 +333,6 @@ void apply_playback() {
         s_playback_state == RadioPlaybackState::Error ? kRed : kAmber);
 }
 
-void apply_volume() {
-    if (!s_volume_value || !s_volume_bar) return;
-    char text[16];
-    std::snprintf(text, sizeof(text), "%u%%", s_volume);
-    lv_label_set_text(s_volume_value, text);
-    lv_bar_set_value(s_volume_bar, s_volume, LV_ANIM_ON);
-}
-
 void apply_sleep_timer() {
     if (!s_sleep_timer || !s_status) return;
     const uint32_t seconds=radio_sleep_timer_remaining_seconds(),now=lv_tick_get();
@@ -521,8 +357,6 @@ void build_main() {
     s_play_icon = nullptr;
     s_main_hint = nullptr;
     s_location = nullptr;
-    s_volume_value = nullptr;
-    s_volume_bar = nullptr;
     s_pair_dot = nullptr;
     s_sleep_timer = nullptr;
     s_dial_needle = nullptr;
@@ -537,12 +371,11 @@ void build_main() {
     ui_pixel_top_bar(s_main_group);
     ui_pixel_wifi_bars_create(s_main_group, UI_STATUS_WIFI_X, 18, s_wifi_bars);
     make_label(s_main_group, "收音机", 42, 3, 106, UI_TEXT, &buddy_font_16);
-    s_clock = nullptr;
     s_battery = ui_pixel_battery_create(s_main_group, UI_STATUS_BATTERY_X, 6, UI_TEXT,
                                         &lv_font_montserrat_14);
     ui_pixel_battery_set(&s_battery, bsp_battery_soc());
     s_battery_ticks = 0;
-    s_clock_tick = lv_tick_get() - 1000;
+    s_status_tick = lv_tick_get() - 1000;
 
     s_station_number=make_label(s_main_group,"",12,42,104,UI_TEXT_DIM,&lv_font_montserrat_14);
     s_status=make_label(s_main_group,"",116,42,112,UI_TEXT_DIM);
@@ -580,56 +413,6 @@ void build_main() {
     apply_sleep_timer();
 }
 
-void build_config(const char *ssid, const char *url) {
-    lv_obj_clean(s_screen);
-    s_page = Page::Config;
-    s_station_number = nullptr;
-    s_station_name = nullptr;
-    s_station_description = nullptr;
-    s_status = nullptr;
-    s_play_icon = nullptr;
-    s_main_hint = nullptr;
-    s_location = nullptr;
-    s_clock = nullptr;
-    s_battery = {nullptr, nullptr};
-    s_sleep_timer = nullptr;
-    s_dial_needle = nullptr;
-    s_dial_glow = nullptr;
-    s_dial_readout = nullptr;
-    for (auto &bar : s_wifi_bars) bar = nullptr;
-    for (auto &bar : s_meter) bar = nullptr;
-
-    make_label(s_screen, "联网收音机", 12, 12, 216, kText, &ui_font_20);
-    lv_obj_t *tag = make_label(s_screen, "首次配网", 12, 45, 216, kAmber);
-    set_centered(tag);
-    s_pair_dot = make_box(s_screen, 112, 77, 16, 16, kRed, LV_RADIUS_CIRCLE);
-
-    lv_obj_t *panel = make_box(s_screen, 18, 111, 204, 132, kPanel, 10);
-    lv_obj_set_style_border_color(panel, lv_color_hex(kGrid), 0);
-    lv_obj_set_style_border_width(panel, 0, 0);
-    lv_obj_t *hint = make_label(panel, "手机连接热点", 0, 14, 204, kMuted);
-    set_centered(hint);
-    lv_obj_t *ssid_label = make_label(panel, ssid && ssid[0] ? ssid : "LEO Radio",
-                                      8, 43, 188, kAmber);
-    set_centered(ssid_label);
-    hint = make_label(panel, "连接后会自动打开配网页面", 0, 77, 204, kText);
-    set_centered(hint);
-    lv_obj_t *address = make_label(panel, url && url[0] ? url : "192.168.4.1",
-                                   0, 104, 204, kMuted,
-                                   &lv_font_montserrat_14);
-    set_centered(address);
-    hint = make_label(s_screen, "请选择 2.4G 无线网络", 12, 259, 216, kText);
-    make_taskbar(s_screen);
-    set_centered(hint);
-    hint = make_label(s_screen, "配网完成后会自动开始播放", 12, 291, 216, UI_TEXT);
-    set_centered(hint);
-}
-
-const lv_font_t *ssid_font(const char *ssid) {
-    (void)ssid;
-    return &buddy_font_16;
-}
-
 void reset_transient_objects(Page page) {
     lv_obj_clean(s_screen);
     s_page = page;
@@ -640,9 +423,6 @@ void reset_transient_objects(Page page) {
     s_play_icon = nullptr;
     s_main_hint = nullptr;
     s_location = nullptr;
-    s_volume_value = nullptr;
-    s_volume_bar = nullptr;
-    s_clock = nullptr;
     s_battery = {nullptr, nullptr};
     s_sleep_timer = nullptr;
     s_pair_dot = nullptr;
@@ -654,7 +434,6 @@ void reset_transient_objects(Page page) {
     s_wifi_keyboard_network = nullptr;
     s_wifi_password_mask = nullptr;
     s_wifi_keyboard_status = nullptr;
-    s_easter_message = nullptr;
     for (auto &bar : s_wifi_bars) bar = nullptr;
     for (auto &bar : s_meter) bar = nullptr;
     for (auto &row : s_settings_rows) row = nullptr;
@@ -680,132 +459,9 @@ void apply_settings_selection() {
     }
 }
 
-void build_settings(RadioSettingsPage page, std::size_t selected, uint8_t volume) {
-    reset_transient_objects(Page::Settings);
-    s_settings_page = page;
-    s_settings_selected = selected;
-    s_volume = volume;
-    s_settings_row_count = 0;
-
-    if (page == RadioSettingsPage::Volume) {
-        lv_obj_t *title = make_label(s_screen, "音量", 12, 16, 216, kText,
-                                     &buddy_font_16);
-        set_centered(title);
-        s_volume_value = make_label(s_screen, "55%", 12, 84, 216, kAmber,
-                                    &lv_font_montserrat_20);
-        set_centered(s_volume_value);
-        s_volume_bar = lv_bar_create(s_screen);
-        lv_obj_set_pos(s_volume_bar, 30, 136);
-        lv_obj_set_size(s_volume_bar, 180, 14);
-        lv_bar_set_range(s_volume_bar, 0, 100);
-        lv_obj_set_style_bg_color(s_volume_bar, lv_color_hex(kGrid), LV_PART_MAIN);
-        lv_obj_set_style_bg_color(s_volume_bar, lv_color_hex(kAmber), LV_PART_INDICATOR);
-        lv_obj_set_style_radius(s_volume_bar, 0, LV_PART_MAIN);
-        lv_obj_set_style_radius(s_volume_bar, 0, LV_PART_INDICATOR);
-        make_taskbar(s_screen);
-        lv_obj_t *hint = make_label(s_screen, "上下调节  确定返回",
-                                    12, 291, 216, UI_TEXT);
-        set_centered(hint);
-        apply_volume();
-        return;
-    }
-
-    static constexpr const char *kMenuItems[] = {
-        "音量", "城市电台", "定时播放", "屏幕设置", "网络设置", "蓝牙", "返回",
-    };
-    static constexpr const char *kCityItems[] = {
-        "自动定位", "北京", "上海", "广州", "深圳", "长沙", "杭州", "成都",
-    };
-    static constexpr const char *kSleepTimerItems[] = {
-        "无定时", "15 分钟", "30 分钟", "60 分钟", "90 分钟", "返回",
-    };
-    char brightness_item[32];
-    char timeout_item[48];
-    std::snprintf(brightness_item, sizeof(brightness_item), "亮度 %u%%",
-                  static_cast<unsigned>(radio_display_brightness()));
-    const uint16_t timeout = radio_display_timeout_seconds();
-    if (!timeout) {
-        std::snprintf(timeout_item, sizeof(timeout_item), "自动熄屏 关闭");
-    } else if (timeout < 60) {
-        std::snprintf(timeout_item, sizeof(timeout_item), "自动熄屏 %u 秒",
-                      static_cast<unsigned>(timeout));
-    } else {
-        std::snprintf(timeout_item, sizeof(timeout_item), "自动熄屏 %u 分钟",
-                      static_cast<unsigned>(timeout / 60));
-    }
-    const char *display_items[] = {brightness_item, timeout_item, "返回"};
-    static constexpr const char *kWifiMenuItems[] = {
-        "连接新网络", "已存网络", "返回",
-    };
-
-    const char *const *items = nullptr;
-    std::size_t item_count = 0;
-    const char *title_text = "设置";
-    const char *hint_text = "上下选择  确定进入";
-    switch (page) {
-        case RadioSettingsPage::Menu:
-            items = kMenuItems;
-            item_count = sizeof(kMenuItems) / sizeof(kMenuItems[0]);
-            break;
-        case RadioSettingsPage::City:
-            items = kCityItems;
-            item_count = sizeof(kCityItems) / sizeof(kCityItems[0]);
-            title_text = "城市电台";
-            hint_text = "确定选择  长按返回";
-            break;
-        case RadioSettingsPage::SleepTimer:
-            items = kSleepTimerItems;
-            item_count = sizeof(kSleepTimerItems) / sizeof(kSleepTimerItems[0]);
-            title_text = "定时播放";
-            hint_text = "确定开始  长按返回";
-            break;
-        case RadioSettingsPage::Display:
-            items = display_items;
-            item_count = sizeof(display_items) / sizeof(display_items[0]);
-            title_text = "屏幕设置";
-            hint_text = "确定切换  长按返回";
-            break;
-        case RadioSettingsPage::WifiMenu:
-            items = kWifiMenuItems;
-            item_count = sizeof(kWifiMenuItems) / sizeof(kWifiMenuItems[0]);
-            title_text = "网络设置";
-            hint_text = "确定进入  长按返回";
-            break;
-        default:
-            return;
-    }
-
-    const bool compact = item_count > 3;
-    const bool extra_compact = item_count > 6;
-    const bool city_rows = item_count >= 8;
-    const int first_y = city_rows ? 34 : (extra_compact ? 39 : (compact ? 45 : 70));
-    const int row_height = city_rows ? 27 : (extra_compact ? 29 : (compact ? 32 : 42));
-    const int row_gap = city_rows ? 30 : (extra_compact ? 34 : (compact ? 38 : 55));
-    s_settings_row_count = item_count;
-    if (s_settings_selected >= item_count) s_settings_selected = 0;
-
-    lv_obj_t *title = make_label(s_screen, title_text, 12, 13, 216, kText,
-                                 &buddy_font_16);
-    set_centered(title);
-    for (std::size_t i = 0; i < item_count; ++i) {
-        const int y = first_y + static_cast<int>(i) * row_gap;
-        s_settings_rows[i] = make_box(s_screen, 24, y, 192, row_height, kPanel, 7);
-        s_settings_labels[i] = make_label(s_settings_rows[i], items[i], 0,
-                                          city_rows ? 5 :
-                                          extra_compact ? 5 : (compact ? 7 : 12),
-                                          192, kText);
-        set_centered(s_settings_labels[i]);
-    }
-    apply_settings_selection();
-    make_taskbar(s_screen);
-    lv_obj_t *hint = make_label(s_screen, hint_text, 12, 291, 216, UI_TEXT);
-    set_centered(hint);
-}
-
 void build_saved_wifi(const char *const *ssids, std::size_t count,
                       std::size_t selected) {
     reset_transient_objects(Page::Settings);
-    s_settings_page = RadioSettingsPage::SavedWifi;
     const std::size_t total = count + 1;
     selected = std::min(selected, total - 1);
 
@@ -832,49 +488,22 @@ void build_saved_wifi(const char *const *ssids, std::size_t count,
         const char *text = index < count ? ssids[index] : "返回";
         s_settings_labels[row] = make_label(
             s_settings_rows[row], passport::ssid_display(text, &buddy_font_16).c_str(), 8, 6, 188, active ? UI_AMBER : kMuted,
-            index < count ? ssid_font(text) : &buddy_font_16);
+            &buddy_font_16);
         set_centered(s_settings_labels[row]);
     }
-    make_taskbar(s_screen);
-    lv_obj_t *hint = make_label(s_screen, "长按确定返回", 12, 291, 216, UI_TEXT);
-    set_centered(hint);
-}
-
-void build_wifi_action(const char *ssid, std::size_t selected) {
-    reset_transient_objects(Page::Settings);
-    s_settings_page = RadioSettingsPage::WifiAction;
-    s_settings_selected = selected % 3;
-    s_settings_row_count = 3;
-    lv_obj_t *title = make_label(s_screen, "网络设置", 12, 13, 216, kText,
-                                 &buddy_font_16);
-    set_centered(title);
-    lv_obj_t *network = make_label(s_screen, passport::ssid_display(ssid ? ssid : "WIFI", &buddy_font_16).c_str(), 12, 45, 216,
-                                   kAmber, ssid_font(ssid));
-    set_centered(network);
-    static constexpr const char *kItems[] = {"设为首选", "删除网络", "返回"};
-    for (std::size_t i = 0; i < 3; ++i) {
-        const int y = 83 + static_cast<int>(i) * 55;
-        s_settings_rows[i] = make_box(s_screen, 24, y, 192, 42, kPanel, 7);
-        s_settings_labels[i] = make_label(s_settings_rows[i], kItems[i], 0, 12,
-                                          192, kText);
-        set_centered(s_settings_labels[i]);
-    }
-    apply_settings_selection();
-    make_taskbar(s_screen);
     lv_obj_t *hint = make_label(s_screen, "长按确定返回", 12, 291, 216, UI_TEXT);
     set_centered(hint);
 }
 
 void build_wifi_delete_confirm(const char *ssid, std::size_t selected) {
     reset_transient_objects(Page::Settings);
-    s_settings_page = RadioSettingsPage::WifiDeleteConfirm;
     s_settings_selected = selected % 2;
     s_settings_row_count = 2;
     lv_obj_t *title = make_label(s_screen, "确认删除", 12, 18, 216, kText,
                                  &buddy_font_16);
     set_centered(title);
     lv_obj_t *network = make_label(s_screen, passport::ssid_display(ssid ? ssid : "WIFI", &buddy_font_16).c_str(), 12, 55, 216,
-                                   kAmber, ssid_font(ssid));
+                                   kAmber, &buddy_font_16);
     set_centered(network);
     lv_obj_t *warning = make_label(s_screen, "删除后无法自动连接", 12, 88, 216,
                                    kMuted);
@@ -888,19 +517,6 @@ void build_wifi_delete_confirm(const char *ssid, std::size_t selected) {
         set_centered(s_settings_labels[i]);
     }
     apply_settings_selection();
-}
-
-void build_easter_egg(const char *message) {
-    reset_transient_objects(Page::EasterEgg);
-    lv_obj_t *title = make_label(s_screen, "蓝牙", 12, 12, 216, kAmber,
-                                 &buddy_font_16);
-    set_centered(title);
-    s_easter_message = make_label(s_screen, message ? message : "正在加载彩蛋",
-                                  12, 146, 216, kText);
-    set_centered(s_easter_message);
-    make_taskbar(s_screen);
-    lv_obj_t *hint = make_label(s_screen, "确定返回", 12, 291, 216, UI_TEXT);
-    set_centered(hint);
 }
 
 void update_wifi_list(const WifiNetworkView *networks, std::size_t count,
@@ -939,8 +555,7 @@ void update_wifi_list(const WifiNetworkView *networks, std::size_t count,
         std::snprintf(ssid_disp, sizeof(ssid_disp), "%s%s",
                       networks[index].secure ? "*" : "", passport::ssid_display(networks[index].ssid, &buddy_font_16).c_str());
         lv_label_set_text(s_wifi_row_ssid[row], ssid_disp);
-        lv_obj_set_style_text_font(s_wifi_row_ssid[row],
-                                   ssid_font(networks[index].ssid), 0);
+        lv_obj_set_style_text_font(s_wifi_row_ssid[row], &buddy_font_16, 0);
         lv_obj_set_style_text_color(s_wifi_row_ssid[row], lv_color_hex(color), 0);
         // 右侧"WiFi 信号"三格:RSSI 分档与首页一致(-60/-75)
         const int rssi = networks[index].rssi;
@@ -977,7 +592,6 @@ void build_wifi_list(const WifiNetworkView *networks, std::size_t count,
         }
     }
 
-    make_taskbar(s_screen);
     s_wifi_list_hint = make_label(s_screen, "", 12, 279, 216, UI_TEXT);
     set_centered(s_wifi_list_hint);
     char portal[96];
@@ -993,7 +607,7 @@ void update_wifi_keyboard(const char *ssid, std::size_t password_length,
                           WifiKeyboardPage page, std::size_t selected,
                           const char *status) {
     lv_label_set_text(s_wifi_keyboard_network, passport::ssid_display(ssid ? ssid : "WIFI", &buddy_font_16).c_str());
-    lv_obj_set_style_text_font(s_wifi_keyboard_network, ssid_font(ssid), 0);
+    lv_obj_set_style_text_font(s_wifi_keyboard_network, &buddy_font_16, 0);
 
     char password[48] = {};
     const std::size_t stars = std::min<std::size_t>(password_length, 38);
@@ -1082,7 +696,6 @@ void build_wifi_keyboard(const char *ssid, std::size_t password_length,
         set_centered(s_wifi_key_label[i]);
     }
 
-    make_taskbar(s_screen);
     s_wifi_keyboard_status = make_label(s_screen, "", 12, 279, 216, UI_TEXT);
     set_centered(s_wifi_keyboard_status);
     lv_obj_t *hint = make_label(s_screen, "上下移动 · 长按下返回", 12, 300, 216, UI_MUTED);
@@ -1095,7 +708,7 @@ void build_wifi_connecting(const char *ssid, const char *detail, bool success = 
     make_label(s_screen, success ? "无线网络已连接" : "正在连接无线网络", 12, 37, 216, kText,
                &buddy_font_16);
     lv_obj_t *network = make_label(s_screen, passport::ssid_display(ssid ? ssid : "WIFI", &buddy_font_16).c_str(), 12, 102, 216,
-                                   kAmber, ssid_font(ssid));
+                                   kAmber, &buddy_font_16);
     set_centered(network);
     s_pair_dot = make_box(s_screen, 108, 151, 24, 24, kAmber, LV_RADIUS_CIRCLE);
     if (success) lv_obj_add_flag(s_pair_dot, LV_OBJ_FLAG_HIDDEN);
@@ -1110,7 +723,7 @@ void timer_callback(lv_timer_t *timer) {
     lv_timer_set_period(timer, visible ? 50 : 1000);
     if (!visible) return;
     s_animation += 17;
-    if (s_page == Page::Config || s_page == Page::WifiConnecting) {
+    if (s_page == Page::WifiConnecting) {
         if (s_pair_dot) {
             const uint8_t triangle = s_animation < 128 ? s_animation : 255 - s_animation;
             lv_obj_set_style_opa(s_pair_dot, 70 + triangle, 0);
@@ -1119,16 +732,10 @@ void timer_callback(lv_timer_t *timer) {
     }
 
     if(s_volume_until && (int32_t)(lv_tick_get()-s_volume_until)>=0){s_volume_until=0;apply_sleep_timer();}
-    // The audio meter needs 20 Hz; clock and sleep labels only need 1 Hz.
+    // The audio meter needs 20 Hz; status and sleep labels only need 1 Hz.
     const uint32_t now = lv_tick_get();
-    if (now - s_clock_tick >= 1000) {
-        s_clock_tick = now;
-        if (s_clock) {
-            // Keep the same timezone and unsynchronized placeholder as Home.
-            char text[8];
-            home_clock_format_time(text, sizeof(text));
-            ui_pixel_label_set_text(s_clock, text);
-        }
+    if (now - s_status_tick >= 1000) {
+        s_status_tick = now;
         apply_sleep_timer();
     }
 
@@ -1183,12 +790,6 @@ void radio_ui_hide() {
     if (!bsp_lvgl_lock(500)) return;
     if (s_ui_timer) lv_timer_pause(s_ui_timer);
     reset_transient_objects(Page::Main);
-    bsp_lvgl_unlock();
-}
-
-void radio_ui_show_config(const char *ssid, const char *url) {
-    if (!s_screen || !bsp_lvgl_lock(500)) return;
-    build_config(ssid, url);
     bsp_lvgl_unlock();
 }
 
@@ -1301,30 +902,10 @@ void radio_ui_set_audio_levels(const uint8_t *levels, std::size_t count) {
     s_level_generation.fetch_add(1, std::memory_order_release);
 }
 
-void radio_ui_show_settings(RadioSettingsPage page, std::size_t selected,
-                            uint8_t volume) {
-    if (!s_screen || !bsp_lvgl_lock(500)) return;
-    if (s_page == Page::Settings && s_settings_page == page &&
-        page != RadioSettingsPage::Volume &&
-        page != RadioSettingsPage::Display && s_settings_row_count > 0) {
-        s_settings_selected = selected % s_settings_row_count;
-        apply_settings_selection();
-    } else {
-        build_settings(page, selected, volume);
-    }
-    bsp_lvgl_unlock();
-}
-
 void radio_ui_show_saved_wifi(const char *const *ssids, std::size_t count,
                               std::size_t selected) {
     if (!s_screen || !bsp_lvgl_lock(500)) return;
     build_saved_wifi(ssids, count, selected);
-    bsp_lvgl_unlock();
-}
-
-void radio_ui_show_wifi_action(const char *ssid, std::size_t selected) {
-    if (!s_screen || !bsp_lvgl_lock(500)) return;
-    build_wifi_action(ssid, selected);
     bsp_lvgl_unlock();
 }
 
@@ -1334,93 +915,9 @@ void radio_ui_show_wifi_delete_confirm(const char *ssid, std::size_t selected) {
     bsp_lvgl_unlock();
 }
 
-void radio_ui_show_easter_egg(const char *message) {
-    if (!s_screen || !bsp_lvgl_lock(500)) return;
-    if (s_page == Page::EasterEgg && s_easter_message) {
-        lv_label_set_text(s_easter_message, message ? message : "正在加载彩蛋");
-        lv_obj_remove_flag(s_easter_message, LV_OBJ_FLAG_HIDDEN);
-    } else {
-        build_easter_egg(message);
-    }
-    bsp_lvgl_unlock();
-}
-
-bool radio_ui_show_easter_egg_frame(const uint8_t *jpeg, std::size_t size,
-                                    uint16_t width, uint16_t height) {
-    if (!jpeg || !size || !s_screen || !width || !height ||
-        kVideoWidth % width != 0 || kVideoHeight % height != 0) {
-        ESP_LOGE("radio_ui", "Video frame rejected: jpeg=%p size=%u %ux%u screen=%p",
-                 jpeg, static_cast<unsigned>(size),
-                 static_cast<unsigned>(width), static_cast<unsigned>(height),
-                 s_screen);
-        return false;
-    }
-    const uint16_t scale_x = kVideoWidth / width;
-    const uint16_t scale_y = kVideoHeight / height;
-    if (scale_x != scale_y || scale_x == 0 || scale_x > kMaxVideoScale) {
-        ESP_LOGE("radio_ui", "Video scale invalid %ux%u", scale_x, scale_y);
-        return false;
-    }
-    if (!ensure_direct_video_buffers()) {
-        ESP_LOGE("radio_ui", "Video buffers unavailable: work=%p stripe=%p",
-                 s_jpeg_work, s_video_stripe);
-        return false;
-    }
-    if (!bsp_lvgl_lock(500)) {
-        ESP_LOGE("radio_ui", "LVGL lock timeout for video frame");
-        return false;
-    }
-    if (s_page != Page::EasterEgg) {
-        ESP_LOGE("radio_ui", "Video frame page mismatch page=%d", static_cast<int>(s_page));
-        bsp_lvgl_unlock();
-        return false;
-    }
-
-    if (s_video_color_pending) {
-        if (!drain_video_color_transfers()) {
-            bsp_lvgl_unlock();
-            return false;
-        }
-        s_video_color_pending = false;
-    }
-
-    DirectJpegContext context = {
-        .data = jpeg,
-        .size = size,
-        .position = 0,
-        .source_width = width,
-        .source_height = height,
-        .scale = static_cast<uint8_t>(scale_x),
-        .failed = false,
-    };
-    JDEC decoder = {};
-    JRESULT result = jd_prepare(&decoder, direct_jpeg_input, s_jpeg_work,
-                                kJpegWorkSize, &context);
-    if (result == JDR_OK && decoder.width == width && decoder.height == height) {
-        result = jd_decomp(&decoder, direct_jpeg_output, 0);
-    } else {
-        ESP_LOGE("radio_ui", "JPEG prepare failed %d (%ux%u expected %ux%u)",
-                 result, decoder.width, decoder.height, width, height);
-    }
-    if (result != JDR_OK || context.failed) {
-        ESP_LOGE("radio_ui", "JPEG decomp failed %d context_failed=%d",
-                 result, context.failed);
-    }
-    bsp_lvgl_unlock();
-    return result == JDR_OK && !context.failed;
-}
-
-void radio_ui_finish_easter_egg() {
-    if (!s_screen || !bsp_lvgl_lock(500)) return;
-    release_direct_video_buffers();
-    build_main();
-    bsp_lvgl_unlock();
-}
-
 void radio_ui_set_volume(uint8_t volume) {
     s_volume = volume;
     if (!s_screen || !bsp_lvgl_lock(250)) return;
-    apply_volume();
     s_volume_until = lv_tick_get() + 1200;
     s_last_sleep_seconds = UINT32_MAX;
     apply_sleep_timer();

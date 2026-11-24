@@ -60,7 +60,6 @@ esp_err_t home_weather_refresh(const char *lat, const char *lon);
 void home_weather_age_text(uint32_t updated_at, int64_t now, char *out, size_t capacity);
 
 // 每次成功刷新递增,UI 据此刷新天气行。
-uint32_t home_weather_version(void);
 
 #ifdef __cplusplus
 }
