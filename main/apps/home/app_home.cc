@@ -886,17 +886,6 @@ void update_almanac_labels() {
                   almanac.next_solar_term,
                   (unsigned)almanac.days_to_next_solar_term);
     if (s_layout == HOME_LAYOUT_PROFILE) {
-        const char *pillars_full[] = {
-            almanac.year, almanac.month, almanac.day, almanac.hour,
-        };
-        for (int col = 0; col < 4; ++col) {
-            char stem[4] = {};
-            std::snprintf(stem, sizeof(stem), "%.3s", pillars_full[col]);
-            lv_label_set_text(s_pillar_labels[1][col], pillars_full[col]);
-            lv_label_set_text(s_pillar_labels[2][col], "");
-            ui_pixel_text_color(s_pillar_labels[1][col],
-                                five_element_color(five_element_for_glyph(stem)));
-        }
         char combined[52];
         std::snprintf(combined, sizeof(combined), "%s · %s",
                       almanac.lunar_month_day,
@@ -1470,13 +1459,13 @@ void create_profile_ui() {
         s_pillar_labels[1][col] = make_label(today, &ganzhi_font_20, kPhos,
                                               LV_TEXT_ALIGN_CENTER);
         lv_obj_set_pos(s_pillar_labels[1][col], kPillarX[col], 70);
-        lv_obj_set_size(s_pillar_labels[1][col], 52, 26);
+        lv_obj_set_size(s_pillar_labels[1][col], 26, 26);
         lv_label_set_long_mode(s_pillar_labels[1][col], LV_LABEL_LONG_MODE_CLIP);
         s_pillar_labels[2][col] = make_label(today, &ganzhi_font_20, kAccent,
                                               LV_TEXT_ALIGN_CENTER);
-        lv_obj_set_pos(s_pillar_labels[2][col], kPillarX[col], 70);
-        lv_obj_set_size(s_pillar_labels[2][col], 52, 26);
-        lv_obj_add_flag(s_pillar_labels[2][col], LV_OBJ_FLAG_HIDDEN);
+        lv_obj_set_pos(s_pillar_labels[2][col], kPillarX[col] + 26, 70);
+        lv_obj_set_size(s_pillar_labels[2][col], 26, 26);
+        lv_label_set_long_mode(s_pillar_labels[2][col], LV_LABEL_LONG_MODE_CLIP);
     }
 
     s_wicon_zone = nullptr;
