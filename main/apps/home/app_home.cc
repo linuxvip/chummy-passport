@@ -1449,7 +1449,7 @@ void create_profile_ui() {
     lv_obj_set_size(s_lbl_next_solar_term, 208, 18);
     lv_obj_add_flag(s_lbl_next_solar_term, LV_OBJ_FLAG_HIDDEN);
 
-    constexpr int kPillarX[4] = {36, 76, 116, 156};
+    constexpr int kPillarX[4] = {24, 72, 120, 168};
     for (int col = 0; col < 4; ++col) {
         s_pillar_labels[0][col] = make_label(today, &buddy_font_16, kPhosDim,
                                               LV_TEXT_ALIGN_CENTER);
