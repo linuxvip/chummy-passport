@@ -17,15 +17,16 @@ static const char *TAG = "launcher";
 
 namespace {
 
-constexpr int kGridX = 8;
-constexpr int kGridY = 43;
-constexpr int kTileW = 70;
-constexpr int kTileH = 58;
-constexpr int kColumnGap = 7;
-constexpr int kIconSize = 32;
-constexpr int kGlyphSpan = 24;
+constexpr int kViewportY = 25;
+constexpr int kViewportH = 295;
+constexpr int kCardW = 240;
+constexpr int kCardH = 295;
+constexpr int kCardStep = 295;
+constexpr int kIconSize = 64;
+constexpr int kGlyphSpan = 54;
 constexpr size_t kMaxTiles = 10;
-constexpr int kGridUsableHeight = 235;
+constexpr int kTileX = (240 - kCardW) / 2;
+constexpr int kCardCenterY = (kViewportH - kCardH) / 2;
 
 // 旅行仪器配色:与首页(app_home.cc)完全同源,风格统一。
 #define kBg (UI_BG)          // 屏底炭黑
@@ -36,15 +37,31 @@ constexpr int kGridUsableHeight = 235;
 #define kStatus (ui_theme_is_multicolor() ? UI_TEXT : kPhos)
 
 lv_obj_t *s_screen;
-lv_obj_t *s_page_number;
+lv_obj_t *s_viewport;
+lv_obj_t *s_catalogue;
+lv_obj_t *s_accent_flash;
+lv_obj_t *s_background_bands[6];
+lv_obj_t *s_rail[kMaxTiles];
+lv_obj_t *s_up_arrow;
+lv_obj_t *s_down_arrow;
+lv_obj_t *s_ok_button;
+lv_obj_t *s_ok_label;
 lv_obj_t *s_wifi_bars[3];
 ui_pixel_battery_t s_battery;
 size_t s_selected_index;
+uint32_t s_active_accent;
+bool s_animating;
+bool s_opening;
+passport_app_id_t s_entry_app = APP_ID_COUNT;
+uint8_t s_nav_key = 0xff;
 
 struct AppTile {
     lv_obj_t *card = nullptr;
     lv_obj_t *icon = nullptr;
     lv_obj_t *label = nullptr;
+    lv_obj_t *secondary = nullptr;
+    lv_obj_t *ring = nullptr;
+    lv_obj_t *accent_bar = nullptr;
     passport_app_id_t id = APP_ID_COUNT;
     size_t index = 0;
 };
@@ -265,39 +282,6 @@ constexpr IconGlyph kIconGlyphs[] = {
     }},
 };
 
-int slot_for_index(size_t index) {
-    if (index < 9) return static_cast<int>(index);
-    if (index == 9) return 10;  // Settings alone, centered on the fourth row.
-    return -1;
-}
-
-struct GridMetrics {
-    int rows;
-    int row_gap;
-    int origin_y;
-};
-
-GridMetrics grid_metrics(size_t count) {
-    const int rows = count <= 9 ? (static_cast<int>(count) + 2) / 3 : 4;
-    int row_gap = 0;
-    if (rows > 1) {
-        row_gap = (kGridUsableHeight - rows * kTileH) / (rows - 1);
-        if (row_gap > 18) row_gap = 18;
-    }
-    const int content_height = rows * kTileH + (rows - 1) * row_gap;
-    return {rows, row_gap, kGridY + (kGridUsableHeight - content_height) / 2};
-}
-
-int row_for_index(size_t index) {
-    const int slot = slot_for_index(index);
-    return slot < 0 ? 0 : slot / 3;
-}
-
-int column_for_index(size_t index) {
-    const int slot = slot_for_index(index);
-    return slot < 0 ? 0 : slot % 3;
-}
-
 // The icon is drawn into its own tile object; no image or per-part allocation.
 void draw_tile_icon_event(lv_event_t *event) {
     const auto *tile = static_cast<const AppTile *>(lv_event_get_user_data(event));
@@ -323,76 +307,247 @@ void draw_tile_icon_event(lv_event_t *event) {
     }
 }
 
-void draw_tile_focus_marker(lv_event_t *event) {
-    const auto *tile = static_cast<const AppTile *>(lv_event_get_user_data(event));
-    if (!tile || tile->index != s_selected_index) return;
-    pixel_scene::Ink ink(event);
-    ink.box(3, 3, 4, 4, UI_ACCENT);
+int wrap_offset(int offset, int count) {
+    if (count <= 1) return 0;
+    while (offset > count / 2) offset -= count;
+    while (offset < -count / 2) offset += count;
+    return offset;
+}
+
+int card_y(int offset) {
+    return kCardCenterY + wrap_offset(offset, static_cast<int>(s_tile_count)) * kCardStep;
+}
+
+uint32_t accent_for(passport_app_id_t id) {
+    return icon_ink_color(id);
+}
+
+void card_y_anim(void *obj, int32_t value) {
+    lv_obj_set_y(static_cast<lv_obj_t *>(obj), value);
+}
+
+void opacity_anim(void *obj, int32_t value) {
+    lv_obj_set_style_opa(static_cast<lv_obj_t *>(obj), static_cast<lv_opa_t>(value), 0);
+}
+
+void icon_scale_anim(void *obj, int32_t value) {
+    lv_obj_set_style_transform_scale(static_cast<lv_obj_t *>(obj), value, 0);
+}
+
+void key_scale_anim(void *obj, int32_t value) {
+    lv_obj_set_style_transform_scale(static_cast<lv_obj_t *>(obj), value, 0);
+}
+
+void set_key_feedback(uint8_t button, bool pressed) {
+    const uint32_t accent = accent_for(s_tiles[s_selected_index].id);
+    if (button == BSP_BTN_UP || button == BSP_BTN_DOWN) {
+        lv_obj_t *key = button == BSP_BTN_UP ? s_up_arrow : s_down_arrow;
+        if (key == nullptr) return;
+        lv_obj_set_style_text_color(
+            key, lv_color_hex(pressed ? accent : UI_TEXT_DIM), 0);
+        lv_obj_set_style_transform_pivot_x(key, 9, 0);
+        lv_obj_set_style_transform_pivot_y(key, 9, 0);
+        lv_anim_delete(key, key_scale_anim);
+        lv_anim_t anim;
+        lv_anim_init(&anim);
+        lv_anim_set_var(&anim, key);
+        lv_anim_set_exec_cb(&anim, key_scale_anim);
+        lv_anim_set_values(&anim, pressed ? 320 : 256, 256);
+        lv_anim_set_duration(&anim, 100);
+        lv_anim_set_path_cb(&anim, lv_anim_path_overshoot);
+        lv_anim_start(&anim);
+    } else if (button == BSP_BTN_OK) {
+        if (s_ok_button == nullptr) return;
+        lv_obj_set_style_bg_opa(s_ok_button, pressed ? 90 : LV_OPA_TRANSP, 0);
+        lv_obj_set_style_border_width(s_ok_button, pressed ? 2 : 1, 0);
+        lv_obj_set_style_border_color(
+            s_ok_button, lv_color_hex(pressed ? accent : UI_BORDER), 0);
+        if (s_ok_label != nullptr) {
+            lv_obj_set_style_text_color(
+                s_ok_label, lv_color_hex(pressed ? accent : UI_TEXT_DIM), 0);
+        }
+    }
+}
+
+void update_accent(uint32_t accent) {
+    s_active_accent = accent;
+    if (s_accent_flash != nullptr) {
+        lv_anim_delete(s_accent_flash, opacity_anim);
+        lv_obj_set_style_bg_opa(s_accent_flash, 54, 0);
+        lv_anim_t anim;
+        lv_anim_init(&anim);
+        lv_anim_set_var(&anim, s_accent_flash);
+        lv_anim_set_exec_cb(&anim, opacity_anim);
+        lv_anim_set_values(&anim, 54, LV_OPA_TRANSP);
+        lv_anim_set_duration(&anim, 260);
+        lv_anim_set_path_cb(&anim, lv_anim_path_ease_out);
+        lv_anim_start(&anim);
+    }
+    if (s_up_arrow != nullptr) {
+        if (s_nav_key != BSP_BTN_UP) {
+            lv_obj_set_style_text_color(s_up_arrow, lv_color_hex(UI_TEXT_DIM), 0);
+        }
+    }
+    if (s_down_arrow != nullptr) {
+        if (s_nav_key != BSP_BTN_DOWN) {
+            lv_obj_set_style_text_color(s_down_arrow, lv_color_hex(UI_TEXT_DIM), 0);
+        }
+    }
+    if (s_ok_button != nullptr && s_nav_key != BSP_BTN_OK) {
+        lv_obj_set_style_border_color(s_ok_button, lv_color_hex(accent), 0);
+    }
+}
+
+void apply_tile_style(size_t selected_index) {
+    for (size_t i = 0; i < s_tile_count; ++i) {
+        AppTile &tile = s_tiles[i];
+        if (tile.card == nullptr) continue;
+        const bool selected = i == selected_index;
+        lv_obj_set_style_bg_opa(tile.card, LV_OPA_TRANSP, 0);
+        if (tile.ring != nullptr) {
+            lv_obj_set_style_border_color(tile.ring,
+                                          lv_color_hex(accent_for(tile.id)), 0);
+        }
+        lv_obj_set_style_text_color(tile.label,
+                                    lv_color_hex(selected ? UI_TEXT : UI_TEXT_DIM), 0);
+        if (tile.secondary != nullptr) {
+            lv_obj_set_style_text_color(
+                tile.secondary,
+                lv_color_hex(accent_for(tile.id)), 0);
+        }
+        if (tile.accent_bar != nullptr) {
+            lv_obj_set_style_bg_color(tile.accent_bar,
+                                      lv_color_hex(accent_for(tile.id)), 0);
+            lv_obj_set_style_bg_opa(tile.accent_bar, LV_OPA_COVER, 0);
+        }
+        if (tile.icon != nullptr) {
+            lv_obj_set_style_bg_color(tile.icon, lv_color_hex(icon_tile_color(tile.id)), 0);
+            lv_obj_set_style_border_color(tile.icon, lv_color_hex(icon_ink_color(tile.id)), 0);
+            lv_obj_set_style_border_width(tile.icon, 0, 0);
+            lv_obj_set_style_bg_opa(tile.icon, LV_OPA_TRANSP, 0);
+            lv_obj_invalidate(tile.icon);
+        }
+        lv_obj_invalidate(tile.card);
+    }
+
+    for (size_t i = 0; i < s_tile_count; ++i) {
+        if (s_rail[i] == nullptr) continue;
+        const bool selected = i == selected_index;
+        lv_obj_set_style_bg_color(s_rail[i],
+                                  lv_color_hex(accent_for(s_tiles[i].id)), 0);
+        lv_obj_set_style_bg_opa(s_rail[i], selected ? LV_OPA_COVER : 170, 0);
+        lv_obj_set_size(s_rail[i], selected ? 9 : 6, selected ? 24 : 6);
+        lv_obj_set_x(s_rail[i], selected ? 26 : 27);
+        lv_obj_set_y(s_rail[i],
+                     94 + static_cast<int>(i) * 19 - (selected ? 9 : 0));
+    }
+
+    const uint32_t accent = accent_for(s_tiles[selected_index].id);
+    update_accent(accent);
+}
+
+void selection_finished(lv_anim_t *anim) {
+    s_animating = false;
+    s_nav_key = 0xff;
+    set_key_feedback(BSP_BTN_UP, false);
+    set_key_feedback(BSP_BTN_DOWN, false);
+    (void)anim;
+}
+
+void move_selection(int delta) {
+    if (s_tile_count == 0 || s_animating || s_opening) return;
+    const int count = static_cast<int>(s_tile_count);
+    const int old_index = static_cast<int>(s_selected_index);
+    const int new_index = (old_index + delta + count) % count;
+    s_animating = true;
+    s_nav_key = delta > 0 ? BSP_BTN_DOWN : BSP_BTN_UP;
+    set_key_feedback(s_nav_key, true);
+
+    for (size_t i = 0; i < s_tile_count; ++i) {
+        AppTile &tile = s_tiles[i];
+        if (tile.card == nullptr) continue;
+        const int old_offset = wrap_offset(static_cast<int>(i) - old_index, count);
+        const int target_offset = wrap_offset(old_offset - delta, count);
+        if (tile.icon != nullptr) {
+            lv_anim_delete(tile.icon, icon_scale_anim);
+            const int32_t target_scale =
+                static_cast<int>(i) == new_index ? 256 : 200;
+            const int32_t source_scale =
+                static_cast<int>(i) == new_index ? 196 : 256;
+            lv_anim_t scale;
+            lv_anim_init(&scale);
+            lv_anim_set_var(&scale, tile.icon);
+            lv_anim_set_exec_cb(&scale, icon_scale_anim);
+            lv_anim_set_values(&scale, source_scale, target_scale);
+            lv_anim_set_duration(&scale, delta == 1 || delta == -1 ? 220 : 320);
+            lv_anim_set_path_cb(&scale, lv_anim_path_overshoot);
+            lv_anim_start(&scale);
+        }
+        const int target_y = card_y(target_offset);
+        lv_anim_delete(tile.card, card_y_anim);
+        lv_anim_t anim;
+        lv_anim_init(&anim);
+        lv_anim_set_var(&anim, tile.card);
+        lv_anim_set_exec_cb(&anim, card_y_anim);
+        lv_anim_set_values(&anim, lv_obj_get_y(tile.card), target_y);
+        lv_anim_set_duration(&anim, delta == 1 || delta == -1 ? 220 : 320);
+        lv_anim_set_path_cb(&anim, lv_anim_path_overshoot);
+        if (static_cast<int>(i) == new_index) {
+            lv_anim_set_completed_cb(&anim, selection_finished);
+        }
+        lv_anim_start(&anim);
+    }
+
+    s_selected_index = static_cast<size_t>(new_index);
+    apply_tile_style(s_selected_index);
+    lv_obj_move_foreground(s_tiles[s_selected_index].card);
+}
+
+void entry_scale_anim(void *obj, int32_t value) {
+    lv_obj_set_style_transform_scale(static_cast<lv_obj_t *>(obj), value, 0);
+}
+
+void commit_entry(lv_timer_t *timer) {
+    lv_timer_delete(timer);
+    if (s_entry_app != APP_ID_COUNT) app_registry_switch_to(s_entry_app);
+}
+
+void start_entry() {
+    if (s_tile_count == 0 || s_animating || s_opening) return;
+    const passport_app_t *app = app_registry_get_by_index(s_selected_index);
+    if (app == nullptr) return;
+    s_opening = true;
+    s_nav_key = BSP_BTN_OK;
+    set_key_feedback(BSP_BTN_OK, true);
+    s_entry_app = app->id;
+    AppTile &tile = s_tiles[s_selected_index];
+    lv_anim_delete(tile.card, entry_scale_anim);
+    lv_anim_t anim;
+    lv_anim_init(&anim);
+    lv_anim_set_var(&anim, tile.card);
+    lv_anim_set_exec_cb(&anim, entry_scale_anim);
+    lv_anim_set_values(&anim, 256, 96);
+    lv_anim_set_duration(&anim, 220);
+    lv_anim_set_path_cb(&anim, lv_anim_path_ease_in_out);
+    lv_anim_start(&anim);
+    lv_timer_create(commit_entry, 230, nullptr);
+}
+
+void layout_tiles_immediate() {
+    for (size_t i = 0; i < s_tile_count; ++i) {
+        const int offset = wrap_offset(static_cast<int>(i) -
+                                       static_cast<int>(s_selected_index),
+                                       static_cast<int>(s_tile_count));
+        lv_obj_set_pos(s_tiles[i].card, kTileX, card_y(offset));
+    }
+    lv_obj_move_foreground(s_tiles[s_selected_index].card);
 }
 
 void apply_selection() {
     if (s_tile_count == 0) return;
     if (s_selected_index >= s_tile_count) s_selected_index = 0;
-    for (size_t i = 0; i < s_tile_count; ++i) {
-        AppTile &tile = s_tiles[i];
-        if (!tile.card) continue;
-        const bool selected = i == s_selected_index;
-        lv_obj_set_style_bg_opa(tile.card, selected ? LV_OPA_COVER : LV_OPA_TRANSP, 0);
-        lv_obj_set_style_border_color(tile.card, lv_color_hex(kPhos), 0);
-        lv_obj_set_style_border_opa(tile.card, selected ? LV_OPA_COVER : LV_OPA_TRANSP, 0);
-        lv_obj_set_style_text_color(tile.label,
-                                    lv_color_hex(selected ? UI_TEXT : UI_TEXT_DIM), 0);
-        if (tile.icon) {
-            lv_obj_set_style_bg_color(tile.icon, lv_color_hex(icon_tile_color(tile.id)), 0);
-            lv_obj_set_style_border_color(tile.icon, lv_color_hex(icon_ink_color(tile.id)), 0);
-            lv_obj_set_style_border_width(tile.icon, selected ? 2 : 1, 0);
-            lv_obj_set_y(tile.icon, 2);
-            lv_obj_invalidate(tile.icon);
-        }
-        lv_obj_invalidate(tile.card);
-    }
-    lv_label_set_text_fmt(s_page_number, "%02u / %02u",
-                          (unsigned)s_selected_index + 1, (unsigned)s_tile_count);
-}
-
-size_t row_target_index(int direction) {
-    const int current_column = column_for_index(s_selected_index);
-    const int current_row = row_for_index(s_selected_index);
-    for (int step = 1; step <= 4; ++step) {
-        const int target_row = (current_row + direction * step + 8) % 4;
-        size_t best = s_selected_index;
-        int best_distance = 100;
-        bool found = false;
-        for (size_t i = 0; i < s_tile_count; ++i) {
-            if (row_for_index(i) != target_row) continue;
-            const int distance = column_for_index(i) > current_column
-                ? column_for_index(i) - current_column
-                : current_column - column_for_index(i);
-            if (distance < best_distance) {
-                best_distance = distance;
-                best = i;
-                found = true;
-            }
-        }
-        if (found) return best;
-    }
-    return s_selected_index;
-}
-
-void icon_y_anim(void *obj, int32_t v) { lv_obj_set_y((lv_obj_t *)obj, v); }
-
-void tile_nudge(size_t index, int direction) {
-    if (index >= s_tile_count || !s_tiles[index].icon) return;
-    lv_obj_t *icon = s_tiles[index].icon;
-    lv_anim_delete(icon, icon_y_anim);
-    lv_anim_t b;
-    lv_anim_init(&b);
-    lv_anim_set_var(&b, icon);
-    lv_anim_set_exec_cb(&b, icon_y_anim);
-    lv_anim_set_values(&b, 2 + 2 * direction, 2);
-    lv_anim_set_duration(&b, 80);
-    lv_anim_set_path_cb(&b, lv_anim_path_ease_out);
-    lv_anim_start(&b);
+    apply_tile_style(s_selected_index);
+    layout_tiles_immediate();
 }
 
 lv_obj_t *block(lv_obj_t *parent, int x, int y, int w, int h, uint32_t color) {
@@ -414,86 +569,147 @@ void launcher_ui_init(void) {
 
     s_screen = lv_obj_create(nullptr);
     lv_obj_clear_flag(s_screen, LV_OBJ_FLAG_SCROLLABLE);
-    // 与首页一致的绿磷光底(不再用天空/云/草地的像素风背景)
     lv_obj_set_style_bg_color(s_screen, lv_color_hex(kBg), 0);
     lv_obj_set_style_border_width(s_screen, 0, 0);
     lv_obj_set_style_pad_all(s_screen, 0, 0);
 
-    // ---- 状态栏 (y0..24):与首页同款 —— 炭灰条 + 共享 Wi-Fi 格 + 电池 ----
+    // A fixed low-contrast band texture keeps the page background stable across
+    // apps; only foreground identity colours change with the selection.
+    for (size_t i = 0; i < sizeof(s_background_bands) / sizeof(s_background_bands[0]); ++i) {
+        lv_obj_t *band = block(s_screen, 0, 25 + static_cast<int>(i) * 49,
+                               240, 49, kCardBg);
+        lv_obj_set_style_bg_opa(band, static_cast<lv_opa_t>(9 + i * 3), 0);
+        s_background_bands[i] = band;
+    }
+    // One full-height page per app moves through this clipped viewport.
+    s_viewport = lv_obj_create(s_screen);
+    lv_obj_remove_style_all(s_viewport);
+    lv_obj_remove_flag(s_viewport, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_set_pos(s_viewport, 0, kViewportY);
+    lv_obj_set_size(s_viewport, 240, kViewportH);
+    lv_obj_set_style_bg_opa(s_viewport, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_pad_all(s_viewport, 0, 0);
+    // Neutral flash above the pages gives a visible transition without
+    // changing the page's resting background colour.
+    s_accent_flash = block(s_screen, 0, 25, 240, 295, UI_TEXT);
+    lv_obj_set_style_bg_opa(s_accent_flash, LV_OPA_TRANSP, 0);
+
     ui_pixel_top_bar(s_screen);
     ui_pixel_wifi_bars_create(s_screen, UI_STATUS_WIFI_X, 18, s_wifi_bars);
     s_battery = ui_pixel_battery_create(s_screen, UI_STATUS_BATTERY_X, 6, kStatus,
                                         &lv_font_montserrat_14);
 
-    lv_obj_t *catalogue = ui_pixel_label(s_screen, "应用", &buddy_font_16, UI_TEXT);
-    ui_pixel_status_text_align(catalogue, 42, 40, LV_TEXT_ALIGN_LEFT);
-
-    lv_obj_t *caption = ui_pixel_label(s_screen, "选择一个应用", &launcher_font_12, UI_TEXT_DIM);
-    lv_obj_set_pos(caption, 8, 27);
-    lv_obj_set_size(caption, 136, 18);
-    s_page_number = ui_pixel_label(s_screen, "", &launcher_font_12, UI_TEXT_DIM);
-    lv_obj_set_pos(s_page_number, 160, 27);
-    lv_obj_set_size(s_page_number, 72, 18);
-    lv_obj_set_style_text_align(s_page_number, LV_TEXT_ALIGN_RIGHT, 0);
-    block(s_screen, 8, 40, 224, 1, kPhosBorder);
+    s_catalogue = ui_pixel_label(s_screen, "选择应用", &buddy_font_16, UI_TEXT);
+    ui_pixel_status_text_align(s_catalogue, 42, 112, LV_TEXT_ALIGN_LEFT);
 
     const size_t count = app_registry_get_count();
     s_tile_count = count < kMaxTiles ? count : kMaxTiles;
-    const GridMetrics metrics = grid_metrics(s_tile_count);
     for (size_t i = 0; i < s_tile_count; ++i) {
-        const int slot = slot_for_index(i);
-        if (slot < 0) continue;
-        const int col = slot % 3;
-        const int row = slot / 3;
-        const int x = kGridX + col * (kTileW + kColumnGap);
-        const int y = metrics.origin_y + row * (kTileH + metrics.row_gap);
-
         AppTile &tile = s_tiles[i];
         tile = {};
         tile.index = i;
         const passport_app_t *app = app_registry_get_by_index(i);
         tile.id = app ? app->id : APP_ID_COUNT;
 
-        tile.card = lv_obj_create(s_screen);
+        tile.card = lv_obj_create(s_viewport);
         lv_obj_remove_flag(tile.card, LV_OBJ_FLAG_SCROLLABLE);
-        lv_obj_set_pos(tile.card, x, y);
-        lv_obj_set_size(tile.card, kTileW, kTileH);
-        lv_obj_set_style_radius(tile.card, 6, 0);
+        lv_obj_set_pos(tile.card, kTileX, 0);
+        lv_obj_set_size(tile.card, kCardW, kCardH);
         lv_obj_set_style_pad_all(tile.card, 0, 0);
-        lv_obj_set_style_bg_color(tile.card, lv_color_hex(kCardBg), 0);
         lv_obj_set_style_bg_opa(tile.card, LV_OPA_TRANSP, 0);
-        lv_obj_set_style_border_width(tile.card, 2, 0);
-        lv_obj_set_style_border_color(tile.card, lv_color_hex(kPhos), 0);
-        lv_obj_set_style_border_opa(tile.card, LV_OPA_TRANSP, 0);
-        lv_obj_add_event_cb(tile.card, draw_tile_focus_marker, LV_EVENT_DRAW_MAIN, &tile);
+        lv_obj_set_style_border_width(tile.card, 0, 0);
+        lv_obj_set_style_transform_pivot_x(tile.card, kCardW / 2, 0);
+        lv_obj_set_style_transform_pivot_y(tile.card, kCardH / 2, 0);
+
+        tile.ring = lv_obj_create(tile.card);
+        lv_obj_remove_style_all(tile.ring);
+        lv_obj_remove_flag(tile.ring, LV_OBJ_FLAG_SCROLLABLE);
+        lv_obj_set_pos(tile.ring, 57, 35);
+        lv_obj_set_size(tile.ring, 126, 126);
+        lv_obj_set_style_radius(tile.ring, LV_RADIUS_CIRCLE, 0);
+        lv_obj_set_style_bg_opa(tile.ring, LV_OPA_TRANSP, 0);
+        lv_obj_set_style_border_width(tile.ring, 2, 0);
+        lv_obj_set_style_border_color(tile.ring,
+                                      lv_color_hex(accent_for(tile.id)), 0);
+        lv_obj_set_style_border_opa(tile.ring, 220, 0);
+
+        tile.accent_bar = lv_obj_create(tile.card);
+        lv_obj_remove_style_all(tile.accent_bar);
+        lv_obj_remove_flag(tile.accent_bar, LV_OBJ_FLAG_SCROLLABLE);
+        lv_obj_set_pos(tile.accent_bar, 69, 188);
+        lv_obj_set_size(tile.accent_bar, 3, 42);
+        lv_obj_set_style_radius(tile.accent_bar, 2, 0);
+        lv_obj_set_style_bg_opa(tile.accent_bar, LV_OPA_COVER, 0);
 
         tile.icon = lv_obj_create(tile.card);
         lv_obj_remove_style_all(tile.icon);
         lv_obj_remove_flag(tile.icon, LV_OBJ_FLAG_SCROLLABLE);
-        lv_obj_set_pos(tile.icon, (kTileW - kIconSize) / 2, 2);
+        lv_obj_set_pos(tile.icon, 88, 66);
         lv_obj_set_size(tile.icon, kIconSize, kIconSize);
-        lv_obj_set_style_radius(tile.icon, 9, 0);
-        lv_obj_set_style_bg_opa(tile.icon, LV_OPA_COVER, 0);
-        lv_obj_set_style_border_width(tile.icon, 1, 0);
+        lv_obj_set_style_bg_opa(tile.icon, LV_OPA_TRANSP, 0);
+        lv_obj_set_style_border_width(tile.icon, 0, 0);
         lv_obj_add_event_cb(tile.icon, draw_tile_icon_event, LV_EVENT_DRAW_MAIN, &tile);
 
+        tile.secondary = ui_pixel_label(
+            tile.card, "", &launcher_font_12, accent_for(tile.id));
+        lv_label_set_text_fmt(
+            tile.secondary, "%02u  %s", static_cast<unsigned>(i + 1),
+            app != nullptr && app->en_name != nullptr ? app->en_name : "");
+        lv_obj_set_pos(tile.secondary, 77, 190);
+        lv_obj_set_size(tile.secondary, 140, 18);
+        lv_obj_set_style_text_align(tile.secondary, LV_TEXT_ALIGN_LEFT, 0);
+
         tile.label = ui_pixel_label(tile.card, app_chinese_name(tile.id),
-                                    &launcher_font_12, UI_TEXT_DIM);
-        lv_obj_set_pos(tile.label, 0, 34);
-        lv_obj_set_size(tile.label, kTileW, 20);
-        lv_obj_set_style_text_align(tile.label, LV_TEXT_ALIGN_CENTER, 0);
+                                    &launcher_title_20, UI_TEXT);
+        lv_obj_set_pos(tile.label, 77, 207);
+        lv_obj_set_size(tile.label, 140, 26);
+        lv_obj_set_style_text_align(tile.label, LV_TEXT_ALIGN_LEFT, 0);
         lv_label_set_long_mode(tile.label, LV_LABEL_LONG_DOT);
+
+        lv_obj_set_style_transform_pivot_x(tile.icon, kIconSize / 2, 0);
+        lv_obj_set_style_transform_pivot_y(tile.icon, kIconSize / 2, 0);
     }
 
-    ui_pixel_footer(s_screen, "上下逐项 · 长按跨行",
-                    "确定打开 · 长按确定返回", &launcher_font_12);
+    for (size_t i = 0; i < s_tile_count; ++i) {
+        s_rail[i] = lv_obj_create(s_screen);
+        lv_obj_remove_style_all(s_rail[i]);
+        lv_obj_remove_flag(s_rail[i], LV_OBJ_FLAG_SCROLLABLE);
+        lv_obj_set_pos(s_rail[i], 27, 94 + static_cast<int>(i) * 19);
+        lv_obj_set_size(s_rail[i], 6, 6);
+        lv_obj_set_style_radius(s_rail[i], LV_RADIUS_CIRCLE, 0);
+        lv_obj_set_style_bg_color(s_rail[i],
+                                  lv_color_hex(accent_for(s_tiles[i].id)), 0);
+        lv_obj_set_style_bg_opa(s_rail[i], 170, 0);
+    }
+
+    s_up_arrow = ui_pixel_label(s_screen, "▲", &buddy_font_16, UI_TEXT_DIM);
+    lv_obj_set_pos(s_up_arrow, 210, 46);
+    lv_obj_set_size(s_up_arrow, 18, 18);
+    lv_obj_set_style_text_align(s_up_arrow, LV_TEXT_ALIGN_CENTER, 0);
+    s_down_arrow = ui_pixel_label(s_screen, "▼", &buddy_font_16, UI_TEXT_DIM);
+    lv_obj_set_pos(s_down_arrow, 210, 150);
+    lv_obj_set_size(s_down_arrow, 18, 18);
+    lv_obj_set_style_text_align(s_down_arrow, LV_TEXT_ALIGN_CENTER, 0);
+    s_ok_button = lv_obj_create(s_screen);
+    lv_obj_remove_flag(s_ok_button, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_set_pos(s_ok_button, 201, 269);
+    lv_obj_set_size(s_ok_button, 36, 36);
+    lv_obj_set_style_radius(s_ok_button, LV_RADIUS_CIRCLE, 0);
+    lv_obj_set_style_bg_opa(s_ok_button, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_border_width(s_ok_button, 1, 0);
+    lv_obj_set_style_border_color(s_ok_button, lv_color_hex(UI_BORDER), 0);
+    lv_obj_set_style_border_opa(s_ok_button, 190, 0);
+    lv_obj_set_style_pad_all(s_ok_button, 0, 0);
+    s_ok_label = ui_pixel_label(s_ok_button, "OK", &lv_font_montserrat_14,
+                                UI_TEXT_DIM);
+    lv_obj_center(s_ok_label);
 
     if (s_selected_index >= s_tile_count) s_selected_index = 0;
     apply_selection();
     launcher_ui_update_status();
     lv_scr_load(s_screen);
     bsp_lvgl_unlock();
-    ESP_LOGI(TAG, "Launcher grid initialized, %u apps", (unsigned)s_tile_count);
+    ESP_LOGI(TAG, "Passport flow initialized, %u apps", (unsigned)s_tile_count);
 }
 
 void launcher_ui_show(void) {
@@ -514,8 +730,20 @@ void launcher_ui_hide(void) {
     bsp_lvgl_lock(-1);
     if (s_screen) lv_obj_delete(s_screen);
     s_screen = nullptr;
-    s_page_number = nullptr;
+    s_viewport = nullptr;
+    s_catalogue = nullptr;
+    s_accent_flash = nullptr;
+    s_up_arrow = nullptr;
+    s_down_arrow = nullptr;
+    s_ok_button = nullptr;
+    s_ok_label = nullptr;
+    s_active_accent = 0;
+    s_animating = false;
+    s_opening = false;
+    s_entry_app = APP_ID_COUNT;
     for (AppTile &tile : s_tiles) tile = {};
+    for (lv_obj_t *&band : s_background_bands) band = nullptr;
+    for (lv_obj_t *&dot : s_rail) dot = nullptr;
     s_tile_count = 0;
     s_battery = {nullptr, nullptr};
     for (lv_obj_t *&bar : s_wifi_bars) bar = nullptr;
@@ -538,28 +766,32 @@ void launcher_ui_update_status(void) {
 }
 
 void launcher_ui_on_key(uint8_t btn, app_btn_event_t event) {
-    if (event != BTN_EVT_CLICK && event != BTN_EVT_LONG) return;
     if (!s_tile_count || !s_screen) return;
 
-    if ((btn == BSP_BTN_UP || btn == BSP_BTN_DOWN) &&
-        (event == BTN_EVT_CLICK || event == BTN_EVT_LONG)) {
-        const int direction = btn == BSP_BTN_UP ? -1 : 1;
-        const size_t previous = s_selected_index;
-        if (event == BTN_EVT_CLICK) {
-            s_selected_index = (s_selected_index + s_tile_count +
-                                (direction < 0 ? s_tile_count - 1 : 1)) % s_tile_count;
-        } else {
-            s_selected_index = row_target_index(direction);
-        }
-        bsp_lvgl_lock(-1);
-        apply_selection();
-        tile_nudge(s_selected_index, s_selected_index > previous ? -1 : 1);
+    bsp_lvgl_lock(-1);
+    if (event == BTN_EVT_PRESS) {
+        set_key_feedback(btn, true);
         bsp_lvgl_unlock();
+        return;
+    }
+    if (event == BTN_EVT_RELEASE || event == BTN_EVT_LONG_UP) {
+        if (!s_animating && !s_opening) set_key_feedback(btn, false);
+        bsp_lvgl_unlock();
+        return;
+    }
+    if (event != BTN_EVT_CLICK && event != BTN_EVT_LONG) {
+        bsp_lvgl_unlock();
+        return;
+    }
+    if (btn == BSP_BTN_UP || btn == BSP_BTN_DOWN) {
+        const int direction = btn == BSP_BTN_UP ? -1 : 1;
+        move_selection(direction * (event == BTN_EVT_LONG ? 4 : 1));
     } else if (btn == BSP_BTN_OK && event == BTN_EVT_CLICK) {
         const passport_app_t *app = app_registry_get_by_index(s_selected_index);
-        if (app) {
+        if (app != nullptr) {
             ESP_LOGI(TAG, "User launched: %s (ID: %d)", app->name, app->id);
-            app_registry_switch_to(app->id);
         }
+        start_entry();
     }
+    bsp_lvgl_unlock();
 }

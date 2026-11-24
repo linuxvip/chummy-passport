@@ -37,6 +37,7 @@ idf_component_register(
         "fonts/ganzhi_font_13.c"
         "fonts/ganzhi_font_12.c"
         "fonts/launcher_font_12.c"
+        "fonts/launcher_title_20.c"
         "fonts/calendar_font_9.c"
         "fonts/calendar_title_font_20.c"
         "fonts/ui_font_20.c"

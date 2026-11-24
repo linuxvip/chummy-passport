@@ -23,6 +23,7 @@ LV_FONT_DECLARE(ganzhi_font_13);
 LV_FONT_DECLARE(ganzhi_font_12);
 // Compact launcher labels, sized for the 70px application grid.
 LV_FONT_DECLARE(launcher_font_12);
+LV_FONT_DECLARE(launcher_title_20);
 // Dense calendar cells: ASCII, lunar days, solar terms and earthly branches.
 LV_FONT_DECLARE(calendar_font_9);
 // Three extra title glyphs used only by the Calendar launcher card.
