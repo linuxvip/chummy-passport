@@ -36,6 +36,8 @@ Voice tools require a network connection and Xiaozhi configuration. NetEase play
 
 ## Ten apps
 
+The launcher uses a phone-style 3 × 4 grid that shows all apps at once. Short Up/Down presses move one app, long presses move by row, and OK opens the highlighted app. Long-press OK to return Home.
+
 | App | What it does | Requirements |
 | --- | --- | --- |
 | Home | Four selectable layouts: almanac, minimal four pillars, weather life, and a colorful personal profile with name, introduction, weather, lunar date, and Ganzhi | Network for the daily quote and weather; Beijing is the initial default city |
