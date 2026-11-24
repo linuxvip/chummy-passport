@@ -1449,7 +1449,7 @@ void create_profile_ui() {
     lv_obj_set_size(s_lbl_next_solar_term, 208, 18);
     lv_obj_add_flag(s_lbl_next_solar_term, LV_OBJ_FLAG_HIDDEN);
 
-    constexpr int kPillarX[4] = {12, 64, 116, 168};
+    constexpr int kPillarX[4] = {36, 76, 116, 156};
     for (int col = 0; col < 4; ++col) {
         s_pillar_labels[0][col] = make_label(today, &buddy_font_16, kPhosDim,
                                               LV_TEXT_ALIGN_CENTER);
@@ -1459,12 +1459,12 @@ void create_profile_ui() {
         s_pillar_labels[1][col] = make_label(today, &ganzhi_font_20, kPhos,
                                               LV_TEXT_ALIGN_CENTER);
         lv_obj_set_pos(s_pillar_labels[1][col], kPillarX[col], 70);
-        lv_obj_set_size(s_pillar_labels[1][col], 26, 26);
+        lv_obj_set_size(s_pillar_labels[1][col], 20, 26);
         lv_label_set_long_mode(s_pillar_labels[1][col], LV_LABEL_LONG_MODE_CLIP);
         s_pillar_labels[2][col] = make_label(today, &ganzhi_font_20, kAccent,
                                               LV_TEXT_ALIGN_CENTER);
-        lv_obj_set_pos(s_pillar_labels[2][col], kPillarX[col] + 26, 70);
-        lv_obj_set_size(s_pillar_labels[2][col], 26, 26);
+        lv_obj_set_pos(s_pillar_labels[2][col], kPillarX[col] + 20, 70);
+        lv_obj_set_size(s_pillar_labels[2][col], 20, 26);
         lv_label_set_long_mode(s_pillar_labels[2][col], LV_LABEL_LONG_MODE_CLIP);
     }
 
