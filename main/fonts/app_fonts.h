@@ -35,11 +35,6 @@ LV_FONT_DECLARE(ui_font_20);
 // Display readout (大读数): Montserrat 32 digits, '.', ':', space and "NET",
 // copied from LVGL's built-in font by tools/gen_digit_font.py.
 LV_FONT_DECLARE(ui_digits_32);
-// Five additional 20px glyphs, with existing ui_font_20 as fallback.
-LV_FONT_DECLARE(pomodoro_font_20);
-// Hero readout (特大读数): digits and colon only; do not link the full
-// Montserrat 48px repertoire.
-LV_FONT_DECLARE(pomodoro_digits_48);
 
 #ifdef __cplusplus
 }

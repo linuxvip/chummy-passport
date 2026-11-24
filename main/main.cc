@@ -1,5 +1,4 @@
 #include "launcher/launcher.h"
-#include "launcher/timer_resume.h"
 #include "launcher/app_registry.h"
 #include "launcher/ok_gesture.h"
 #include "boot_chime.h"
@@ -19,7 +18,6 @@
 #include "driver/gpio.h"
 #include "bsp_i2c.h"
 #include "ui/ui_capture.h"
-#include "apps/pomodoro/app_pomodoro.h"
 #include "apps/reminders/reminder_service.h"
 #include "device_control.h"
 #include "apps/lists/list_service.h"
@@ -275,7 +273,6 @@ static void system_monitor_task(void *arg) {
         }
 
         app_registry_tick();
-        pomodoro_service_tick();
         if (app_registry_get_active() == APP_ID_LAUNCHER && app_registry_screen_is_on()) {
             bsp_lvgl_lock(-1);
             if (app_registry_screen_is_on()) launcher_ui_update_status();
@@ -352,8 +349,6 @@ static void handle_serial_command(int c) {
     } else if (c == 'h') {
         // 诊断版专用:逐块打印内部堆及其所属任务,用于比对应用退出前后的残留。
         bsp_memory_map();
-    } else if (c == 't') {
-        app_registry_switch_to(APP_ID_POMODORO);
     } else if (c >= '1' && c <= '9') {
         int target_id = c - '0';
         ESP_LOGI(TAG, "[SerialCmd] Direct switch to App ID %d", target_id);
@@ -456,7 +451,6 @@ extern "C" void app_main(void) {
     // 为整理堆而软重启时(见 app_registry 的 clean launch),直接进入目标应用,
     // 不先构建首页,也不播开机音:否则又会在新堆上留下首页与音频的碎片。
     const passport_app_id_t clean_target = app_registry_take_clean_launch();
-    timers_restore_after_restart();
     bool chime = true;
     if (!SsidManager::GetInstance().GetSsidList().empty()) {
         ESP_LOGI(TAG, "Stored Wi-Fi found, starting station auto-connect in background...");

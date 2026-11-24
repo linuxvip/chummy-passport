@@ -133,44 +133,6 @@ constexpr IconGlyph kIconGlyphs[] = {
         ".................",
         ".................",
     }},
-    {APP_ID_POMODORO, {  // tomato clock
-        "........#........",
-        "......##.##......",
-        "......#####......",
-        "....##.....##....",
-        "...#.........#...",
-        "..#.....#.....#..",
-        "..#.....#.....#..",
-        ".#......#......#.",
-        ".#......#......#.",
-        ".#......####...#.",
-        ".#.............#.",
-        ".#.............#.",
-        "..#...........#..",
-        "..#...........#..",
-        "...#.........#...",
-        "....##.....##....",
-        "......#####......",
-    }},
-    {APP_ID_STOPWATCH, {  // stopwatch
-        ".......###.......",
-        "........#.....#..",
-        "......#####..#...",
-        "....##.....##....",
-        "...#.........#...",
-        "..#...........#..",
-        "..#........#..#..",
-        ".#........#....#.",
-        ".#.......#.....#.",
-        ".#......#......#.",
-        ".#.............#.",
-        ".#.............#.",
-        "..#...........#..",
-        "..#...........#..",
-        "...#.........#...",
-        "....##.....##....",
-        "......#####......",
-    }},
     {APP_ID_REMINDERS, {  // bell
         ".................",
         ".................",
@@ -305,8 +267,8 @@ uint32_t tile_icon_color(const passport_app_t *app, bool selected) {
     if (!selected) return kPhosDim;
     if (!ui_theme_is_multicolor()) return kPhos;
     switch (app->id) {
-        case APP_ID_RADIO: case APP_ID_POMODORO: return UI_TERTIARY;
-        case APP_ID_XIAOZHI: case APP_ID_STOPWATCH: case APP_ID_LISTS: return UI_SUCCESS;
+        case APP_ID_RADIO: return UI_TERTIARY;
+        case APP_ID_XIAOZHI: case APP_ID_LISTS: return UI_SUCCESS;
         case APP_ID_REMINDERS: case APP_ID_BAZI: return UI_WARNING;
         case APP_ID_NETEASE: return UI_DANGER;
         case APP_ID_CALENDAR: return UI_TERTIARY;

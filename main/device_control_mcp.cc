@@ -10,11 +10,10 @@
 namespace device_control {
 namespace {
 const char *const schemas[] = {
-R"({"name":"self.pomodoro.control","description":"Control or query the device's actual pomodoro timer (番茄钟). action: status/start/pause/resume/reset. start defaults to focus=25 minutes; short_break=5 and long_break=15 are the only other durations. Do not claim unsupported custom durations. phase is allowed only with start. Starting an already running same phase does not restart it; use resume for a paused timer. Reset only on explicit user request; never automatically reset to resolve a conflict. Starting stays in Xiaozhi and continues counting after leaving it or screen sleep. Open the pomodoro app separately only if asked. Read actual returned status and remaining_seconds. Timer is not saved across power-off. Completion shows on screen; sound waits while another audio app owns the speaker.","inputSchema":{"type":"object","properties":{"action":{"type":"string","enum":["status","start","pause","resume","reset"]},"phase":{"type":"string","enum":["focus","short_break","long_break"]}},"required":["action"],"additionalProperties":false}})",
 R"({"name":"self.device.get_status","description":"Read this device's saved speaker volume, screen brightness and current app. Volume and brightness are percentages. Use the actual tool result; do not guess device state.","inputSchema":{"type":"object","properties":{}}})",
 R"({"name":"self.audio.set_volume","description":"Change AND persist this device's master speaker volume. Use exactly one of percent (absolute 0..100) or delta (signed percentage points -100..100). For louder/quieter without an amount use delta +10/-10. Zero mutes speech and media; timer and reminder alarms still ring at their fixed alert level. Only claim saved on saved=true; report the returned volume_percent. No external player or server setting is needed.","inputSchema":{"type":"object","properties":{"percent":{"type":"integer","minimum":0,"maximum":100},"delta":{"type":"integer","minimum":-100,"maximum":100}}}})",
 R"({"name":"self.screen.set_brightness","description":"Change AND persist this device's screen brightness. Use exactly one of percent (absolute 10..100) or delta (signed percentage points -100..100). For brighter/dimmer without an amount use delta +10/-10. Values clamp to 10..100 to keep the display readable. Only claim saved on saved=true; report brightness_percent. Survives reboot and screen sleep/wake.","inputSchema":{"type":"object","properties":{"percent":{"type":"integer","minimum":10,"maximum":100},"delta":{"type":"integer","minimum":-100,"maximum":100}}}})",
-R"({"name":"self.application.open","description":"Open a built-in device app on explicit request. music=网易云音乐; radio=城市收音机; reminders=备忘提醒; lists=文字清单; pomodoro=番茄时钟; bazi=八字排盘; calendar=万年历; settings=设置; home=首页; launcher=应用列表; stopwatch=秒表; xiaozhi=小智. Ask which app if ambiguous. Opens its screen only. Switching exits this Xiaozhi conversation after the tool reply; do not promise continued background voice control.","inputSchema":{"type":"object","properties":{"app":{"type":"string","enum":["music","radio","reminders","lists","pomodoro","bazi","calendar","settings","home","launcher","stopwatch","xiaozhi"]}},"required":["app"]}})",
+R"({"name":"self.application.open","description":"Open a built-in device app on explicit request. music=网易云音乐; radio=城市收音机; reminders=备忘提醒; lists=文字清单; bazi=八字排盘; calendar=万年历; settings=设置; home=首页; launcher=应用列表; xiaozhi=小智. Ask which app if ambiguous. Opens its screen only. Switching exits this Xiaozhi conversation after the tool reply; do not promise continued background voice control.","inputSchema":{"type":"object","properties":{"app":{"type":"string","enum":["music","radio","reminders","lists","bazi","calendar","settings","home","launcher","xiaozhi"]}},"required":["app"]}})",
 R"({"name":"self.music.search","description":"Search the user's own NetEase Cloud Music (网易云音乐) library on THIS device while staying in this conversation. Call it FIRST for any request naming a song or an artist, and NEVER use search_music or any built-in cloud music tool instead. Returns up to 5 results (song_id, name, artist) in relevance order. If the first result matches the request (title, and singer when given), immediately call self.music.play with source=search, the same query and its song_id, and tell the user which song and singer will play. Only if several versions are equally plausible (original/live/cover) and the user gave no hint, briefly ask which one. NetEase lacks some artists' originals (e.g. 周杰伦): then say only a cover is available and play it if the user agrees.","inputSchema":{"type":"object","properties":{"query":{"type":"string","maxLength":20}},"required":["query"]}})",
 R"({"name":"self.music.play","description":"Play music on THIS device from the user's own logged-in NetEase Cloud Music (网易云音乐) account, which has the user's full library and membership. For EVERY request to play a song, an artist or music use this tool (after self.music.search for a song or artist) and NEVER search_music, play_music or any built-in cloud music tool. source=search: the searched query plus song_id of the chosen result; the other results follow. source=favorites: 我喜欢的音乐; daily: 每日推荐; playlist: the user's own or saved playlist, or a chart 热歌榜/新歌榜/飙升榜/原创榜, given as name. shuffle=true for 随机播放. stop_after_minutes pauses playback later, e.g. 半小时后停 = 30. Exits this Xiaozhi conversation after the reply; open Xiaozhi again for more voice control. Except for a chosen search result the playing song is unknown: do not name one. Favorites, daily and personal playlists need the device logged in.","inputSchema":{"type":"object","properties":{"source":{"type":"string","enum":["search","favorites","daily","playlist"]},"query":{"type":"string","maxLength":20},"song_id":{"type":"integer","minimum":1},"name":{"type":"string","maxLength":20},"shuffle":{"type":"boolean"},"stop_after_minutes":{"type":"integer","minimum":1,"maximum":180}},"required":["source"]}})",
 R"({"name":"self.radio.play","description":"Play live internet radio for a Chinese city or province in this device's 城市收音机 app, e.g. 打开北京的电台 = city 北京. station: optional keywords of a station name such as 交通 or 音乐; otherwise the most popular local station plays. stop_after_minutes pauses the radio later, e.g. 半小时后停 = 30. Exits this Xiaozhi conversation after the reply. Stations come from a public directory, so do not promise a particular one; the result shows on screen.","inputSchema":{"type":"object","properties":{"city":{"type":"string","maxLength":16},"station":{"type":"string","maxLength":10},"stop_after_minutes":{"type":"integer","minimum":1,"maximum":180}},"required":["city"]}})"
@@ -22,8 +21,8 @@ R"({"name":"self.radio.play","description":"Play live internet radio for a Chine
 struct App {const char *key; passport_app_id_t id;};
 constexpr App apps[] = {
     {"music",APP_ID_NETEASE},{"radio",APP_ID_RADIO},{"reminders",APP_ID_REMINDERS},
-    {"lists",APP_ID_LISTS},{"pomodoro",APP_ID_POMODORO},{"bazi",APP_ID_BAZI},{"calendar",APP_ID_CALENDAR},{"settings",APP_ID_SETTINGS},{"home",APP_ID_HOME},
-    {"launcher",APP_ID_LAUNCHER},{"stopwatch",APP_ID_STOPWATCH},{"xiaozhi",APP_ID_XIAOZHI}
+    {"lists",APP_ID_LISTS},{"bazi",APP_ID_BAZI},{"calendar",APP_ID_CALENDAR},{"settings",APP_ID_SETTINGS},{"home",APP_ID_HOME},
+    {"launcher",APP_ID_LAUNCHER},{"xiaozhi",APP_ID_XIAOZHI}
 };
 const char *app_key(passport_app_id_t id) {
     for (const auto &app : apps) if (app.id == id) return app.key;
@@ -51,9 +50,6 @@ bool integer(const cJSON *value,int low,int high) {
     return cJSON_IsNumber(value) && value->valuedouble>=low && value->valuedouble<=high &&
         value->valuedouble==value->valueint;
 }
-const char *const timer_actions[] = {"status","start","pause","resume","reset"};
-const char *const timer_phases[] = {"focus","short_break","long_break"};
-const char *const timer_states[] = {"ready","running","paused","finished"};
 // Copies a text argument; error names what is missing in words the user hears.
 bool text_field(const cJSON *args,const char *key,bool required,char *out,size_t capacity,const char **error) {
     const cJSON *value=cJSON_GetObjectItemCaseSensitive(args,key);
@@ -106,7 +102,6 @@ std::string call(const char *name,const cJSON *args,uint64_t token) {
     else if (!std::strcmp(name,"self.audio.set_volume")) request.action=Action::Volume;
     else if (!std::strcmp(name,"self.screen.set_brightness")) request.action=Action::Brightness;
     else if (!std::strcmp(name,"self.application.open")) request.action=Action::Open;
-    else if (!std::strcmp(name,"self.pomodoro.control")) request.action=Action::Pomodoro;
     else if (!std::strcmp(name,"self.music.play") || !std::strcmp(name,"self.radio.play")) request.action=Action::Handover;
     else if (!std::strcmp(name,"self.music.search")) return cJSON_IsObject(args)?search(args):fail("请说出要搜索的歌名或歌手");
     else return {};
@@ -120,29 +115,6 @@ std::string call(const char *name,const cJSON *args,uint64_t token) {
         if (!integer(value,delta?-100:request.action==Action::Volume?0:10,100))
             return fail("音量范围0到100，亮度范围10到100；增减幅度为整数百分比");
         request.value=value->valueint;request.relative=delta!=nullptr;
-    } else if (request.action==Action::Pomodoro) {
-        unsigned fields=0;
-        for (const cJSON *field=args->child;field;field=field->next) {
-            const unsigned bit=field->string&&!std::strcmp(field->string,"action")?1:
-                field->string&&!std::strcmp(field->string,"phase")?2:0;
-            if (!bit || (fields&bit)) return fail("番茄钟只接受 action 和 phase，暂不支持自定义时长");
-            fields|=bit;
-        }
-        const auto *action=cJSON_GetObjectItemCaseSensitive(args,"action");
-        const auto *phase=cJSON_GetObjectItemCaseSensitive(args,"phase");
-        if (!cJSON_IsString(action)) return fail("请指定查询、开始、暂停、继续或重置番茄钟");
-        unsigned index=0;
-        while (index<5 && std::strcmp(action->valuestring,timer_actions[index])) ++index;
-        if (index==5) return fail("不支持的番茄钟操作");
-        request.timer_action=static_cast<pomodoro_action_t>(index);
-        if (phase) {
-            if (request.timer_action!=POMODORO_START || !cJSON_IsString(phase))
-                return fail("仅开始计时时可以指定专注或休息类型");
-            index=0;
-            while (index<3 && std::strcmp(phase->valuestring,timer_phases[index])) ++index;
-            if (index==3) return fail("仅支持25分钟专注、5分钟短休息、15分钟长休息");
-            request.timer_phase=static_cast<uint8_t>(index);
-        }
     } else if (request.action==Action::Open) {
         const auto *app=cJSON_GetObjectItemCaseSensitive(args,"app");
         if (!cJSON_IsString(app)) return fail("请明确要打开哪个应用");
@@ -197,22 +169,9 @@ std::string call(const char *name,const cJSON *args,uint64_t token) {
         case Error::Alarm:return fail("请先处理当前提醒，再打开其他应用");
         case Error::UnknownApp:return fail("无法打开该应用");
         case Error::AlreadyOpen:return fail("小智已经在运行，无需再次打开");
-        case Error::TimerConflict:return fail("番茄钟状态不支持此操作，请先查询状态；已暂停请继续，未开始或已结束请开始。不要自行重置已有计时");
-        case Error::TimerInvalid:return fail("无效的番茄钟操作");
         case Error::None:break;
     }
     Json value(cJSON_CreateObject(),cJSON_Delete);
-    if (request.action==Action::Pomodoro) {
-        cJSON_AddBoolToObject(value.get(),"success",true);
-        cJSON_AddStringToObject(value.get(),"phase",timer_phases[result.timer.phase]);
-        cJSON_AddStringToObject(value.get(),"status",timer_states[result.timer.status]);
-        cJSON_AddNumberToObject(value.get(),"remaining_seconds",result.timer.remaining_seconds);
-        cJSON_AddNumberToObject(value.get(),"duration_seconds",pomodoro_duration_us(result.timer.phase)/1000000ULL);
-        cJSON_AddNumberToObject(value.get(),"completed_focus_sessions",result.timer.completed);
-        cJSON_AddBoolToObject(value.get(),"continues_in_background",true);
-        cJSON_AddBoolToObject(value.get(),"persisted",false);
-        return reply(value.get(),false);
-    }
     cJSON_AddNumberToObject(value.get(),"volume_percent",result.volume);
     cJSON_AddNumberToObject(value.get(),"brightness_percent",result.brightness);
     if (result.applied_brightness<result.brightness) {

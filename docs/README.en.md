@@ -4,7 +4,7 @@
 
 **A small device worth keeping in your daily routine.**
 
-Community firmware for the FoloToy AI Passport, based on ESP32-C3 with 8 MB Flash. It brings ten apps together with shared settings, Wi-Fi setup, themes, audio, battery reporting, and power management.
+Community firmware for the FoloToy AI Passport, based on ESP32-C3 with 8 MB Flash. It brings eight apps together with shared settings, Wi-Fi setup, themes, audio, battery reporting, and power management.
 
 **Ask Xiaozhi to adjust the volume, play music or radio, and set reminders on the device.**
 
@@ -25,16 +25,15 @@ People have suggested many personal improvements. Because everyone uses the hard
 | “Turn the volume down” or “Set screen brightness to 50%” | Adjust and save the device's volume or brightness |
 | “Play my liked songs and stop in half an hour” | Open NetEase Music, play your favorites, and set a stop timer |
 | “Play traffic radio from Shenzhen” | Find a station by city and keywords, then open Radio to play it |
-| “Start a Pomodoro” or “How much time is left?” | Start a 25-minute focus session or read the actual remaining time; pause and resume are also supported |
 | “Remind me to drink water in ten minutes” or “Remind me to read every day at 9 pm” | Save a one-time or recurring reminder with an on-device alert and chime |
 | “Create a packing list: keys, phone, umbrella” or “Mark umbrella as done” | Save a checklist, then read and update its items and completion state |
-| “Open Stopwatch” or “Go to Home” | Open the requested app or screen |
+| “Open Bazi” or “Go to Home” | Open the requested app or screen |
 
 You can also ask for today's AI news. Robot expressions and an audio waveform follow listening and speech, longer text expands into a reading area, and all six themes are supported.
 
 Voice tools require a network connection and Xiaozhi configuration. NetEase playback also depends on your account and available tracks; radio depends on the online directory. Opening another app or starting media playback ends the current Xiaozhi conversation. Double-press OK again for further voice control. The device must remain powered on for reminders to trigger.
 
-## Ten apps
+## Eight apps
 
 The launcher uses a phone-style 3 × 4 grid that shows all apps at once. Short Up/Down presses move one app, long presses move by row, and OK opens the highlighted app. Long-press OK to return Home.
 
@@ -46,8 +45,6 @@ The launcher uses a phone-style 3 × 4 grid that shows all apps at once. Short U
 | NetEase Music | Search songs, play playlists and daily recommendations | Wi-Fi, your own NetEase account, and available APIs |
 | Reminders | One-time and recurring reminders, chimes, and snooze | Works offline; uses the device clock |
 | Lists | View, check off, and manage tasks | Works offline |
-| Stopwatch | Timing, splits, pause, and resume | Works offline |
-| Pomodoro | Focus sessions, breaks, and completion chimes | Works offline |
 | Bazi chart | Four pillars, a horizontal luck-cycle row, and vertically scrolling flow years | Works offline; supports birth dates from 1900 to 2100 |
 | Perpetual calendar | Month grid with lunar dates, solar terms and each day's Ganzhi; day details and year/month jump | Works offline; supports 1900–2100 |
 

@@ -125,12 +125,6 @@ void poll() {
         const auto percent = static_cast<uint8_t>(std::clamp(requested, volume ? 0 : 10, 100));
         const bool saved = volume ? settings_save_volume(percent) : settings_save_brightness(percent);
         if (!saved) completed.error = Error::Storage;
-    } else if (command.action == Action::Pomodoro) {
-        pomodoro_command_result_t timer_result = POMODORO_COMMAND_OK;
-        if (!pomodoro_control(command.timer_action, command.timer_phase, &completed.timer, &timer_result))
-            completed.error = Error::Busy;
-        else if (timer_result == POMODORO_COMMAND_CONFLICT) completed.error = Error::TimerConflict;
-        else if (timer_result != POMODORO_COMMAND_OK) completed.error = Error::TimerInvalid;
     } else if (command.action == Action::Open || command.action == Action::Handover) {
         const bool handover = command.action == Action::Handover;
         const passport_app_id_t app = handover ? command.handover.app : command.app;

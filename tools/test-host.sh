@@ -37,28 +37,11 @@ python3 tests/test_home_photo_api.py
 "${CC:-cc}" -std=c11 -Wall -Wextra -Werror -Itests/audio_mocks -Icomponents/bsp/src \
     tests/test_audio_volume.c components/bsp/src/bsp_audio_volume.c -lm -o "$test_dir/audio-volume"
 "$test_dir/audio-volume"
-"${CC:-cc}" -std=c11 -Wall -Wextra -Werror -Imain \
-    tests/test_stopwatch.c main/apps/stopwatch/stopwatch_core.c -o "$test_dir/stopwatch"
-"$test_dir/stopwatch"
 python3 tests/test_wifi_configure.py
 python3 tests/test_wifi_internet.py
 "${CC:-cc}" -std=c11 -Wall -Wextra -Werror -fsanitize=address,undefined -g -Imain \
     tests/test_battery_guard.c -o "$test_dir/battery-guard"
 "$test_dir/battery-guard"
-"${CC:-cc}" -std=c11 -Wall -Wextra -Werror -fsanitize=address,undefined -g -Imain \
-    tests/test_pomodoro.c main/apps/pomodoro/pomodoro_core.c -o "$test_dir/pomodoro"
-"$test_dir/pomodoro"
-"${CC:-cc}" -std=c11 -Wall -Wextra -Werror -fsanitize=address,undefined -g -Imain \
-    -c main/apps/pomodoro/pomodoro_core.c -o "$test_dir/pomodoro-core.o"
-"${CC:-cc}" -std=c11 -Wall -Wextra -Werror -fsanitize=address,undefined -g -Imain \
-    -c main/apps/stopwatch/stopwatch_core.c -o "$test_dir/stopwatch-core.o"
-"${CXX:-c++}" -std=c++17 -Wall -Wextra -Werror -fsanitize=address,undefined -g -Imain \
-    tests/test_timer_resume.cc "$test_dir/stopwatch-core.o" "$test_dir/pomodoro-core.o" -o "$test_dir/timer-resume"
-"$test_dir/timer-resume"
-"${CXX:-c++}" -std=c++20 -Wall -Wextra -Werror -Wno-unused-variable -Wno-misleading-indentation \
-    -fsanitize=address,undefined -g -Itests/pomodoro_mocks -Imain -Imain/fonts \
-    tests/test_pomodoro_app.cc "$test_dir/pomodoro-core.o" -o "$test_dir/pomodoro-app"
-"$test_dir/pomodoro-app"
 "${CXX:-c++}" -std=c++17 -Wall -Wextra -Werror -Imain \
     tests/test_wifi_keyboard.cc -o "$test_dir/wifi-keyboard"
 "$test_dir/wifi-keyboard"

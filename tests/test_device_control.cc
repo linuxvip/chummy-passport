@@ -21,13 +21,6 @@ extern "C" const passport_app_t *app_registry_get_by_id(passport_app_id_t id){
 }
 extern "C" void app_registry_switch_to(passport_app_id_t id){++switches;foreground=id;}
 namespace xiaozhi {void ui_set_volume(unsigned value){ui_volume=value;}}
-static pomodoro_t voice_timer=POMODORO_INITIALIZER;
-bool pomodoro_control(pomodoro_action_t action,uint8_t phase,PomodoroSnapshot *out,pomodoro_command_result_t *result){
-    if(!display_available)return false;
-    *result=pomodoro_command(&voice_timer,action,phase,monotonic_us);
-    *out={pomodoro_remaining_seconds(&voice_timer,monotonic_us),voice_timer.completed,voice_timer.phase,voice_timer.status};
-    return true;
-}
 extern "C" int time_sync_tz_offset_sec(){return 28800;}
 namespace reminders {
 bool alarm_active(){return mock_alarm;}
@@ -210,27 +203,11 @@ int main(){
     answer=invoke("self.audio.set_volume",R"({"percent":90})");assert(answer.find("\"isError\":true")!=std::string::npos);
     poll();assert(s_volume==0);mock_delay_hook=poll;
     bool rpc_error=false;
-    for(unsigned page=0;page<20;++page){
+    for(unsigned page=0;page<19;++page){
         auto out=reminders::mcp_result("tools/list",("{\"cursor\":\""+std::to_string(page)+"\"}").c_str(),&rpc_error);
         auto *json=cJSON_Parse(out.c_str());assert(!rpc_error&&cJSON_GetArraySize(cJSON_GetObjectItem(json,"tools"))==1);
         assert(out.size()<1800); // each tool page fits the real receive limit
-        assert(bool(cJSON_GetObjectItem(json,"nextCursor"))==(page<19));cJSON_Delete(json);
+        assert(bool(cJSON_GetObjectItem(json,"nextCursor"))==(page<18));cJSON_Delete(json);
     }
-    answer=invoke("self.pomodoro.control",R"({"action":"start"})");
-    assert(answer.find("running")!=std::string::npos&&answer.find("1500")!=std::string::npos&&foreground==APP_ID_XIAOZHI);
-    const auto deadline=voice_timer.deadline_us;
-    invoke("self.pomodoro.control",R"({"action":"start"})");assert(voice_timer.deadline_us==deadline);
-    for(auto args:{R"({})",R"({"action":"toggle"})",R"({"action":"start","minutes":40})",
-                  R"({"action":"pause","phase":"focus"})",R"({"action":"start","phase":"custom"})",
-                  R"({"action":"start","action":"reset"})"}){
-        answer=invoke("self.pomodoro.control",args);assert(answer.find("\"isError\":true")!=std::string::npos);
-        assert(voice_timer.deadline_us==deadline);
-    }
-    invoke("self.pomodoro.control",R"({"action":"pause"})");assert(voice_timer.status==POMODORO_PAUSED);
-    answer=invoke("self.pomodoro.control",R"({"action":"start"})");assert(answer.find("\"isError\":true")!=std::string::npos);
-    invoke("self.pomodoro.control",R"({"action":"resume"})");assert(voice_timer.status==POMODORO_RUNNING);
-    display_available=false;
-    answer=invoke("self.pomodoro.control",R"({"action":"reset"})");assert(answer.find("\"isError\":true")!=std::string::npos&&voice_timer.status==POMODORO_RUNNING);
-    display_available=true;invoke("self.pomodoro.control",R"({"action":"reset"})");assert(voice_timer.status==POMODORO_READY);
-    puts("Device control: saved settings, guarded navigation, voice pomodoro validation/state, timeout, voice music/radio handover, in-session search, low-battery brightness, AIHOT news and twenty-tool discovery PASS");
+    puts("Device control: saved settings, guarded navigation, timeout, voice music/radio handover, in-session search, low-battery brightness, AIHOT news and nineteen-tool discovery PASS");
 }

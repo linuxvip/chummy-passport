@@ -14,7 +14,6 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 TITLE_FONTS = {
     'ui_font_20': ['main/fonts/ui_font_20.c'],
-    'pomodoro_font_20': ['main/apps/pomodoro/pomodoro_font_20.c', 'main/fonts/ui_font_20.c'],
 }
 LITERAL = re.compile(r'"((?:[^"\\]|\\.)*)"')
 

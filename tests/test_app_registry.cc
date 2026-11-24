@@ -24,7 +24,6 @@ static bool music_back(){++music_back_calls;if(music_page==netease::Page::Lists)
 static passport_app_t app(passport_app_id_t id){passport_app_t a{};a.id=id;a.name="test";a.start=start;a.stop=stop;a.on_key=key;a.prepare_stop=prepare;if(id==APP_ID_NETEASE)a.on_back=music_back;return a;}
 const passport_app_t g_radio_app=app(APP_ID_RADIO),g_xiaozhi_app=app(APP_ID_XIAOZHI),
  g_wifi_app=app(APP_ID_WIFI),g_settings_app=app(APP_ID_SETTINGS),g_home_app=app(APP_ID_HOME),
- g_stopwatch_app=app(APP_ID_STOPWATCH),g_pomodoro_app=app(APP_ID_POMODORO),
  g_netease_app=app(APP_ID_NETEASE),g_reminders_app=app(APP_ID_REMINDERS),g_lists_app=app(APP_ID_LISTS),
  g_bazi_app=app(APP_ID_BAZI),g_calendar_app=app(APP_ID_CALENDAR);
 static bool mock_reminder_active=false;
@@ -74,7 +73,7 @@ int main(){
  // A busy display must not discard a request after its worker has stopped.
  mock_display_lock=false;app_registry_switch_to(APP_ID_HOME);assert(starts==2);
  mock_display_lock=true;app_registry_process_pending_switch();assert(starts==3);
- mock_chime=true;app_registry_switch_to(APP_ID_STOPWATCH);assert(starts==3);
+ mock_chime=true;app_registry_switch_to(APP_ID_BAZI);assert(starts==3);
  mock_chime=false;app_registry_process_pending_switch();assert(starts==4);
  // Sleep/wake preserves PM lock balance and consumes the waking gesture.
  app_registry_set_screen_timeout(1);mock_now+=2000000;app_registry_tick();assert(!app_registry_screen_is_on());
@@ -270,7 +269,7 @@ int main(){
  assert(mock_restarts==2);mock_restarts=0;s_fresh_heap=false;
  // An allocation failure during a heavy session marks the heap as strained:
  // leaving is fine, the next heavy entry restarts into itself once.
- ++mock_alloc_failures;app_registry_switch_to(APP_ID_HOME);app_registry_switch_to(APP_ID_STOPWATCH);
+ ++mock_alloc_failures;app_registry_switch_to(APP_ID_HOME);app_registry_switch_to(APP_ID_BAZI);
  assert(mock_restarts==0);
  const int clean_stops=stops;
  try{app_registry_switch_to(APP_ID_XIAOZHI);assert(false);}catch(const MockRestart&){}
@@ -280,9 +279,9 @@ int main(){
  // Only a software reset with an intact record is honoured, and only once.
  mock_reset_reason=ESP_RST_SW;assert(app_registry_take_clean_launch()==APP_ID_XIAOZHI);
  assert(app_registry_take_clean_launch()==APP_ID_COUNT);
- s_clean_launch[0]=kCleanLaunchMagic;s_clean_launch[1]=APP_ID_STOPWATCH^kCleanLaunchMagic;
+ s_clean_launch[0]=kCleanLaunchMagic;s_clean_launch[1]=APP_ID_BAZI^kCleanLaunchMagic;
  mock_reset_reason=ESP_RST_PANIC;assert(app_registry_take_clean_launch()==APP_ID_COUNT);
- s_clean_launch[0]=kCleanLaunchMagic;s_clean_launch[1]=APP_ID_STOPWATCH^kCleanLaunchMagic;
+ s_clean_launch[0]=kCleanLaunchMagic;s_clean_launch[1]=APP_ID_BAZI^kCleanLaunchMagic;
  mock_reset_reason=ESP_RST_SW;assert(app_registry_take_clean_launch()==APP_ID_COUNT);
  s_clean_launch[0]=0x12345678;s_clean_launch[1]=APP_ID_RADIO;assert(app_registry_take_clean_launch()==APP_ID_COUNT);
  s_clean_launch[0]=kCleanTalkMagic;s_clean_launch[1]=APP_ID_RADIO^kCleanTalkMagic;

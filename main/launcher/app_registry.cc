@@ -1,5 +1,4 @@
 #include "launcher/app_registry.h"
-#include "launcher/timer_resume.h"
 #include "bsp_memory.h"
 #include "bsp_memory.h"
 #include "lwip/sockets.h"
@@ -35,8 +34,6 @@ extern const passport_app_t g_xiaozhi_app;
 extern const passport_app_t g_wifi_app;
 extern const passport_app_t g_settings_app;
 extern const passport_app_t g_home_app;
-extern const passport_app_t g_stopwatch_app;
-extern const passport_app_t g_pomodoro_app;
 extern const passport_app_t g_netease_app;
 extern const passport_app_t g_reminders_app;
 extern const passport_app_t g_lists_app;
@@ -53,8 +50,6 @@ const passport_app_t *s_apps[] = {
     &g_xiaozhi_app,
     &g_radio_app,
     &g_netease_app,
-    &g_pomodoro_app,
-    &g_stopwatch_app,
     &g_reminders_app,
     &g_lists_app,
     &g_bazi_app,
@@ -65,8 +60,7 @@ const passport_app_t *s_apps[] = {
 constexpr size_t kAppCount = sizeof(s_apps) / sizeof(s_apps[0]);
 bool feedback_allowed(passport_app_id_t id) {
     return id == APP_ID_HOME || id == APP_ID_LAUNCHER || id == APP_ID_SETTINGS ||
-           id == APP_ID_WIFI || id == APP_ID_STOPWATCH || id == APP_ID_POMODORO ||
-           id == APP_ID_REMINDERS || id == APP_ID_LISTS || id == APP_ID_BAZI ||
+           id == APP_ID_WIFI || id == APP_ID_REMINDERS || id == APP_ID_LISTS || id == APP_ID_BAZI ||
            id == APP_ID_CALENDAR;
 }
 std::atomic<passport_app_id_t> s_active_id{APP_ID_LAUNCHER};
@@ -161,9 +155,6 @@ void show_clean_launch_notice(passport_app_id_t id);
     s_clean_launch[1] = static_cast<uint32_t>(id) ^ magic;
     ESP_LOGW(TAG, "Restarting for a defragmented heap: target app=%d", (int)id);
     show_clean_launch_notice(id);
-#ifdef ESP_PLATFORM
-    timers_save_for_restart();
-#endif
     esp_restart();
 }
 
