@@ -20,9 +20,10 @@ namespace {
 constexpr int kGridX = 8;
 constexpr int kGridY = 43;
 constexpr int kTileW = 70;
-constexpr int kTileH = 54;
+constexpr int kTileH = 58;
 constexpr int kColumnGap = 7;
-constexpr int kIconSize = 24;
+constexpr int kIconSize = 32;
+constexpr int kGlyphSpan = 24;
 constexpr size_t kMaxTiles = 10;
 constexpr int kGridUsableHeight = 235;
 
@@ -65,12 +66,46 @@ const char *app_chinese_name(passport_app_id_t id) {
     }
 }
 
+struct IconPalette {
+    uint32_t dark_ink;
+    uint32_t dark_tile;
+    uint32_t light_ink;
+    uint32_t light_tile;
+};
+
+IconPalette icon_palette(passport_app_id_t id) {
+    switch (id) {
+        case APP_ID_XIAOZHI: return {0x31D1DF, 0x123B44, 0x14727E, 0xD8EDF0};
+        case APP_ID_RADIO: return {0xFFC45A, 0x493514, 0x8D5D13, 0xF2E1BB};
+        case APP_ID_NETEASE: return {0xFF7887, 0x48202A, 0xA73C4B, 0xF2D8DC};
+        case APP_ID_REMINDERS: return {0xF3D86B, 0x463A16, 0x786317, 0xF1E8C4};
+        case APP_ID_LISTS: return {0x73DF97, 0x183C27, 0x3D7A55, 0xDCEDDF};
+        case APP_ID_BAZI: return {0xF17D66, 0x45211D, 0xA34B3E, 0xF1DDD7};
+        case APP_ID_CALENDAR: return {0x7DBCF6, 0x18364E, 0x3C6690, 0xDDE9F3};
+        case APP_ID_SETTINGS: return {0xB0C2CE, 0x28343C, 0x58635D, 0xE4E7E3};
+        default: return {0xD9CFB9, 0x29343B, 0x5B5145, 0xE4E7E3};
+    }
+}
+
+bool light_launcher_theme() {
+    return ui_theme_get() == UI_THEME_PLAYFUL || ui_theme_get() == UI_THEME_PAPER;
+}
+
+uint32_t icon_ink_color(passport_app_id_t id) {
+    const IconPalette palette = icon_palette(id);
+    return light_launcher_theme() ? palette.light_ink : palette.dark_ink;
+}
+
+uint32_t icon_tile_color(passport_app_id_t id) {
+    const IconPalette palette = icon_palette(id);
+    return light_launcher_theme() ? palette.light_tile : palette.dark_tile;
+}
+
 // One line-icon vocabulary: a 17x17 grid of single-pixel cells drawn in the app color,
 // strokes one cell wide, no fills or second tone. Each glyph is centered on
 // the grid, so new apps add one table entry instead of hand-placed strokes.
 constexpr int kGlyphCells = 17;
-constexpr int kGlyphCell = 1;
-constexpr int kGlyphOrigin = (kIconSize - kGlyphCells * kGlyphCell) / 2;
+constexpr int kGlyphOrigin = (kIconSize - kGlyphSpan) / 2;
 struct IconGlyph {
     passport_app_id_t id;
     const char *rows[kGlyphCells];
@@ -263,19 +298,6 @@ int column_for_index(size_t index) {
     return slot < 0 ? 0 : slot % 3;
 }
 
-uint32_t tile_icon_color(const passport_app_t *app, bool selected) {
-    if (!selected) return kPhosDim;
-    if (!ui_theme_is_multicolor()) return kPhos;
-    switch (app->id) {
-        case APP_ID_RADIO: return UI_TERTIARY;
-        case APP_ID_XIAOZHI: case APP_ID_LISTS: return UI_SUCCESS;
-        case APP_ID_REMINDERS: case APP_ID_BAZI: return UI_WARNING;
-        case APP_ID_NETEASE: return UI_DANGER;
-        case APP_ID_CALENDAR: return UI_TERTIARY;
-        default: return kPhos;
-    }
-}
-
 // The icon is drawn into its own tile object; no image or per-part allocation.
 void draw_tile_icon_event(lv_event_t *event) {
     const auto *tile = static_cast<const AppTile *>(lv_event_get_user_data(event));
@@ -284,18 +306,19 @@ void draw_tile_icon_event(lv_event_t *event) {
     for (const IconGlyph &g : kIconGlyphs)
         if (g.id == tile->id) glyph = &g;
     if (!glyph) return;
-    const passport_app_t *app = app_registry_get_by_index(tile->index);
-    if (!app) return;
     pixel_scene::Ink ink(event);
+    const uint32_t color = icon_ink_color(tile->id);
     for (int y = 0; y < kGlyphCells; ++y) {
         const char *row = glyph->rows[y];
         for (int x = 0; x < kGlyphCells;) {
             if (row[x] != '#') { ++x; continue; }
             const int start = x;
             while (x < kGlyphCells && row[x] == '#') ++x;
-            ink.box(kGlyphOrigin + start * kGlyphCell, kGlyphOrigin + y * kGlyphCell,
-                    (x - start) * kGlyphCell, kGlyphCell,
-                    tile_icon_color(app, tile->index == s_selected_index));
+            const int x0 = kGlyphOrigin + start * kGlyphSpan / kGlyphCells;
+            const int x1 = kGlyphOrigin + x * kGlyphSpan / kGlyphCells;
+            const int y0 = kGlyphOrigin + y * kGlyphSpan / kGlyphCells;
+            const int y1 = kGlyphOrigin + (y + 1) * kGlyphSpan / kGlyphCells;
+            ink.box(x0, y0, x1 - x0, y1 - y0, color);
         }
     }
 }
@@ -320,7 +343,10 @@ void apply_selection() {
         lv_obj_set_style_text_color(tile.label,
                                     lv_color_hex(selected ? UI_TEXT : UI_TEXT_DIM), 0);
         if (tile.icon) {
-            lv_obj_set_y(tile.icon, 4);
+            lv_obj_set_style_bg_color(tile.icon, lv_color_hex(icon_tile_color(tile.id)), 0);
+            lv_obj_set_style_border_color(tile.icon, lv_color_hex(icon_ink_color(tile.id)), 0);
+            lv_obj_set_style_border_width(tile.icon, selected ? 2 : 1, 0);
+            lv_obj_set_y(tile.icon, 2);
             lv_obj_invalidate(tile.icon);
         }
         lv_obj_invalidate(tile.card);
@@ -363,7 +389,7 @@ void tile_nudge(size_t index, int direction) {
     lv_anim_init(&b);
     lv_anim_set_var(&b, icon);
     lv_anim_set_exec_cb(&b, icon_y_anim);
-    lv_anim_set_values(&b, 4 + 2 * direction, 4);
+    lv_anim_set_values(&b, 2 + 2 * direction, 2);
     lv_anim_set_duration(&b, 80);
     lv_anim_set_path_cb(&b, lv_anim_path_ease_out);
     lv_anim_start(&b);
@@ -444,13 +470,16 @@ void launcher_ui_init(void) {
         tile.icon = lv_obj_create(tile.card);
         lv_obj_remove_style_all(tile.icon);
         lv_obj_remove_flag(tile.icon, LV_OBJ_FLAG_SCROLLABLE);
-        lv_obj_set_pos(tile.icon, (kTileW - kIconSize) / 2, 4);
+        lv_obj_set_pos(tile.icon, (kTileW - kIconSize) / 2, 2);
         lv_obj_set_size(tile.icon, kIconSize, kIconSize);
+        lv_obj_set_style_radius(tile.icon, 9, 0);
+        lv_obj_set_style_bg_opa(tile.icon, LV_OPA_COVER, 0);
+        lv_obj_set_style_border_width(tile.icon, 1, 0);
         lv_obj_add_event_cb(tile.icon, draw_tile_icon_event, LV_EVENT_DRAW_MAIN, &tile);
 
         tile.label = ui_pixel_label(tile.card, app_chinese_name(tile.id),
                                     &launcher_font_12, UI_TEXT_DIM);
-        lv_obj_set_pos(tile.label, 0, 29);
+        lv_obj_set_pos(tile.label, 0, 34);
         lv_obj_set_size(tile.label, kTileW, 20);
         lv_obj_set_style_text_align(tile.label, LV_TEXT_ALIGN_CENTER, 0);
         lv_label_set_long_mode(tile.label, LV_LABEL_LONG_DOT);

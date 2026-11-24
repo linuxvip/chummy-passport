@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="zh-CN">
+<meta charset="utf-8">
+<title>应用选择 · 彩色图标效果图</title>
+<style>
+  *{box-sizing:border-box}
+  html,body{margin:0;min-height:100%;background:#dfe3e4;font-family:"Hiragino Sans GB","PingFang SC",sans-serif}
+  body{padding:28px}
+  .board{width:1024px;display:flex;gap:64px;justify-content:center}
+  .frame{width:480px;height:640px;position:relative}
+  .device{position:absolute;left:0;top:0;width:240px;height:320px;transform:scale(2);transform-origin:top left;overflow:hidden;background:#101b24;color:#f0e8d8}
+  .device.paper{background:#f4eee0;color:#3d3931}
+  .status{height:24px;display:flex;align-items:center;gap:7px;padding:0 10px;background:#0c171f;border-bottom:1px solid #31404a;color:#e7ddc8;font-size:12px}
+  .paper .status{background:#e9e0d0;border-bottom-color:#cfc4af;color:#3d3931}
+  .signal{display:flex;align-items:flex-end;gap:2px;width:18px;height:13px}.signal i{display:block;width:3px;background:#d9cfb9}.signal i:nth-child(1){height:4px}.signal i:nth-child(2){height:7px}.signal i:nth-child(3){height:10px}.signal i:nth-child(4){height:13px}
+  .paper .signal i{background:#565048}
+  .title{font-size:15px;font-weight:650;margin-left:5px}.battery{margin-left:auto;display:flex;align-items:center;gap:5px;font-size:12px}.battery b{display:block;width:25px;height:11px;border:1px solid currentColor;border-radius:2px;position:relative}.battery b:after{content:"";position:absolute;right:-3px;top:3px;width:2px;height:5px;background:currentColor}.battery b:before{content:"";position:absolute;left:2px;top:2px;bottom:2px;width:18px;background:#83c4b6}
+  .paper .battery b:before{background:#6c997a}
+  .section{height:18px;margin-top:3px;padding:0 8px;display:flex;align-items:center;justify-content:space-between;color:#9cacab;font-size:10px;letter-spacing:.08em}
+  .paper .section{color:#857d70}
+  .grid{position:absolute;left:8px;top:52px;width:224px;height:198px;display:grid;grid-template-columns:repeat(3,70px);grid-template-rows:repeat(3,58px);column-gap:7px;row-gap:12px}
+  .app{position:relative;height:58px;display:flex;flex-direction:column;align-items:center;border:2px solid transparent;border-radius:8px;padding-top:1px}
+  .icon-tile{width:32px;height:32px;border-radius:9px;display:grid;place-items:center;background:var(--tile);color:var(--ink);border:1px solid color-mix(in srgb,var(--ink) 35%,transparent);box-shadow:inset 0 1px 0 rgba(255,255,255,.16)}
+  .paper .icon-tile{box-shadow:inset 0 1px 0 rgba(255,255,255,.7)}
+  .icon-tile svg{width:24px;height:24px;stroke:currentColor;fill:none;stroke-width:1.65;stroke-linecap:round;stroke-linejoin:round}
+  .app span{font-size:12px;line-height:18px;white-space:nowrap;margin-top:1px;color:#aaa79e}
+  .paper .app span{color:#777064}
+  .app.selected{background:rgba(22,42,52,.78);border-color:#e2b85d;box-shadow:inset 0 0 0 1px rgba(255,240,200,.08)}
+  .paper .app.selected{background:rgba(255,255,255,.62);border-color:#a94938;box-shadow:0 1px 0 rgba(93,65,37,.12)}
+  .app.selected span{color:#f3ead2;font-weight:650}.paper .app.selected span{color:#332f29}
+  .app.selected:before{content:"";position:absolute;left:4px;top:4px;width:4px;height:4px;background:#e8bc60}.paper .app.selected:before{background:#a94938}
+  .footer{position:absolute;left:0;bottom:0;width:240px;height:30px;border-top:1px solid #33434d;background:#0b161e;color:#9da8aa;text-align:center;font-size:10.5px;line-height:14px;padding-top:1px}
+  .paper .footer{background:#e9e0d0;border-top-color:#cfc4af;color:#746d62}.footer b{color:#d8c9aa;font-weight:500}.paper .footer b{color:#46413a}
+  .caption{text-align:center;height:32px;line-height:32px;color:#5a6265;font-size:14px;font-weight:600;letter-spacing:.08em}
+  .ai{--ink:#31d1df;--tile:#123b44}.radio{--ink:#ffc45a;--tile:#493514}.music{--ink:#ff7887;--tile:#48202a}.reminder{--ink:#f3d86b;--tile:#463a16}.list{--ink:#73df97;--tile:#183c27}.bazi{--ink:#f17d66;--tile:#45211d}.calendar{--ink:#7dbcf6;--tile:#18364e}.settings{--ink:#b0c2ce;--tile:#28343c}
+  .paper .ai{--ink:#14727e;--tile:#d8edf0}.paper .radio{--ink:#8d5d13;--tile:#f2e1bb}.paper .music{--ink:#a73c4b;--tile:#f2d8dc}.paper .reminder{--ink:#786317;--tile:#f1e8c4}.paper .list{--ink:#3d7a55;--tile:#dceddf}.paper .bazi{--ink:#a34b3e;--tile:#f1ddd7}.paper .calendar{--ink:#3c6690;--tile:#dde9f3}.paper .settings{--ink:#58635d;--tile:#e4e7e3}
+</style>
+<svg width="0" height="0" style="position:absolute">
+  <symbol id="i-ai" viewBox="0 0 24 24"><rect x="5" y="7" width="14" height="11" rx="3"/><path d="M9 7V5m6 2V5M9 14h.01M15 14h.01M9 18v2m6-2v2"/></symbol>
+  <symbol id="i-radio" viewBox="0 0 24 24"><path d="M4 9h11v8H4zM15 11h3l2 2v4h-5zM7 20a2 2 0 1 0 0-4 2 2 0 0 0 0 4Zm10 0a2 2 0 1 0 0-4 2 2 0 0 0 0 4ZM7 6v3m3-3v3m3-3v3"/></symbol>
+  <symbol id="i-music" viewBox="0 0 24 24"><path d="M10 17V6l8-2v11"/><circle cx="7" cy="18" r="3"/><circle cx="18" cy="15" r="3"/></symbol>
+  <symbol id="i-bell" viewBox="0 0 24 24"><path d="M5 17h14l-2-2v-5a5 5 0 0 0-10 0v5zM10 20h4"/></symbol>
+  <symbol id="i-list" viewBox="0 0 24 24"><path d="M5 7h14M5 12h14M5 17h9"/><path d="m17 16 2 2 3-4"/></symbol>
+  <symbol id="i-bazi" viewBox="0 0 24 24"><path d="M4 5h7v7H4zM13 5h7v7h-7zM4 14h7v5H4zM13 14h7v5h-7z"/></symbol>
+  <symbol id="i-calendar" viewBox="0 0 24 24"><rect x="4" y="6" width="16" height="14" rx="2"/><path d="M8 3v5m8-5v5M4 11h16M8 15h2m4 0h2M8 18h2"/></symbol>
+  <symbol id="i-settings" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/><circle cx="8" cy="7" r="2" fill="currentColor"/><circle cx="15" cy="12" r="2" fill="currentColor"/><circle cx="10" cy="17" r="2" fill="currentColor"/></symbol>
+</svg>
+<div class="board">
+  <div><div class="caption">青金守夜 · 深色图标</div><div class="frame"><div class="device">
+    <div class="status"><div class="signal"><i></i><i></i><i></i><i></i></div><div class="title">应用</div><div class="battery">98%<b></b></div></div>
+    <div class="section"><span>选择一个应用</span><span>06 / 08</span></div>
+    <div class="grid">
+      <div class="app ai"><div class="icon-tile"><svg><use href="#i-ai"/></svg></div><span>小智 AI</span></div>
+      <div class="app radio"><div class="icon-tile"><svg><use href="#i-radio"/></svg></div><span>城市收音机</span></div>
+      <div class="app music"><div class="icon-tile"><svg><use href="#i-music"/></svg></div><span>音乐播放器</span></div>
+      <div class="app reminder"><div class="icon-tile"><svg><use href="#i-bell"/></svg></div><span>备忘提醒</span></div>
+      <div class="app list"><div class="icon-tile"><svg><use href="#i-list"/></svg></div><span>文字清单</span></div>
+      <div class="app bazi selected"><div class="icon-tile"><svg><use href="#i-bazi"/></svg></div><span>八字排盘</span></div>
+      <div class="app calendar"><div class="icon-tile"><svg><use href="#i-calendar"/></svg></div><span>万年历</span></div>
+      <div class="app settings"><div class="icon-tile"><svg><use href="#i-settings"/></svg></div><span>设置</span></div>
+    </div>
+    <div class="footer"><b>上下逐项 · 长按跨行</b><br>确定打开 · 长按确定返回</div>
+  </div></div></div>
+  <div><div class="caption">宣纸朱砂 · 浅色图标</div><div class="frame"><div class="device paper">
+    <div class="status"><div class="signal"><i></i><i></i><i></i><i></i></div><div class="title">应用</div><div class="battery">98%<b></b></div></div>
+    <div class="section"><span>选择一个应用</span><span>02 / 08</span></div>
+    <div class="grid">
+      <div class="app ai"><div class="icon-tile"><svg><use href="#i-ai"/></svg></div><span>小智 AI</span></div>
+      <div class="app radio selected"><div class="icon-tile"><svg><use href="#i-radio"/></svg></div><span>城市收音机</span></div>
+      <div class="app music"><div class="icon-tile"><svg><use href="#i-music"/></svg></div><span>音乐播放器</span></div>
+      <div class="app reminder"><div class="icon-tile"><svg><use href="#i-bell"/></svg></div><span>备忘提醒</span></div>
+      <div class="app list"><div class="icon-tile"><svg><use href="#i-list"/></svg></div><span>文字清单</span></div>
+      <div class="app bazi"><div class="icon-tile"><svg><use href="#i-bazi"/></svg></div><span>八字排盘</span></div>
+      <div class="app calendar"><div class="icon-tile"><svg><use href="#i-calendar"/></svg></div><span>万年历</span></div>
+      <div class="app settings"><div class="icon-tile"><svg><use href="#i-settings"/></svg></div><span>设置</span></div>
+    </div>
+    <div class="footer"><b>上下逐项 · 长按跨行</b><br>确定打开 · 长按确定返回</div>
+  </div></div></div>
+</div>
+</html>

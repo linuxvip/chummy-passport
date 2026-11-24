@@ -19,7 +19,12 @@ for key in registered:
     assert not missing,(apps[key],'missing 12px glyphs',''.join(sorted(missing)))
 launcher=(root/'main/launcher/launcher.cc').read_text(encoding='utf-8')
 assert 'constexpr int kTileW = 70;' in launcher
-assert 'constexpr int kTileH = 54;' in launcher
+assert 'constexpr int kTileH = 58;' in launcher
+assert 'constexpr int kIconSize = 32;' in launcher
+assert 'constexpr int kGlyphSpan = 24;' in launcher
+assert 'IconPalette icon_palette(passport_app_id_t id)' in launcher
+assert 'icon_tile_color(tile.id)' in launcher
+assert 'icon_ink_color(tile.id)' in launcher
 assert 'if (index == 9) return 10;' in launcher
 assert 'BTN_EVT_LONG' in launcher and 'row_target_index(direction)' in launcher
 assert '"上下逐项 · 长按跨行"' in launcher
