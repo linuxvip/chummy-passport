@@ -17,5 +17,6 @@ profile = source[source.index("void create_profile_ui()"):source.index("void cre
 assert "lv_obj_set_size(s_pillar_labels[1][col], 26, 26);" in profile
 assert "lv_obj_set_pos(s_pillar_labels[2][col], kPillarX[col] + 26, 70);" in profile
 assert "lv_obj_add_flag(s_pillar_labels[2][col], LV_OBJ_FLAG_HIDDEN);" not in profile
+assert "constexpr int kPillarX[4] = {12, 64, 116, 168};" in profile
 
 print("Home five-element colors: profile stems and branches colored separately: PASS")
