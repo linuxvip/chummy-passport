@@ -1,4 +1,5 @@
 #include "apps/calendar/calendar_core.h"
+#include "apps/bazi/bazi_almanac.h"
 
 #include <assert.h>
 #include <stdio.h>
@@ -46,6 +47,17 @@ int main(void) {
     assert(!strcmp(term, "大雪") && days == 15);
     assert(calendar_next_solar_term(2026, 11, 23, term, &days));
     assert(!strcmp(term, "大雪") && days == 14);
+
+    // Hour stems for 2026-11-23 (辛丑日): 戊子 ... 己亥.
+    bazi_almanac_t day;
+    assert(bazi_almanac_calculate_solar(2026, 11, 23, 12, 0,
+                                        BAZI_ALMANAC_ZI_EARLY, &day));
+    const uint8_t expected_hour_stems[12] = {
+        4, 5, 6, 7, 8, 9, 0, 1, 2, 3, 4, 5,
+    };
+    for (uint8_t branch = 0; branch < 12; ++branch) {
+        assert(((day.day_stem % 5U) * 2U + branch) % 10U == expected_hour_stems[branch]);
+    }
 
     assert(!calendar_day_info(1899, 12, 31, &info));
     assert(!calendar_day_info(2026, 2, 29, &info));

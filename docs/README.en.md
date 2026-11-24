@@ -46,7 +46,7 @@ The launcher uses a phone-style 3 × 4 grid that shows all apps at once. Short U
 | Reminders | One-time and recurring reminders, chimes, and snooze | Works offline; uses the device clock |
 | Lists | View, check off, and manage tasks | Works offline |
 | Bazi chart | Four pillars, a horizontal luck-cycle row, and vertically scrolling flow years | Works offline; supports birth dates from 1900 to 2100 |
-| Perpetual calendar | Month grid with lunar dates, solar terms and each day's Ganzhi; day details and year/month jump | Works offline; supports 1900–2100 |
+| Perpetual calendar | Month grid with lunar dates, solar terms and each day's Ganzhi; day details include a 6 × 2 twelve-shichen hour-stem table and year/month jump | Works offline; supports 1900–2100 |
 
 ## FoloToy official firmware
 

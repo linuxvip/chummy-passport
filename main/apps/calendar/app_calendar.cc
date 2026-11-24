@@ -9,6 +9,7 @@
 #include "esp_heap_caps.h"
 #include "esp_log.h"
 #include "launcher/app_registry.h"
+#include "ui/pixel_scene.h"
 #include "ui_pixel.h"
 #include "wifi_manager.h"
 
@@ -26,6 +27,13 @@ constexpr int kGridX = 8;
 constexpr int kGridY = 68;
 constexpr int kVisibleRows = 5;
 constexpr uint8_t kNoTerm = UINT8_MAX;
+constexpr int kHourCardX = 8;
+constexpr int kHourCardY = 164;
+constexpr int kHourCardW = 224;
+constexpr int kHourCardH = 106;
+constexpr int kHourColumnW = 37;
+constexpr int kHourHeaderH = 18;
+constexpr int kHourRowH = 44;
 
 enum class Mode : uint8_t { Month, Detail, Picker };
 enum class PickerField : uint8_t { Year, Month, Jump, Cancel, Count };
@@ -59,12 +67,55 @@ Cell s_cells[42] = {};
 lv_obj_t *s_picker_rows[static_cast<int>(PickerField::Count)] = {};
 lv_obj_t *s_picker_names[static_cast<int>(PickerField::Count)] = {};
 lv_obj_t *s_picker_values[static_cast<int>(PickerField::Count)] = {};
+int8_t s_current_hour_branch = -1;
 
 const char *const kWeekdays[] = {
     "星期日", "星期一", "星期二", "星期三", "星期四", "星期五", "星期六",
 };
 
 const char *const kPickerNames[] = {"年份", "月份", "跳转", "取消"};
+const char *const kStems[] = {"甲", "乙", "丙", "丁", "戊", "己", "庚", "辛", "壬", "癸"};
+const char *const kBranches[] = {"子", "丑", "寅", "卯", "辰", "巳", "午", "未", "申", "酉", "戌", "亥"};
+const char *const kHourRanges[] = {
+    "23-01", "01-03", "03-05", "05-07", "07-09", "09-11",
+    "11-13", "13-15", "15-17", "17-19", "19-21", "21-23",
+};
+
+enum class FiveElement { Wood, Fire, Earth, Metal, Water, Unknown };
+
+FiveElement five_element_for_glyph(const char *glyph) {
+    if (std::strstr("甲乙寅卯", glyph)) return FiveElement::Wood;
+    if (std::strstr("丙丁巳午", glyph)) return FiveElement::Fire;
+    if (std::strstr("戊己辰戌丑未", glyph)) return FiveElement::Earth;
+    if (std::strstr("庚辛申酉", glyph)) return FiveElement::Metal;
+    if (std::strstr("壬癸亥子", glyph)) return FiveElement::Water;
+    return FiveElement::Unknown;
+}
+
+uint32_t five_element_color(FiveElement element) {
+    static constexpr uint32_t kClassic[5] = {
+        0x82C89A, 0xE28A72, 0xDDB36C, 0xE2DED0, 0x79B8D8,
+    };
+    static constexpr uint32_t kNeon[5] = {
+        0x5EF29E, 0xFF6B7A, 0xFFD25A, 0xEAF4FF, 0x54C8FF,
+    };
+    static constexpr uint32_t kPlayful[5] = {
+        0x2F7D52, 0xB4463B, 0x8A5A13, 0x4B5563, 0x246B91,
+    };
+    static constexpr uint32_t kPaper[5] = {
+        0x47745A, 0xB43B2D, 0x946528, 0x5B5145, 0x3F6078,
+    };
+    static constexpr uint32_t kNight[5] = {
+        0x72B6A1, 0xCF5B4D, 0xD1A75B, 0xD7D6CB, 0x67A9C4,
+    };
+    const int index = static_cast<int>(element);
+    if (index < 0 || index >= 5) return UI_TEXT;
+    const uint32_t *palette = ui_theme_get() == UI_THEME_PLAYFUL ? kPlayful
+        : ui_theme_get() == UI_THEME_NEON ? kNeon
+        : ui_theme_get() == UI_THEME_PAPER ? kPaper
+        : ui_theme_get() == UI_THEME_NIGHT ? kNight : kClassic;
+    return palette[index];
+}
 
 void set_text(lv_obj_t *obj, const char *text) {
     if (obj && text && std::strcmp(lv_label_get_text(obj), text) != 0)
@@ -80,6 +131,22 @@ lv_obj_t *label(lv_obj_t *parent, const lv_font_t *font, uint32_t color,
     lv_obj_set_style_text_align(obj, align, 0);
     lv_label_set_long_mode(obj, LV_LABEL_LONG_MODE_DOTS);
     return obj;
+}
+
+void draw_hour_card(lv_event_t *event) {
+    pixel_scene::Ink ink(event);
+    if (s_current_hour_branch >= 0) {
+        const int column = s_current_hour_branch % 6;
+        const int row = s_current_hour_branch / 6;
+        const int x = column * kHourColumnW + 1;
+        const int y = kHourHeaderH + row * kHourRowH + 1;
+        ink.box(x, y, kHourColumnW - 2, kHourRowH - 2, UI_SURFACE_ALT);
+        ink.frame(x, y, kHourColumnW - 2, kHourRowH - 2, UI_ACCENT, 1);
+    }
+    for (int column = 1; column < 6; ++column)
+        ink.box(column * kHourColumnW, kHourHeaderH, 1, 2 * kHourRowH, UI_BORDER);
+    ink.box(0, kHourHeaderH, kHourCardW, 1, UI_BORDER);
+    ink.box(0, kHourHeaderH + kHourRowH, kHourCardW, 1, UI_BORDER);
 }
 
 bool local_today(int *year, int *month, int *day) {
@@ -270,44 +337,113 @@ void build_detail() {
         return;
     }
 
-    char text[64];
+    char text[96];
     std::snprintf(text, sizeof(text), "%04d年%02d月%02d日", s_year, s_month, s_day);
     lv_obj_t *date = label(s_screen, &buddy_font_16, UI_TEXT,
-                           12, 34, 216, 18, LV_TEXT_ALIGN_CENTER);
+                           12, 31, 216, 18, LV_TEXT_ALIGN_CENTER);
     set_text(date, text);
     lv_obj_t *weekday = label(s_screen, &buddy_font_16, UI_TEXT_DIM,
-                              12, 53, 216, 18, LV_TEXT_ALIGN_CENTER);
+                              12, 49, 216, 18, LV_TEXT_ALIGN_CENTER);
     set_text(weekday, kWeekdays[info.weekday]);
 
     lv_obj_t *day_gz = label(s_screen, &ganzhi_font_20, UI_ACCENT,
-                             12, 78, 216, 24, LV_TEXT_ALIGN_CENTER);
+                             12, 72, 216, 26, LV_TEXT_ALIGN_CENTER);
     set_text(day_gz, info.day_ganzhi);
     lv_obj_t *lunar = label(s_screen, &buddy_font_16, UI_TEXT,
-                            12, 108, 216, 18, LV_TEXT_ALIGN_CENTER);
+                            12, 103, 216, 18, LV_TEXT_ALIGN_CENTER);
     set_text(lunar, info.lunar_full);
 
     std::snprintf(text, sizeof(text), "年 %s    月 %s    日 %s",
                   info.year_ganzhi, info.month_ganzhi, info.day_ganzhi);
     lv_obj_t *pillars = label(s_screen, &ganzhi_font_12, UI_TEXT,
-                              8, 135, 224, 16, LV_TEXT_ALIGN_CENTER);
+                              8, 124, 224, 16, LV_TEXT_ALIGN_CENTER);
     set_text(pillars, text);
 
+    char solar_text[64] = {};
+    char next_text[24] = {};
     if (info.solar_term_index != kNoTerm) {
-        std::snprintf(text, sizeof(text), "今日交%s",
+        std::snprintf(solar_text, sizeof(solar_text), "今日交%s",
                       calendar_solar_term_name(info.solar_term_index));
-        lv_obj_t *term = label(s_screen, &buddy_font_16, UI_DANGER,
-                               12, 162, 216, 18, LV_TEXT_ALIGN_CENTER);
-        set_text(term, text);
     }
     char next_name[10];
     uint8_t days;
     if (calendar_next_solar_term(s_year, s_month, s_day, next_name, &days)) {
-        std::snprintf(text, sizeof(text), "距%s %u天",
+        std::snprintf(next_text, sizeof(next_text), "距%s %u天",
                       next_name, (unsigned)days);
-        lv_obj_t *next = label(s_screen, &buddy_font_16, UI_TEXT_DIM,
-                               12, 188, 216, 18, LV_TEXT_ALIGN_CENTER);
-        set_text(next, text);
     }
+    if (solar_text[0] && next_text[0])
+        std::snprintf(text, sizeof(text), "%s · %s", solar_text, next_text);
+    else
+        std::snprintf(text, sizeof(text), "%s", solar_text[0] ? solar_text : next_text);
+    lv_obj_t *solar = label(s_screen, &buddy_font_16,
+                            info.solar_term_index != kNoTerm ? UI_DANGER : UI_TEXT_DIM,
+                            12, 145, 216, 18, LV_TEXT_ALIGN_CENTER);
+    set_text(solar, text);
+
+    s_current_hour_branch = -1;
+    if (s_year == s_today_year && s_month == s_today_month && s_day == s_today_day) {
+        time_t now = time(nullptr);
+        if (now >= 1700000000) {
+            now += time_sync_tz_offset_sec();
+            struct tm current {};
+            if (gmtime_r(&now, &current))
+                s_current_hour_branch = static_cast<int8_t>(((current.tm_hour + 1) / 2) % 12);
+        }
+    }
+
+    bazi_almanac_t almanac {};
+    uint8_t day_stem = 0;
+    if (bazi_almanac_calculate_solar(s_year, s_month, s_day, 12, 0,
+                                     BAZI_ALMANAC_ZI_EARLY, &almanac)) {
+        day_stem = almanac.day_stem;
+    }
+
+    lv_obj_t *hour_card = lv_obj_create(s_screen);
+    lv_obj_remove_flag(hour_card, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_set_pos(hour_card, kHourCardX, kHourCardY);
+    lv_obj_set_size(hour_card, kHourCardW, kHourCardH);
+    lv_obj_set_style_radius(hour_card, 5, 0);
+    lv_obj_set_style_pad_all(hour_card, 0, 0);
+    lv_obj_set_style_bg_color(hour_card, lv_color_hex(UI_SURFACE), 0);
+    lv_obj_set_style_bg_opa(hour_card, LV_OPA_COVER, 0);
+    lv_obj_set_style_border_width(hour_card, 1, 0);
+    lv_obj_set_style_border_color(hour_card, lv_color_hex(UI_BORDER), 0);
+    lv_obj_add_event_cb(hour_card, draw_hour_card, LV_EVENT_DRAW_MAIN, nullptr);
+
+    lv_obj_t *hour_title = label(hour_card, &buddy_font_16, UI_TEXT,
+                                 7, 0, 96, kHourHeaderH, LV_TEXT_ALIGN_LEFT);
+    set_text(hour_title, "十二时辰");
+    lv_obj_t *hour_hint = label(hour_card, &buddy_font_16, UI_TEXT_DIM,
+                                136, 0, 81, kHourHeaderH, LV_TEXT_ALIGN_RIGHT);
+    set_text(hour_hint, "时干支");
+
+    for (int branch = 0; branch < 12; ++branch) {
+        const int column = branch % 6;
+        const int row = branch / 6;
+        const int x = column * kHourColumnW;
+        const int y = kHourHeaderH + row * kHourRowH;
+        lv_obj_t *range = label(hour_card, &calendar_font_9, UI_TEXT_DIM,
+                                x, y + 2, kHourColumnW, 10, LV_TEXT_ALIGN_CENTER);
+        lv_label_set_long_mode(range, LV_LABEL_LONG_MODE_CLIP);
+        set_text(range, kHourRanges[branch]);
+
+        char stem[4] = {};
+        std::snprintf(stem, sizeof(stem), "%s",
+                      kStems[((day_stem % 5U) * 2U + static_cast<unsigned>(branch)) % 10U]);
+        lv_obj_t *stem_label = label(hour_card, &ganzhi_font_13,
+                                     five_element_color(five_element_for_glyph(stem)),
+                                     x, y + 12, kHourColumnW, 16, LV_TEXT_ALIGN_CENTER);
+        lv_label_set_long_mode(stem_label, LV_LABEL_LONG_MODE_CLIP);
+        set_text(stem_label, stem);
+
+        const char *branch_text = kBranches[branch];
+        lv_obj_t *branch_label = label(hour_card, &ganzhi_font_13,
+                                       five_element_color(five_element_for_glyph(branch_text)),
+                                       x, y + 27, kHourColumnW, 16, LV_TEXT_ALIGN_CENTER);
+        lv_label_set_long_mode(branch_label, LV_LABEL_LONG_MODE_CLIP);
+        set_text(branch_label, branch_text);
+    }
+
     ui_pixel_footer(s_screen, "上下看前后一天", "确定返回月历", &buddy_font_16);
     lv_screen_load(s_screen);
 }

@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="zh-CN">
+<meta charset="utf-8">
+<title>万年历详情 · 十二时辰</title>
+<style>
+  *{box-sizing:border-box}
+  html,body{margin:0;background:#dfe2e3;min-height:100%;font-family:"Hiragino Sans GB","PingFang SC",sans-serif}
+  body{display:grid;place-items:center;min-height:100vh;padding:28px}
+  .frame{width:480px;height:640px;position:relative}
+  .device{position:absolute;left:0;top:0;width:240px;height:320px;transform:scale(2);transform-origin:top left;overflow:hidden;background:#0f1b24;color:#f0e8d8}
+  .status{height:24px;display:flex;align-items:center;gap:7px;padding:0 10px;background:#0b161e;border-bottom:1px solid #35424a;color:#eee5d1;font-size:12px}
+  .signal{display:flex;align-items:flex-end;gap:2px;width:18px;height:13px}.signal i{display:block;width:3px;background:#dbd1bc}.signal i:nth-child(1){height:4px}.signal i:nth-child(2){height:7px}.signal i:nth-child(3){height:10px}.signal i:nth-child(4){height:13px}
+  .title{font-size:15px;font-weight:650;margin-left:5px}.battery{margin-left:auto;display:flex;align-items:center;gap:5px;font-size:12px}.battery b{display:block;width:25px;height:11px;border:1px solid currentColor;border-radius:2px;position:relative}.battery b:after{content:"";position:absolute;right:-3px;top:3px;width:2px;height:5px;background:currentColor}.battery b:before{content:"";position:absolute;left:2px;top:2px;bottom:2px;width:18px;background:#83c4b6}
+  .date{position:absolute;top:31px;left:12px;width:216px;text-align:center;font:600 13px/18px "Hiragino Sans GB"}
+  .week{position:absolute;top:49px;left:12px;width:216px;text-align:center;color:#a9aaa2;font:11px/18px "Hiragino Sans GB"}
+  .day{position:absolute;top:72px;left:12px;width:216px;text-align:center;color:#d8ad5d;font:600 21px/26px "Hiragino Sans GB"}
+  .lunar{position:absolute;top:103px;left:12px;width:216px;text-align:center;font:11px/18px "Hiragino Sans GB"}
+  .pillars{position:absolute;top:124px;left:8px;width:224px;text-align:center;color:#b6b6af;font:10px/16px "Hiragino Sans GB";letter-spacing:.03em}
+  .solar{position:absolute;top:145px;left:12px;width:216px;text-align:center;color:#9ea9aa;font:10px/17px "Hiragino Sans GB"}
+  .card{position:absolute;left:8px;top:164px;width:224px;height:106px;border:1px solid #43515a;background:#13232d;border-radius:5px;overflow:hidden}
+  .card-head{height:18px;display:flex;align-items:center;justify-content:space-between;padding:0 7px;border-bottom:1px solid #34434d;color:#d9cfb9;font-size:10px}.card-head span:last-child{color:#8f9c9f}
+  .hours{height:86px;display:grid;grid-template-columns:repeat(6,1fr);grid-template-rows:repeat(2,1fr)}
+  .hour{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:"Hiragino Sans GB";line-height:1}
+  .hour:nth-child(n+7):before{content:"";position:absolute;left:0;right:0;top:-1px;height:1px;background:#2f3e47}
+  .hour:not(:nth-child(6n+1)):after{content:"";position:absolute;left:0;top:4px;bottom:4px;width:1px;background:rgba(125,142,151,.22)}
+  .range{font-size:8.5px;color:#849399;margin:0 0 2px;letter-spacing:-.03em}
+  .stem,.branch{font-size:13px;margin-top:1px}
+  .wood{color:#82c89a}.fire{color:#e28a72}.earth{color:#ddb36c}.metal{color:#e2ded0}.water{color:#79b8d8}
+  .hour.current{margin:2px 1px;border:1px solid #d8ad5d;border-radius:4px;background:#223039}
+  .footer{position:absolute;left:12px;top:272px;width:216px;border-top:1px solid #34434d;color:#a8ada8;text-align:center;font-size:11px;line-height:22px;padding-top:3px}.footer b{color:#d0c4ab;font-weight:500}
+</style>
+<div class="frame"><div class="device">
+  <div class="status"><div class="signal"><i></i><i></i><i></i><i></i></div><div class="title">日期详情</div><div class="battery">98%<b></b></div></div>
+  <div class="date">2026年11月23日</div>
+  <div class="week">星期一</div>
+  <div class="day">辛丑</div>
+  <div class="lunar">农历十月十五</div>
+  <div class="pillars">年 丙午　　月 己亥　　日 辛丑</div>
+  <div class="solar">距大雪 14天</div>
+  <div class="card">
+    <div class="card-head"><span>十二时辰</span><span>时干支</span></div>
+    <div class="hours">
+      <div class="hour"><span class="range">23-01</span><span class="stem earth">戊</span><span class="branch water">子</span></div>
+      <div class="hour"><span class="range">01-03</span><span class="stem earth">己</span><span class="branch earth">丑</span></div>
+      <div class="hour"><span class="range">03-05</span><span class="stem metal">庚</span><span class="branch wood">寅</span></div>
+      <div class="hour"><span class="range">05-07</span><span class="stem metal">辛</span><span class="branch wood">卯</span></div>
+      <div class="hour"><span class="range">07-09</span><span class="stem water">壬</span><span class="branch earth">辰</span></div>
+      <div class="hour current"><span class="range">09-11</span><span class="stem water">癸</span><span class="branch fire">巳</span></div>
+      <div class="hour"><span class="range">11-13</span><span class="stem wood">甲</span><span class="branch fire">午</span></div>
+      <div class="hour"><span class="range">13-15</span><span class="stem wood">乙</span><span class="branch earth">未</span></div>
+      <div class="hour"><span class="range">15-17</span><span class="stem fire">丙</span><span class="branch metal">申</span></div>
+      <div class="hour"><span class="range">17-19</span><span class="stem fire">丁</span><span class="branch metal">酉</span></div>
+      <div class="hour"><span class="range">19-21</span><span class="stem earth">戊</span><span class="branch earth">戌</span></div>
+      <div class="hour"><span class="range">21-23</span><span class="stem earth">己</span><span class="branch water">亥</span></div>
+    </div>
+  </div>
+  <div class="footer"><b>上下看前后一天</b><br>确定返回月历</div>
+</div></div>
+</html>
