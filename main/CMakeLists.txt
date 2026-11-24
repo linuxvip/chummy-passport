@@ -33,6 +33,7 @@ idf_component_register(
         "launcher/power.cc"
         "launcher/system_overlay.cc"
         "fonts/buddy_font_16.c"
+        "fonts/boot_title_24.c"
         "fonts/ganzhi_font_20.c"
         "fonts/ganzhi_font_13.c"
         "fonts/ganzhi_font_12.c"

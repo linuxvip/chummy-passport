@@ -15,6 +15,8 @@ extern "C" {
 // names, transcripts, replies). 2bpp is a flash budget decision: 4bpp would
 // add ~320 KB.
 LV_FONT_DECLARE(buddy_font_16);
+// Boot splash title: the four glyphs in "命海拾遗" at 24px/4bpp.
+LV_FONT_DECLARE(boot_title_24);
 // Four-pillar readout: exactly the ten stems and twelve branches at 20px/4bpp.
 LV_FONT_DECLARE(ganzhi_font_20);
 // Dayun header: the same 22 glyphs one step larger than flow-year cells.
