@@ -22,9 +22,9 @@ constexpr int kGridY = 43;
 constexpr int kTileW = 70;
 constexpr int kTileH = 54;
 constexpr int kColumnGap = 7;
-constexpr int kRowGap = 6;
 constexpr int kIconSize = 24;
-constexpr size_t kMaxTiles = 12;
+constexpr size_t kMaxTiles = 10;
+constexpr int kGridUsableHeight = 235;
 
 // 旅行仪器配色:与首页(app_home.cc)完全同源,风格统一。
 #define kBg (UI_BG)          // 屏底炭黑
@@ -274,6 +274,23 @@ int slot_for_index(size_t index) {
     return -1;
 }
 
+struct GridMetrics {
+    int rows;
+    int row_gap;
+    int origin_y;
+};
+
+GridMetrics grid_metrics(size_t count) {
+    const int rows = count <= 9 ? (static_cast<int>(count) + 2) / 3 : 4;
+    int row_gap = 0;
+    if (rows > 1) {
+        row_gap = (kGridUsableHeight - rows * kTileH) / (rows - 1);
+        if (row_gap > 18) row_gap = 18;
+    }
+    const int content_height = rows * kTileH + (rows - 1) * row_gap;
+    return {rows, row_gap, kGridY + (kGridUsableHeight - content_height) / 2};
+}
+
 int row_for_index(size_t index) {
     const int slot = slot_for_index(index);
     return slot < 0 ? 0 : slot / 3;
@@ -351,21 +368,27 @@ void apply_selection() {
 }
 
 size_t row_target_index(int direction) {
-    const int target_row = (row_for_index(s_selected_index) + direction + 4) % 4;
     const int current_column = column_for_index(s_selected_index);
-    size_t best = s_selected_index;
-    int best_distance = 100;
-    for (size_t i = 0; i < s_tile_count; ++i) {
-        if (row_for_index(i) != target_row) continue;
-        const int distance = column_for_index(i) > current_column
-            ? column_for_index(i) - current_column
-            : current_column - column_for_index(i);
-        if (distance < best_distance) {
-            best_distance = distance;
-            best = i;
+    const int current_row = row_for_index(s_selected_index);
+    for (int step = 1; step <= 4; ++step) {
+        const int target_row = (current_row + direction * step + 8) % 4;
+        size_t best = s_selected_index;
+        int best_distance = 100;
+        bool found = false;
+        for (size_t i = 0; i < s_tile_count; ++i) {
+            if (row_for_index(i) != target_row) continue;
+            const int distance = column_for_index(i) > current_column
+                ? column_for_index(i) - current_column
+                : current_column - column_for_index(i);
+            if (distance < best_distance) {
+                best_distance = distance;
+                best = i;
+                found = true;
+            }
         }
+        if (found) return best;
     }
-    return best;
+    return s_selected_index;
 }
 
 void icon_y_anim(void *obj, int32_t v) { lv_obj_set_y((lv_obj_t *)obj, v); }
@@ -428,13 +451,14 @@ void launcher_ui_init(void) {
 
     const size_t count = app_registry_get_count();
     s_tile_count = count < kMaxTiles ? count : kMaxTiles;
+    const GridMetrics metrics = grid_metrics(s_tile_count);
     for (size_t i = 0; i < s_tile_count; ++i) {
         const int slot = slot_for_index(i);
         if (slot < 0) continue;
         const int col = slot % 3;
         const int row = slot / 3;
         const int x = kGridX + col * (kTileW + kColumnGap);
-        const int y = kGridY + row * (kTileH + kRowGap);
+        const int y = metrics.origin_y + row * (kTileH + metrics.row_gap);
 
         AppTile &tile = s_tiles[i];
         tile = {};

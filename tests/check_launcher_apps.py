@@ -23,4 +23,8 @@ assert 'constexpr int kTileH = 54;' in launcher
 assert 'if (index == 9) return 10;' in launcher
 assert 'BTN_EVT_LONG' in launcher and 'row_target_index(direction)' in launcher
 assert '"上下逐项 · 长按跨行"' in launcher
+assert 'const int rows = count <= 9 ? (static_cast<int>(count) + 2) / 3 : 4;' in launcher
+assert 'if (row_gap > 18) row_gap = 18;' in launcher
+assert 'const int y = metrics.origin_y + row * (kTileH + metrics.row_gap);' in launcher
+assert 'for (int step = 1; step <= 4; ++step)' in launcher
 print(f'Launcher: {len(registered)} titles fit the 12px 3x4 app grid and key navigation: PASS')
