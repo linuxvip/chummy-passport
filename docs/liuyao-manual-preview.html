@@ -633,7 +633,7 @@ html.still .coin.shaking.res-b .face.b { opacity: 1; }
         </div>
         <div class="footer">
           <span class="primary">确定摇卦</span>
-          <span class="secondary">长按确定重摇</span>
+          <span class="secondary">长按确定返回</span>
         </div>
       </div>
       <figcaption><strong>02 待摇</strong>六个空爻位固定由下而上；当前爻行用表面色高亮。三枚钱面在落定后保留，方便逐爻核对背/字。</figcaption>
@@ -733,7 +733,7 @@ html.still .coin.shaking.res-b .face.b { opacity: 1; }
     <div>
       <h2>实现约定</h2>
       <ul>
-        <li><b>按键：</b>确定单击摇一爻；六爻完成后进入横屏盘面。长按确定清空重摇，返回键回到起卦方式。</li>
+        <li><b>按键：</b>确定单击摇一爻；六爻完成后进入横屏盘面。有爻时长按确定清空重摇；空盘时长按确定回到起卦方式。</li>
         <li><b>随机：</b>每枚钱独立取背/字，使用设备随机源；同一爻落定后不再变化，六爻全部保留在盘面可核对。</li>
         <li><b>动效边界：</b>只使用位置抖动与钱面切换，不引入图片、帧缓冲或常驻循环；按下确定可跳过，连续按键不叠加。</li>
         <li><b>字体：</b>“手动摇卦”“铜钱”“重摇”“静”等新增字需补进 <code>liuyao_font_12</code> 与 <code>liuyao_title_20</code> 子集并跑字体检查。</li>
