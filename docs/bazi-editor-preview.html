@@ -1,0 +1,677 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>八字排盘 · 出生资料页布局方案</title>
+<style>
+  :root {
+    color-scheme: dark;
+    --stage: #0e1211;
+    --stage-text: #eee7d6;
+    --stage-dim: #aaa99d;
+    --paper: #181b1c;
+    --surface: #202526;
+    --surface-alt: #303738;
+    --border: #59605d;
+    --text: #eee7d6;
+    --text-dim: #b3b2a5;
+    --accent: #ddb36c;
+    --on-accent: #181b1c;
+    --danger: #f09b87;
+    --font-ui: "Microsoft YaHei", "PingFang SC", "Noto Sans CJK SC", sans-serif;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    background: var(--stage);
+    color: var(--stage-text);
+    font-family: var(--font-ui);
+  }
+
+  body {
+    padding: 40px 32px 56px;
+  }
+
+  .page {
+    width: 1120px;
+    margin: 0 auto;
+  }
+
+  .intro h1 {
+    margin: 0 0 10px;
+    font-size: 30px;
+    font-weight: 650;
+    letter-spacing: .02em;
+  }
+
+  .intro p {
+    margin: 0 0 6px;
+    max-width: 980px;
+    font-size: 15px;
+    line-height: 1.75;
+    color: var(--stage-dim);
+  }
+
+  .intro p strong { color: var(--stage-text); font-weight: 600; }
+
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 22px;
+    margin: 18px 0 30px;
+    padding: 14px 18px;
+    border: 1px solid #2a3230;
+    background: #121716;
+    font-size: 13px;
+    color: var(--stage-dim);
+  }
+
+  .legend b {
+    color: var(--accent);
+    font-weight: 600;
+    margin-right: 6px;
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: 496px 496px;
+    gap: 46px 56px;
+  }
+
+  figure { margin: 0; }
+
+  .bezel {
+    width: 496px;
+    height: 656px;
+    padding: 8px;
+    border: 1px solid #2c3532;
+    border-radius: 26px;
+    background: #070a09;
+    box-shadow: 0 18px 44px rgba(0, 0, 0, .45);
+  }
+
+  figure.recommended .bezel {
+    border-color: rgba(221, 179, 108, .75);
+    box-shadow: 0 0 0 1px rgba(221, 179, 108, .22), 0 18px 44px rgba(0, 0, 0, .45);
+  }
+
+  .screen {
+    position: relative;
+    width: 240px;
+    height: 320px;
+    transform: scale(2);
+    transform-origin: top left;
+    overflow: hidden;
+    background: var(--paper);
+    color: var(--text);
+    font-family: var(--font-ui);
+    font-size: 16px;
+    line-height: 1;
+  }
+
+  /* ---- shared device chrome ---- */
+  .bar {
+    position: absolute;
+    left: 0; top: 0;
+    width: 240px; height: 26px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .bar-title {
+    position: absolute;
+    left: 42px; top: 5px;
+    font-size: 16px;
+    color: var(--text);
+  }
+
+  .wifi {
+    position: absolute;
+    left: 18px; bottom: 8px;
+    display: flex;
+    gap: 2px;
+    align-items: flex-end;
+  }
+
+  .wifi i {
+    display: block;
+    width: 2px;
+    background: var(--text);
+  }
+
+  .wifi i:nth-child(1) { height: 4px; }
+  .wifi i:nth-child(2) { height: 7px; }
+  .wifi i:nth-child(3) { height: 10px; }
+
+  .battery {
+    position: absolute;
+    right: 12px; top: 8px;
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    font-size: 12px;
+    color: var(--text);
+  }
+
+  .battery-frame {
+    width: 20px; height: 10px;
+    border: 1.5px solid var(--text);
+    padding: 1px;
+    position: relative;
+  }
+
+  .battery-frame::after {
+    content: "";
+    position: absolute;
+    right: -4px; top: 2px;
+    width: 2px; height: 5px;
+    background: var(--text);
+  }
+
+  .battery-fill {
+    display: block;
+    width: 65%;
+    height: 100%;
+    background: var(--text);
+  }
+
+  .foot-rule {
+    position: absolute;
+    left: 12px; top: 272px;
+    width: 216px; height: 1px;
+    background: var(--border);
+  }
+
+  .foot {
+    position: absolute;
+    left: 12px;
+    width: 216px;
+    text-align: center;
+    font-size: 16px;
+    color: var(--text-dim);
+    opacity: .82;
+  }
+
+  /* ---- current version ---- */
+  .hint {
+    position: absolute;
+    left: 12px; top: 29px;
+    width: 216px; height: 19px;
+    font-size: 16px;
+    color: var(--text-dim);
+  }
+
+  .row {
+    position: absolute;
+    left: 12px;
+    width: 216px;
+    height: 23px;
+  }
+
+  .row.sel {
+    background: var(--surface-alt);
+    box-shadow: inset 3px 0 0 var(--accent);
+  }
+
+  .row.full-sel {
+    background: var(--accent);
+    box-shadow: none;
+  }
+
+  .row .name {
+    position: absolute;
+    left: 6px; top: 1px;
+    font-size: 16px;
+    color: var(--text-dim);
+    line-height: 22px;
+  }
+
+  .row .value {
+    position: absolute;
+    right: 6px; top: 1px;
+    font-size: 16px;
+    color: var(--text);
+    line-height: 22px;
+  }
+
+  .row.sel .name { color: var(--text); }
+  .row.sel .value { color: var(--accent); }
+  .row.full-sel .name,
+  .row.full-sel .value { color: var(--on-accent); }
+  .row.dim .name,
+  .row.dim .value { color: #6d746f; }
+
+  /* ---- sectioned layout ---- */
+  .sec {
+    position: absolute;
+    left: 12px;
+    font-size: 11px;
+    line-height: 13px;
+    letter-spacing: 2px;
+    color: #8d948f;
+  }
+
+  .sec::after {
+    content: "";
+    display: inline-block;
+    vertical-align: middle;
+    width: 116px;
+    height: 1px;
+    margin-left: 8px;
+    background: #333b38;
+  }
+
+  .chips {
+    position: absolute;
+    right: 6px;
+    top: 2px;
+    display: flex;
+    gap: 4px;
+  }
+
+  .chip {
+    height: 18px;
+    padding: 0 5px;
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    font-size: 13px;
+    line-height: 16px;
+    color: var(--text-dim);
+    background: var(--paper);
+  }
+
+  .chip.on {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--on-accent);
+    font-weight: 700;
+  }
+
+  .chip.off {
+    border-style: dashed;
+    color: #6d746f;
+  }
+
+  .date-value, .time-value {
+    position: absolute;
+    right: 6px; top: 1px;
+    font-size: 16px;
+    line-height: 22px;
+    color: var(--text);
+    letter-spacing: .4px;
+  }
+
+  .date-value .sep {
+    color: #6d746f;
+    margin: 0 2px;
+  }
+
+  .seg {
+    display: inline-block;
+    padding: 0 1px;
+  }
+
+  .seg.on {
+    color: var(--accent);
+    border-bottom: 2px solid var(--accent);
+    line-height: 20px;
+  }
+
+  .city {
+    position: absolute;
+    right: 6px; top: 1px;
+    font-size: 16px;
+    line-height: 22px;
+    color: var(--text);
+  }
+
+  .city .arrow {
+    font-size: 13px;
+    color: var(--text-dim);
+    margin: 0 4px;
+  }
+
+  .btn {
+    position: absolute;
+    left: 12px;
+    width: 216px; height: 26px;
+    background: var(--accent);
+    color: var(--on-accent);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: 1px;
+  }
+
+  .btn.ghost {
+    background: transparent;
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    font-weight: 600;
+  }
+
+  /* ---- two-page layout ---- */
+  .tabs {
+    position: absolute;
+    left: 12px; top: 31px;
+    display: flex;
+    gap: 6px;
+  }
+
+  .tab {
+    height: 20px;
+    padding: 0 10px;
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    font-size: 14px;
+    line-height: 18px;
+    color: var(--text-dim);
+  }
+
+  .tab.on {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--on-accent);
+    font-weight: 700;
+  }
+
+  .page-no {
+    position: absolute;
+    right: 12px; top: 36px;
+    font-size: 11px;
+    letter-spacing: 1px;
+    color: var(--text-dim);
+  }
+
+  .summary {
+    position: absolute;
+    left: 12px; top: 145px;
+    width: 216px; height: 68px;
+    border: 1px solid #3a4340;
+    background: rgba(48, 55, 56, .32);
+    padding: 7px 9px;
+  }
+
+  .summary .label {
+    font-size: 10px;
+    letter-spacing: 2px;
+    color: #8d948f;
+    margin-bottom: 6px;
+  }
+
+  .summary .line {
+    font-size: 13px;
+    line-height: 18px;
+    color: var(--text);
+  }
+
+  .summary .line span { color: var(--text-dim); }
+
+  figcaption {
+    width: 496px;
+    margin-top: 16px;
+    font-size: 13px;
+    line-height: 1.7;
+    color: var(--stage-dim);
+  }
+
+  figcaption .title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 4px;
+    font-size: 16px;
+    font-weight: 650;
+    color: var(--stage-text);
+  }
+
+  .pill {
+    display: inline-block;
+    padding: 1px 7px;
+    border-radius: 99px;
+    background: rgba(221, 179, 108, .16);
+    border: 1px solid rgba(221, 179, 108, .55);
+    color: var(--accent);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: .08em;
+  }
+
+  .callout {
+    margin-top: 30px;
+    padding: 16px 20px;
+    border-left: 2px solid var(--accent);
+    background: #121716;
+    font-size: 14px;
+    line-height: 1.8;
+    color: var(--stage-dim);
+  }
+
+  .callout b { color: var(--stage-text); font-weight: 600; }
+</style>
+</head>
+<body>
+<main class="page">
+  <header class="intro">
+    <h1>八字排盘 · 出生资料页布局方案</h1>
+    <p>设备为 <strong>240×320</strong>、三个实体键（上 / 下 / 确定）。当前页有 <strong>12 个字段，但一屏只显示 8 行</strong>，出生地、子时规则、时间制和排盘都在屏幕外；每一项切换还要「确定进入 → 上下改 → 确定提交」。</p>
+    <p>下面两版都只改布局与按键映射：<strong>排盘算法、资料存储和离开即清空的行为不变</strong>。</p>
+  </header>
+
+  <div class="legend">
+    <span><b>上 / 下</b>移动焦点</span>
+    <span><b>确定</b>切换选项 / 进入分段</span>
+    <span><b>长按下键</b>任意位置直接排盘</span>
+    <span><b>长按确定</b>返回上一层</span>
+  </div>
+
+  <div class="grid">
+    <figure>
+      <div class="bezel">
+        <div class="screen">
+          <div class="bar">
+            <div class="wifi"><i></i><i></i><i></i></div>
+            <div class="bar-title">八字排盘</div>
+            <div class="battery"><div class="battery-frame"><span class="battery-fill"></span></div>78</div>
+          </div>
+
+          <div class="hint">上下选择 · 确定修改</div>
+
+          <div class="row" style="top:50px">
+            <span class="name">性别</span><span class="value">男</span>
+          </div>
+          <div class="row" style="top:75px">
+            <span class="name">历法</span><span class="value">公历</span>
+          </div>
+          <div class="row full-sel" style="top:100px">
+            <span class="name">出生年</span><span class="value">1990</span>
+          </div>
+          <div class="row" style="top:125px">
+            <span class="name">出生月</span><span class="value">5</span>
+          </div>
+          <div class="row" style="top:150px">
+            <span class="name">出生日</span><span class="value">17</span>
+          </div>
+          <div class="row" style="top:175px">
+            <span class="name">出生时</span><span class="value">08</span>
+          </div>
+          <div class="row" style="top:200px">
+            <span class="name">出生分</span><span class="value">30</span>
+          </div>
+          <div class="row dim" style="top:225px">
+            <span class="name">闰月</span><span class="value">仅农历</span>
+          </div>
+
+          <div class="foot-rule"></div>
+          <div class="foot" style="top:276px">上下选择 · 确定修改</div>
+          <div class="foot" style="top:298px">长按下键排盘</div>
+        </div>
+      </div>
+      <figcaption>
+        <div class="title">当前版 <span class="pill">对照</span></div>
+        一屏只有 8 行，另外 4 项（出生地、子时规则、时间制、开始排盘）在屏幕外，焦点移到下方时列表会整窗滚动，容易迷失位置。每个二元选项都要按三次键才能改完。
+      </figcaption>
+    </figure>
+
+    <figure class="recommended">
+      <div class="bezel">
+        <div class="screen">
+          <div class="bar">
+            <div class="wifi"><i></i><i></i><i></i></div>
+            <div class="bar-title">出生资料</div>
+            <div class="battery"><div class="battery-frame"><span class="battery-fill"></span></div>78</div>
+          </div>
+
+          <div class="sec" style="top:31px">基本</div>
+          <div class="row" style="top:44px">
+            <span class="name">性别</span>
+            <span class="chips"><span class="chip on">男</span><span class="chip">女</span></span>
+          </div>
+          <div class="row" style="top:67px">
+            <span class="name">历法</span>
+            <span class="chips"><span class="chip">公历</span><span class="chip on">农历</span><span class="chip off">闰月</span></span>
+          </div>
+
+          <div class="sec" style="top:93px">出生时刻</div>
+          <div class="row sel" style="top:106px">
+            <span class="name">出生日期</span>
+            <span class="date-value"><span class="seg on">1990</span><span class="sep">-</span><span class="seg">04</span><span class="sep">-</span><span class="seg">23</span></span>
+          </div>
+          <div class="row" style="top:129px">
+            <span class="name">出生时间</span>
+            <span class="time-value"><span class="seg">12</span><span class="sep">:</span><span class="seg">00</span></span>
+          </div>
+          <div class="row" style="top:152px">
+            <span class="name">子时</span>
+            <span class="chips"><span class="chip on">早子时</span><span class="chip">晚子时</span></span>
+          </div>
+
+          <div class="sec" style="top:178px">地点与校正</div>
+          <div class="row" style="top:191px">
+            <span class="name">出生地</span>
+            <span class="city"><span class="arrow">&lt;</span>北京<span class="arrow">&gt;</span></span>
+          </div>
+          <div class="row" style="top:214px">
+            <span class="name">时间制</span>
+            <span class="chips"><span class="chip">标准时</span><span class="chip on">真太阳时</span></span>
+          </div>
+
+          <div class="btn" style="top:242px">开始排盘</div>
+
+          <div class="foot-rule"></div>
+          <div class="foot" style="top:276px">上下选择 · 确定切换</div>
+          <div class="foot" style="top:298px">长按下键直接排盘</div>
+        </div>
+      </div>
+      <figcaption>
+        <div class="title">方案 A：单页分区 <span class="pill">推荐</span></div>
+        8 行全部同屏，按「基本 / 出生时刻 / 地点与校正」分区。日期、时间各占一行，确定键在年→月→日、时→分之间换段，上下键只改当前段；性别、历法、子时、时间制这类二元项确定即切换。闰月并入历法行，选农历后才出现。排盘按钮固定在底部，长按下键仍可从任意位置直接排盘。
+      </figcaption>
+    </figure>
+
+    <figure>
+      <div class="bezel">
+        <div class="screen">
+          <div class="bar">
+            <div class="wifi"><i></i><i></i><i></i></div>
+            <div class="bar-title">出生资料</div>
+            <div class="battery"><div class="battery-frame"><span class="battery-fill"></span></div>78</div>
+          </div>
+
+          <div class="tabs">
+            <span class="tab on">出生</span><span class="tab">校正</span>
+          </div>
+          <div class="page-no">1 / 2</div>
+
+          <div class="row" style="top:58px">
+            <span class="name">性别</span><span class="value">男</span>
+          </div>
+          <div class="row" style="top:83px">
+            <span class="name">历法</span><span class="value">公历</span>
+          </div>
+          <div class="row sel" style="top:108px">
+            <span class="name">出生年</span><span class="value">1990</span>
+          </div>
+          <div class="row" style="top:133px">
+            <span class="name">出生月</span><span class="value">5</span>
+          </div>
+          <div class="row" style="top:158px">
+            <span class="name">出生日</span><span class="value">17</span>
+          </div>
+          <div class="row" style="top:183px">
+            <span class="name">出生时</span><span class="value">08</span>
+          </div>
+          <div class="row" style="top:208px">
+            <span class="name">出生分</span><span class="value">30</span>
+          </div>
+          <div class="row dim" style="top:233px">
+            <span class="name">闰月</span><span class="value">仅农历</span>
+          </div>
+
+          <div class="foot-rule"></div>
+          <div class="foot" style="top:276px">上下选择 · 确定修改</div>
+          <div class="foot" style="top:298px">长按上键换页</div>
+        </div>
+      </div>
+      <figcaption>
+        <div class="title">方案 B：两页分栏 · 第 1 页</div>
+        保留现在的逐项编辑方式，只把 12 项拆成两页，行高从 23 加到 25，一页最多 8 行不再滚动。长按上键切换页码。改动最小，但换页是隐藏操作，改一项也可能要先换页。
+      </figcaption>
+    </figure>
+
+    <figure>
+      <div class="bezel">
+        <div class="screen">
+          <div class="bar">
+            <div class="wifi"><i></i><i></i><i></i></div>
+            <div class="bar-title">出生资料</div>
+            <div class="battery"><div class="battery-frame"><span class="battery-fill"></span></div>78</div>
+          </div>
+
+          <div class="tabs">
+            <span class="tab">出生</span><span class="tab on">校正</span>
+          </div>
+          <div class="page-no">2 / 2</div>
+
+          <div class="row" style="top:58px">
+            <span class="name">出生地</span><span class="value">北京</span>
+          </div>
+          <div class="row" style="top:83px">
+            <span class="name">子时规则</span><span class="value">早子时</span>
+          </div>
+          <div class="row" style="top:108px">
+            <span class="name">时间制</span><span class="value">真太阳时</span>
+          </div>
+
+          <div class="summary">
+            <div class="label">当前资料</div>
+            <div class="line">1990-05-17 08:30 <span>· 男</span></div>
+            <div class="line">北京 <span>· 真太阳时 · 早子时</span></div>
+          </div>
+
+          <div class="btn" style="top:222px">开始排盘</div>
+
+          <div class="foot-rule"></div>
+          <div class="foot" style="top:276px">上下选择 · 确定修改</div>
+          <div class="foot" style="top:298px">长按下键排盘</div>
+        </div>
+      </div>
+      <figcaption>
+        <div class="title">方案 B：两页分栏 · 第 2 页</div>
+        校正项集中到第二页，并用一块「当前资料」摘要确认即将排盘的时间和地点。底部留出始终可点的排盘按钮；长按下键的快捷排盘仍保留。
+      </figcaption>
+    </figure>
+  </div>
+
+  <div class="callout">
+    <b>取舍：</b>方案 A 的按键次数最少（切换二元项 1 次、排盘 1 次），所有字段一眼可见，代价是刷新了「确定」的含义并新增日期/时间分段编辑；方案 B 改动小、风险低，但没有解决逐项操作的繁琐，且换页依赖长按上键这一隐藏手势。<br>
+    <b>我的建议：</b>走方案 A，并把「开始排盘」单独做成按钮行；如果你更看重改动范围小，再考虑 B。
+  </div>
+</main>
+</body>
+</html>

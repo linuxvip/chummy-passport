@@ -17,11 +17,12 @@ extern "C" {
 LV_FONT_DECLARE(buddy_font_16);
 // Boot splash title: the four glyphs in "命海拾遗" at 24px/4bpp.
 LV_FONT_DECLARE(boot_title_24);
-// Four-pillar readout: exactly the ten stems and twelve branches at 20px/4bpp.
+// Four pillars and the five visible Dayun cells: ten stems and twelve
+// branches at 20px/4bpp.
 LV_FONT_DECLARE(ganzhi_font_20);
-// Dayun header: the same 22 glyphs one step larger than flow-year cells.
+// Flow-year table: the same 22 glyphs at 13px/4bpp.
 LV_FONT_DECLARE(ganzhi_font_13);
-// Compact Bazi table: stems, branches and the small set of fixed UI labels.
+// Chart headers and the small set of fixed UI labels at 12px.
 LV_FONT_DECLARE(ganzhi_font_12);
 // Compact launcher labels, sized for the 70px application grid.
 LV_FONT_DECLARE(launcher_font_12);

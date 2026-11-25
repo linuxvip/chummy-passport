@@ -1,0 +1,481 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>八字盘面 · 流年 5 行方案</title>
+<style>
+  :root {
+    color-scheme: dark;
+    --stage: #0e1211;
+    --stage-text: #eee7d6;
+    --stage-dim: #aaa99d;
+    --paper: #181b1c;
+    --surface: #202526;
+    --surface-alt: #303738;
+    --border: #59605d;
+    --text: #eee7d6;
+    --text-dim: #b3b2a5;
+    --accent: #ddb36c;
+    --on-accent: #181b1c;
+    --wood: #82c89a;
+    --fire: #e28a72;
+    --earth: #ddb36c;
+    --metal: #e2ded0;
+    --water: #79b8d8;
+    --font-ui: "Microsoft YaHei", "PingFang SC", "Noto Sans CJK SC", sans-serif;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    background: var(--stage);
+    color: var(--stage-text);
+    font-family: var(--font-ui);
+  }
+
+  body { padding: 38px 32px 50px; }
+
+  .page { width: 1568px; margin: 0 auto; }
+
+  h1 {
+    margin: 0 0 10px;
+    font-size: 30px;
+    font-weight: 650;
+    letter-spacing: .02em;
+  }
+
+  .intro p {
+    margin: 0 0 6px;
+    max-width: 1200px;
+    font-size: 15px;
+    line-height: 1.75;
+    color: var(--stage-dim);
+  }
+
+  .intro strong { color: var(--stage-text); font-weight: 600; }
+
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 24px;
+    margin: 18px 0 28px;
+    padding: 13px 18px;
+    border: 1px solid #2a3230;
+    background: #121716;
+    font-size: 13px;
+    color: var(--stage-dim);
+  }
+
+  .legend b { color: var(--accent); font-weight: 600; margin-right: 6px; }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(3, 496px);
+    gap: 40px;
+  }
+
+  figure { margin: 0; }
+
+  .bezel {
+    width: 496px;
+    height: 656px;
+    padding: 8px;
+    border: 1px solid #2c3532;
+    border-radius: 26px;
+    background: #070a09;
+    box-shadow: 0 18px 44px rgba(0, 0, 0, .45);
+  }
+
+  figure.recommended .bezel {
+    border-color: rgba(221, 179, 108, .75);
+    box-shadow: 0 0 0 1px rgba(221, 179, 108, .22), 0 18px 44px rgba(0, 0, 0, .45);
+  }
+
+  .screen {
+    position: relative;
+    width: 240px;
+    height: 320px;
+    transform: scale(2);
+    transform-origin: top left;
+    overflow: hidden;
+    background: var(--paper);
+    color: var(--text);
+    font-family: var(--font-ui);
+    font-size: 16px;
+    line-height: 1;
+  }
+
+  .bar {
+    position: absolute;
+    left: 0; top: 0;
+    width: 240px; height: 26px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .bar-title {
+    position: absolute;
+    left: 42px; top: 5px;
+    font-size: 16px;
+    color: var(--text);
+  }
+
+  .wifi {
+    position: absolute;
+    left: 18px; bottom: 8px;
+    display: flex;
+    gap: 2px;
+    align-items: flex-end;
+  }
+
+  .wifi i { display: block; width: 2px; background: var(--text); }
+  .wifi i:nth-child(1) { height: 4px; }
+  .wifi i:nth-child(2) { height: 7px; }
+  .wifi i:nth-child(3) { height: 10px; }
+
+  .battery {
+    position: absolute;
+    right: 12px; top: 8px;
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    font-size: 12px;
+    color: var(--text);
+  }
+
+  .battery-frame {
+    width: 20px; height: 10px;
+    border: 1.5px solid var(--text);
+    padding: 1px;
+    position: relative;
+  }
+
+  .battery-frame::after {
+    content: "";
+    position: absolute;
+    right: -4px; top: 2px;
+    width: 2px; height: 5px;
+    background: var(--text);
+  }
+
+  .battery-fill { display: block; width: 65%; height: 100%; background: var(--text); }
+
+  .date {
+    position: absolute;
+    left: 12px; top: 32px;
+    width: 160px; height: 16px;
+    font-size: 14px;
+    color: var(--text);
+    letter-spacing: .2px;
+  }
+
+  .method {
+    position: absolute;
+    right: 12px; top: 34px;
+    width: 54px; height: 14px;
+    text-align: right;
+    font-size: 12px;
+    color: var(--accent);
+  }
+
+  .meta {
+    position: absolute;
+    left: 12px; top: 48px;
+    width: 216px; height: 18px;
+    font-size: 16px;
+    color: var(--text-dim);
+  }
+
+  .pillar {
+    position: absolute;
+    width: 54px;
+    height: 24px;
+    text-align: center;
+    font-size: 20px;
+    line-height: 24px;
+  }
+
+  .hdr {
+    position: absolute;
+    top: 132px;
+    height: 14px;
+    line-height: 14px;
+    font-size: 12px;
+    color: var(--text-dim);
+  }
+
+  .hdr-left { left: 12px; width: 118px; }
+  .hdr-right { text-align: right; }
+
+  .dots {
+    position: absolute;
+    left: 219px; top: 138px;
+    display: flex;
+    gap: 3px;
+  }
+
+  .dots i {
+    display: block;
+    width: 3px; height: 3px;
+    border: 1px solid var(--border);
+  }
+
+  .dots i.on {
+    background: var(--accent);
+    border-color: var(--accent);
+  }
+
+  .cell {
+    position: absolute;
+    width: 27px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    overflow: hidden;
+    white-space: nowrap;
+  }
+
+  .cell.current {
+    background: var(--surface-alt);
+    border-color: var(--accent);
+  }
+
+  .luck { height: 38px; }
+  .flow { height: 25px; }
+
+  .luck .chars {
+    display: flex;
+    justify-content: center;
+    gap: 0;
+    line-height: 36px;
+    font-size: 12px;
+  }
+
+  .flow .chars {
+    text-align: center;
+    line-height: 23px;
+    font-size: 12px;
+    color: var(--text);
+  }
+
+  .wood { color: var(--wood); }
+  .fire { color: var(--fire); }
+  .earth { color: var(--earth); }
+  .metal { color: var(--metal); }
+  .water { color: var(--water); }
+
+  .foot-rule {
+    position: absolute;
+    left: 12px; top: 272px;
+    width: 216px; height: 1px;
+    background: var(--border);
+  }
+
+  .foot {
+    position: absolute;
+    left: 12px;
+    width: 216px;
+    text-align: center;
+    font-size: 14px;
+    line-height: 20px;
+    color: var(--text-dim);
+    opacity: .82;
+  }
+
+  figcaption {
+    width: 496px;
+    margin-top: 16px;
+    font-size: 13px;
+    line-height: 1.7;
+    color: var(--stage-dim);
+  }
+
+  figcaption .title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 4px;
+    font-size: 16px;
+    font-weight: 650;
+    color: var(--stage-text);
+  }
+
+  .pill {
+    display: inline-block;
+    padding: 1px 7px;
+    border-radius: 99px;
+    background: rgba(221, 179, 108, .16);
+    border: 1px solid rgba(221, 179, 108, .55);
+    color: var(--accent);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: .08em;
+  }
+
+  .callout {
+    margin-top: 28px;
+    padding: 15px 20px;
+    border-left: 2px solid var(--accent);
+    background: #121716;
+    font-size: 14px;
+    line-height: 1.85;
+    color: var(--stage-dim);
+  }
+
+  .callout b { color: var(--stage-text); font-weight: 600; }
+</style>
+</head>
+<body>
+<main class="page">
+  <header class="intro">
+    <h1>八字盘面 · 流年 5 行方案</h1>
+    <p>当前盘面一屏只有 <strong>2 行流年</strong>，底部两行按键提示占掉 48px。去掉提示后，流年区可放 <strong>5 行 × 26px</strong>，10 年正好分两页：第 1-5 年、第 6-10 年。</p>
+    <p>页码用「流年」标题右侧的两个小方块表示，不额外占行；`长按确定` 本来就会从命盘回到编辑页，所以原来的「长按确定改资料」提示是冗余的。</p>
+  </header>
+
+  <div class="legend">
+    <span><b>上 / 下</b>翻流年页</span>
+    <span><b>确定</b>回到当前年份所在页</span>
+    <span><b>长按确定</b>回编辑页（原有行为）</span>
+    <span><b>长按下键</b>也可回编辑页（原有行为）</span>
+  </div>
+
+  <div class="grid">
+    <figure>
+      <div class="bezel"><div class="screen" id="s-current"></div></div>
+      <figcaption>
+        <div class="title">当前：2 行流年 + 两行提示</div>
+        底部 48px 全部用于说明按键，流年区只能显示第 3-4 年。上/下每次翻两行，空间利用率很低。
+      </figcaption>
+    </figure>
+
+    <figure class="recommended">
+      <div class="bezel"><div class="screen" id="s-page1"></div></div>
+      <figcaption>
+        <div class="title">方案：5 行 · 第 1-5 年 <span class="pill">推荐</span></div>
+        去掉底部提示后放 5 行流年。标题右侧两个小方块表示两页，当前页高亮；当前年份所在的大运列和流年格用强调边框标出。进入盘面时自动定位到当前年份所在页。
+      </figcaption>
+    </figure>
+
+    <figure>
+      <div class="bezel"><div class="screen" id="s-page2"></div></div>
+      <figcaption>
+        <div class="title">翻页后：第 6-10 年</div>
+        下键从第 1-5 年翻到第 6-10 年，页码切到第二格；确定键回到当前年份所在页。没有底部提示，也没有额外占行的说明文字。
+      </figcaption>
+    </figure>
+  </div>
+
+  <div class="callout">
+    <b>按键提示的处理：</b>盘面不再保留任何底部提示。翻页靠「流年」标题右侧的页码点，回编辑页靠原有的长按确定（等同返回），不再重复写一行说明。如果你仍希望保留一行提示，5 行可以压到 24px 高，底部用 12px 单行显示「下键翻页 · 长按改资料」，但会牺牲一点行高。<br>
+    <b>取舍：</b>5 行是 10 年的自然半页，两页干净；6 行会出现 1-6 / 7-10 的不对称分页，所以不推荐。
+  </div>
+</main>
+
+<script>
+const LUCK = [
+  ["甲", "申"], ["乙", "酉"], ["丙", "戌"], ["丁", "亥"],
+  ["戊", "子"], ["己", "丑"], ["庚", "寅"], ["辛", "卯"],
+];
+
+const PAGE1 = [
+  ["甲申", "甲午", "甲辰", "甲寅", "甲子", "甲戌", "甲申", "甲午"],
+  ["乙酉", "乙未", "乙巳", "乙卯", "乙丑", "乙亥", "乙酉", "乙未"],
+  ["丙戌", "丙申", "丙午", "丙辰", "丙寅", "丙子", "丙戌", "丙申"],
+  ["丁亥", "丁酉", "丁未", "丁巳", "丁卯", "丁丑", "丁亥", "丁酉"],
+  ["戊子", "戊戌", "戊申", "戊午", "戊辰", "戊寅", "戊子", "戊戌"],
+];
+
+const PAGE2 = [
+  ["己丑", "己亥", "己酉", "己未", "己巳", "己卯", "己丑", "己亥"],
+  ["庚寅", "庚子", "庚戌", "庚申", "庚午", "庚辰", "庚寅", "庚子"],
+  ["辛卯", "辛丑", "辛亥", "辛酉", "辛未", "辛巳", "辛卯", "辛丑"],
+  ["壬辰", "壬寅", "壬子", "壬戌", "壬申", "壬午", "壬辰", "壬寅"],
+  ["癸巳", "癸卯", "癸丑", "癸亥", "癸酉", "癸未", "癸巳", "癸卯"],
+];
+
+const STEM_ELEMENT = { 甲: "wood", 乙: "wood", 丙: "fire", 丁: "fire", 戊: "earth", 己: "earth", 庚: "metal", 辛: "metal", 壬: "water", 癸: "water" };
+const BRANCH_ELEMENT = { 子: "water", 丑: "earth", 寅: "wood", 卯: "wood", 辰: "earth", 巳: "fire", 午: "fire", 未: "earth", 申: "metal", 酉: "metal", 戌: "earth", 亥: "water" };
+
+function charEl(ch) {
+  const cls = STEM_ELEMENT[ch] || BRANCH_ELEMENT[ch] || "metal";
+  return `<span class="${cls}">${ch}</span>`;
+}
+
+function shell() {
+  return `
+    <div class="bar">
+      <div class="wifi"><i></i><i></i><i></i></div>
+      <div class="bar-title">八字排盘</div>
+      <div class="battery"><div class="battery-frame"><span class="battery-fill"></span></div>99</div>
+    </div>
+    <div class="date">1990-06-24 12:04</div>
+    <div class="method">真太阳时</div>
+    <div class="meta">上海　男　农历闰五月初</div>
+    <div class="pillar" style="left:12px;top:74px">${charEl("庚")}</div>
+    <div class="pillar" style="left:66px;top:74px">${charEl("壬")}</div>
+    <div class="pillar" style="left:120px;top:74px">${charEl("庚")}</div>
+    <div class="pillar" style="left:174px;top:74px">${charEl("壬")}</div>
+    <div class="pillar" style="left:12px;top:100px">${charEl("午")}</div>
+    <div class="pillar" style="left:66px;top:100px">${charEl("午")}</div>
+    <div class="pillar" style="left:120px;top:100px">${charEl("申")}</div>
+    <div class="pillar" style="left:174px;top:100px">${charEl("午")}</div>
+    <div class="hdr hdr-left">大运　顺排 / 2004 起</div>
+  `;
+}
+
+function luckCells(current) {
+  let html = "";
+  LUCK.forEach((pair, i) => {
+    const cls = i === current ? "cell luck current" : "cell luck";
+    html += `<div class="${cls}" style="left:${12 + i * 27}px;top:147px">
+      <div class="chars">${charEl(pair[0])}${charEl(pair[1])}</div></div>`;
+  });
+  return html;
+}
+
+function flowCells(rows, currentRow, rowTop, rowHeight) {
+  let html = "";
+  rows.forEach((row, r) => {
+    row.forEach((gz, c) => {
+      const cls = r === currentRow ? "cell flow current" : "cell flow";
+      html += `<div class="${cls}" style="left:${12 + c * 27}px;top:${rowTop + r * rowHeight}px">
+        <div class="chars">${gz}</div></div>`;
+    });
+  });
+  return html;
+}
+
+function pageDots(active) {
+  return `<div class="dots"><i class="${active === 0 ? "on" : ""}"></i><i class="${active === 1 ? "on" : ""}"></i></div>`;
+}
+
+// Current chart: two flow rows, footer hints, no page dots.
+document.getElementById("s-current").innerHTML = shell() + `
+  <div class="hdr hdr-right" style="left:140px;width:88px">流年 第3-4年</div>
+  ${luckCells(2)}
+  ${flowCells([PAGE1[2], PAGE1[3]], 0, 185, 30)}
+  <div class="foot-rule"></div>
+  <div class="foot" style="top:276px">下键下两行 · 上键回看</div>
+  <div class="foot" style="top:298px">长按确定改资料</div>
+`;
+
+// Proposed page 1: five rows, page dots, no footer.
+document.getElementById("s-page1").innerHTML = shell() + `
+  <div class="hdr hdr-right" style="left:132px;width:84px">流年 第1-5年</div>
+  ${pageDots(0)}
+  ${luckCells(2)}
+  ${flowCells(PAGE1, 2, 185, 26)}
+`;
+
+// Proposed page 2: five rows, second dot active, current cell not visible.
+document.getElementById("s-page2").innerHTML = shell() + `
+  <div class="hdr hdr-right" style="left:132px;width:84px">流年 第6-10年</div>
+  ${pageDots(1)}
+  ${luckCells(2)}
+  ${flowCells(PAGE2, -1, 185, 26)}
+`;
+</script>
+</body>
+</html>

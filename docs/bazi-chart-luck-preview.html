@@ -1,0 +1,547 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>八字盘面 · 5 列大运 + 20px 干支 + 长按切换</title>
+<style>
+  :root {
+    color-scheme: dark;
+    --stage: #0e1211;
+    --stage-text: #eee7d6;
+    --stage-dim: #aaa99d;
+    --paper: #181b1c;
+    --surface: #202526;
+    --surface-alt: #303738;
+    --border: #59605d;
+    --text: #eee7d6;
+    --text-dim: #b3b2a5;
+    --accent: #ddb36c;
+    --wood: #82c89a;
+    --fire: #e28a72;
+    --earth: #ddb36c;
+    --metal: #e2ded0;
+    --water: #79b8d8;
+    --font-ui: "Microsoft YaHei", "PingFang SC", "Noto Sans CJK SC", sans-serif;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    background: var(--stage);
+    color: var(--stage-text);
+    font-family: var(--font-ui);
+  }
+
+  body { padding: 38px 32px 50px; }
+
+  .page { width: 1568px; margin: 0 auto; }
+
+  h1 {
+    margin: 0 0 10px;
+    font-size: 30px;
+    font-weight: 650;
+    letter-spacing: .02em;
+  }
+
+  .intro p {
+    margin: 0 0 6px;
+    max-width: 1250px;
+    font-size: 15px;
+    line-height: 1.75;
+    color: var(--stage-dim);
+  }
+
+  .intro strong { color: var(--stage-text); font-weight: 600; }
+
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 24px;
+    margin: 18px 0 28px;
+    padding: 13px 18px;
+    border: 1px solid #2a3230;
+    background: #121716;
+    font-size: 13px;
+    color: var(--stage-dim);
+  }
+
+  .legend b { color: var(--accent); font-weight: 600; margin-right: 6px; }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(3, 496px);
+    gap: 40px;
+  }
+
+  figure { margin: 0; }
+
+  .bezel {
+    width: 496px;
+    height: 656px;
+    padding: 8px;
+    border: 1px solid #2c3532;
+    border-radius: 26px;
+    background: #070a09;
+    box-shadow: 0 18px 44px rgba(0, 0, 0, .45);
+  }
+
+  figure.recommended .bezel {
+    border-color: rgba(221, 179, 108, .75);
+    box-shadow: 0 0 0 1px rgba(221, 179, 108, .22), 0 18px 44px rgba(0, 0, 0, .45);
+  }
+
+  .screen {
+    position: relative;
+    width: 240px;
+    height: 320px;
+    transform: scale(2);
+    transform-origin: top left;
+    overflow: hidden;
+    background: var(--paper);
+    color: var(--text);
+    font-family: var(--font-ui);
+    font-size: 16px;
+    line-height: 1;
+  }
+
+  .bar {
+    position: absolute;
+    left: 0; top: 0;
+    width: 240px; height: 26px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .bar-title {
+    position: absolute;
+    left: 42px; top: 5px;
+    font-size: 16px;
+    color: var(--text);
+  }
+
+  .wifi {
+    position: absolute;
+    left: 18px; bottom: 8px;
+    display: flex;
+    gap: 2px;
+    align-items: flex-end;
+  }
+
+  .wifi i { display: block; width: 2px; background: var(--text); }
+  .wifi i:nth-child(1) { height: 4px; }
+  .wifi i:nth-child(2) { height: 7px; }
+  .wifi i:nth-child(3) { height: 10px; }
+
+  .battery {
+    position: absolute;
+    right: 12px; top: 8px;
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    font-size: 12px;
+    color: var(--text);
+  }
+
+  .battery-frame {
+    width: 20px; height: 10px;
+    border: 1.5px solid var(--text);
+    padding: 1px;
+    position: relative;
+  }
+
+  .battery-frame::after {
+    content: "";
+    position: absolute;
+    right: -4px; top: 2px;
+    width: 2px; height: 5px;
+    background: var(--text);
+  }
+
+  .battery-fill { display: block; width: 65%; height: 100%; background: var(--text); }
+
+  .date {
+    position: absolute;
+    left: 12px; top: 32px;
+    width: 160px; height: 16px;
+    font-size: 14px;
+    color: var(--text);
+    letter-spacing: .2px;
+  }
+
+  .method {
+    position: absolute;
+    right: 12px; top: 34px;
+    width: 54px; height: 14px;
+    text-align: right;
+    font-size: 12px;
+    color: var(--accent);
+  }
+
+  .meta {
+    position: absolute;
+    left: 12px; top: 48px;
+    width: 216px; height: 18px;
+    font-size: 16px;
+    color: var(--text-dim);
+  }
+
+  .pillar {
+    position: absolute;
+    width: 54px;
+    height: 24px;
+    text-align: center;
+    font-size: 20px;
+    line-height: 24px;
+  }
+
+  .hdr {
+    position: absolute;
+    top: 132px;
+    height: 14px;
+    line-height: 14px;
+    font-size: 12px;
+    color: var(--text-dim);
+  }
+
+  .hdr-left { left: 12px; }
+  .hdr-right { text-align: right; }
+
+  .dots {
+    position: absolute;
+    left: 219px; top: 138px;
+    display: flex;
+    gap: 3px;
+  }
+
+  .dots i {
+    display: block;
+    width: 3px; height: 3px;
+    border: 1px solid var(--border);
+  }
+
+  .dots i.on {
+    background: var(--accent);
+    border-color: var(--accent);
+  }
+
+  .cell {
+    position: absolute;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    overflow: hidden;
+    white-space: nowrap;
+  }
+
+  .cell.current {
+    background: var(--surface-alt);
+    border-color: var(--accent);
+  }
+
+  .cell.luck.selected {
+    background: var(--surface-alt);
+    border-color: var(--accent);
+  }
+
+  .cell.luck.selected::before {
+    content: "";
+    position: absolute;
+    left: 1px; right: 1px; top: 1px;
+    height: 2px;
+    background: var(--accent);
+  }
+
+  .cell.flow.selected-col {
+    background: var(--surface-alt);
+  }
+
+  .luck { height: 38px; }
+  .flow { height: 25px; }
+
+  .luck .chars {
+    display: flex;
+    justify-content: center;
+    gap: 1px;
+    line-height: 36px;
+    font-size: 12px;
+  }
+
+  .flow .chars {
+    text-align: center;
+    line-height: 23px;
+    font-size: 12px;
+    color: var(--text);
+  }
+
+  .wide .luck .chars { font-size: 20px; gap: 0; }
+  .wide .flow .chars { font-size: 13px; }
+
+  .wood { color: var(--wood); }
+  .fire { color: var(--fire); }
+  .earth { color: var(--earth); }
+  .metal { color: var(--metal); }
+  .water { color: var(--water); }
+
+  .foot-rule {
+    position: absolute;
+    left: 12px; top: 272px;
+    width: 216px; height: 1px;
+    background: var(--border);
+  }
+
+  .foot {
+    position: absolute;
+    left: 12px;
+    width: 216px;
+    text-align: center;
+    font-size: 14px;
+    line-height: 20px;
+    color: var(--text-dim);
+    opacity: .82;
+  }
+
+  figcaption {
+    width: 496px;
+    margin-top: 16px;
+    font-size: 13px;
+    line-height: 1.7;
+    color: var(--stage-dim);
+  }
+
+  figcaption .title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 4px;
+    font-size: 16px;
+    font-weight: 650;
+    color: var(--stage-text);
+  }
+
+  .pill {
+    display: inline-block;
+    padding: 1px 7px;
+    border-radius: 99px;
+    background: rgba(221, 179, 108, .16);
+    border: 1px solid rgba(221, 179, 108, .55);
+    color: var(--accent);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: .08em;
+  }
+
+  .callout {
+    margin-top: 28px;
+    padding: 15px 20px;
+    border-left: 2px solid var(--accent);
+    background: #121716;
+    font-size: 14px;
+    line-height: 1.85;
+    color: var(--stage-dim);
+  }
+
+  .callout b { color: var(--stage-text); font-weight: 600; }
+</style>
+</head>
+<body>
+<main class="page">
+  <header class="intro">
+    <h1>八字盘面 · 5 列大运 + 20px 干支 + 长按切换</h1>
+    <p>当前 8 列、每格 27px，干支横向几乎贴边；改为 <strong>5 列 × 43px</strong> 后，大运干支可用 <strong>20px</strong>（与四柱同字号），流年字 13px。10 个大运保留 6 个窗口：1-5、2-6、3-7、4-8、5-9、6-10。</p>
+    <p>短按上/下继续翻流年页；<strong>长按上/下</strong>移动大运的选中项，选中项走到窗口边缘时窗口才滑动。默认选中当前大运；选中项有顶部强调条和整列浅底。确定回到当前大运和当前流年页。</p>
+  </header>
+
+  <div class="legend">
+    <span><b>短按上 / 下</b>流年翻页（第 1-5 / 第 6-10 年）</span>
+    <span><b>长按上 / 下</b>移动大运选中项（窗口边缘跟动）</span>
+    <span><b>确定</b>回到当前大运 + 当前流年页</span>
+    <span><b>长按确定</b>回编辑页（原有返回）</span>
+  </div>
+
+  <div class="grid">
+    <figure>
+      <div class="bezel"><div class="screen" id="s-current"></div></div>
+      <figcaption>
+        <div class="title">当前：8 列 × 27px</div>
+        干支在 27px 格里只剩 1px 左右的边距；8 列也没有切换大运的入口，长按上键目前没有用途。
+      </figcaption>
+    </figure>
+
+    <figure class="recommended">
+      <div class="bezel"><div class="screen wide" id="s-luck-a"></div></div>
+      <figcaption>
+        <div class="title">5 列 · 默认选中当前大运 <span class="pill">按你选的方案</span></div>
+        每格 43px，大运干支 20px（与四柱同字号），横向只剩约 0.5px 边距；流年字 13px。默认选中当前大运丙戌：顶部强调条 + 整列浅底；当前流年丙午仍保留强调边框。
+      </figcaption>
+    </figure>
+
+    <figure>
+      <div class="bezel"><div class="screen wide" id="s-luck-b"></div></div>
+      <figcaption>
+        <div class="title">长按下键后：选中第 4 步（丁亥）</div>
+        长按一次，选中条从丙戌移到丁亥；窗口仍是 1-5，标题不变。选中列的 5 个流年格用浅底贯穿；当前年份已不在选中的大运里，所以流年格不再有强调边框。继续长按，选中项走到窗口边缘时窗口才滑动。
+      </figcaption>
+    </figure>
+  </div>
+
+  <div class="callout">
+    <b>选中状态：</b>顶部 2px 强调条 + 整列浅底。默认选中的是当前大运；长按上/下每次移动一个选中项，只有选中项走到窗口边缘时窗口才滑动，所以按一次通常只看到选中条移动，标题不变。当前流年的强调边框只在选中的大运就是当前大运时出现；切到别的 大运时不再显示当前年份高亮，避免两个高亮打架。确定回到当前大运和当前流年页。<br>
+    <b>这个方案的取舍：</b>5 列 × 43px 能把大运干支做到 20px，和四柱同字号，层级最强；代价是同时少看一个大运，窗口有 6 个位置。若更想多看一列，可以回到 6 列 × 36px + 16px。大运用长按、流年用短按，两套翻页不会打架。<br>
+    <b>按键冲突：</b>现在长按下键是回编辑页；改成“下一个大运”后，这个捷径取消，但长按确定本来就会回编辑页，所以编辑入口还在。如果不想丢长按下键的回编辑快捷，也可以改成「长按上 = 上一个大运、长按下 = 下一个大运、长按确定 = 编辑」。<br>
+    <b>窗口与选中项：</b>标题的 1-5、2-6 … 6-10 是窗口位置，不是选中项；选中项由顶部强调条表示。选中项走到窗口左右边缘时窗口才滑动一格，6 个窗口都能走到。
+  </div>
+</main>
+
+<script>
+const LUCK8 = ["甲申", "乙酉", "丙戌", "丁亥", "戊子", "己丑", "庚寅", "辛卯"];
+const FLOW8 = [
+  ["丙戌", "丙申", "丙午", "丙辰", "丙寅", "丙子", "丙戌", "丙申"],
+  ["丁亥", "丁酉", "丁未", "丁巳", "丁卯", "丁丑", "丁亥", "丁酉"],
+];
+
+const LUCK5A = ["甲申", "乙酉", "丙戌", "丁亥", "戊子"];
+const FLOW5A = [
+  ["甲申", "甲午", "甲辰", "甲寅", "甲子"],
+  ["乙酉", "乙未", "乙巳", "乙卯", "乙丑"],
+  ["丙戌", "丙申", "丙午", "丙辰", "丙寅"],
+  ["丁亥", "丁酉", "丁未", "丁巳", "丁卯"],
+  ["戊子", "戊戌", "戊申", "戊午", "戊辰"],
+];
+
+const LUCK5B = ["己丑", "庚寅", "辛卯", "壬辰", "癸巳"];
+const FLOW5B = [
+  ["甲戌", "甲申", "甲午", "甲辰", "甲寅"],
+  ["乙亥", "乙酉", "乙未", "乙巳", "乙卯"],
+  ["丙子", "丙戌", "丙申", "丙午", "丙辰"],
+  ["丁丑", "丁亥", "丁酉", "丁未", "丁巳"],
+  ["戊寅", "戊子", "戊戌", "戊申", "戊午"],
+];
+
+const STEM_ELEMENT = { 甲: "wood", 乙: "wood", 丙: "fire", 丁: "fire", 戊: "earth", 己: "earth", 庚: "metal", 辛: "metal", 壬: "water", 癸: "water" };
+const BRANCH_ELEMENT = { 子: "water", 丑: "earth", 寅: "wood", 卯: "wood", 辰: "earth", 巳: "fire", 午: "fire", 未: "earth", 申: "metal", 酉: "metal", 戌: "earth", 亥: "water" };
+
+function charEl(ch) {
+  const cls = STEM_ELEMENT[ch] || BRANCH_ELEMENT[ch] || "metal";
+  return `<span class="${cls}">${ch}</span>`;
+}
+
+function shell() {
+  return `
+    <div class="bar">
+      <div class="wifi"><i></i><i></i><i></i></div>
+      <div class="bar-title">八字排盘</div>
+      <div class="battery"><div class="battery-frame"><span class="battery-fill"></span></div>99</div>
+    </div>
+    <div class="date">1990-06-24 12:04</div>
+    <div class="method">真太阳时</div>
+    <div class="meta">上海　男　农历闰五月初</div>
+    <div class="pillar" style="left:12px;top:74px">${charEl("庚")}</div>
+    <div class="pillar" style="left:66px;top:74px">${charEl("壬")}</div>
+    <div class="pillar" style="left:120px;top:74px">${charEl("庚")}</div>
+    <div class="pillar" style="left:174px;top:74px">${charEl("壬")}</div>
+    <div class="pillar" style="left:12px;top:100px">${charEl("午")}</div>
+    <div class="pillar" style="left:66px;top:100px">${charEl("午")}</div>
+    <div class="pillar" style="left:120px;top:100px">${charEl("申")}</div>
+    <div class="pillar" style="left:174px;top:100px">${charEl("午")}</div>
+  `;
+}
+
+function luckCells(luck, cellW, current, selected, wide) {
+  let html = "";
+  luck.forEach((gz, i) => {
+    const classes = ["cell", "luck"];
+    if (i === current) classes.push("current");
+    if (i === selected) classes.push("selected");
+    html += `<div class="${classes.join(" ")}" style="left:${12 + i * cellW}px;top:147px;width:${cellW}px">
+      <div class="chars">${charEl(gz[0])}${charEl(gz[1])}</div></div>`;
+  });
+  return html;
+}
+
+function flowCells(rows, cellW, currentRow, currentCol, selectedCol, top, step, height) {
+  let html = "";
+  rows.forEach((row, r) => {
+    row.forEach((gz, c) => {
+      const classes = ["cell", "flow"];
+      if (c === selectedCol) classes.push("selected-col");
+      if (r === currentRow && c === currentCol) classes.push("current");
+      html += `<div class="${classes.join(" ")}" style="left:${12 + c * cellW}px;top:${top + r * step}px;width:${cellW}px;height:${height}px">
+        <div class="chars">${gz}</div></div>`;
+    });
+  });
+  return html;
+}
+
+function pageDots(active) {
+  return `<div class="dots"><i class="${active === 0 ? "on" : ""}"></i><i class="${active === 1 ? "on" : ""}"></i></div>`;
+}
+
+function chart(el, opts) {
+  const wide = opts.cellW >= 36;
+  el.innerHTML = shell() + `
+    <div class="hdr hdr-left" style="width:${wide ? 120 : 130}px">${opts.headerLeft}</div>
+    <div class="hdr hdr-right" style="left:${wide ? 132 : 140}px;width:${wide ? 84 : 88}px">${opts.headerRight}</div>
+    ${opts.dots === null ? "" : pageDots(opts.dots)}
+    ${luckCells(opts.luck, opts.cellW, opts.currentLuck, opts.selectedLuck, wide)}
+    ${flowCells(opts.flow, opts.cellW, opts.currentFlow, opts.currentCol, opts.selectedLuck, opts.flowTop, opts.flowStep, opts.flowHeight)}
+    ${opts.footer ? `
+      <div class="foot-rule"></div>
+      <div class="foot" style="top:276px">下键下两行 · 上键回看</div>
+      <div class="foot" style="top:298px">长按确定改资料</div>` : ""}
+  `;
+}
+
+chart(document.getElementById("s-current"), {
+  luck: LUCK8,
+  flow: FLOW8,
+  cellW: 27,
+  flowTop: 185,
+  flowStep: 30,
+  flowHeight: 29,
+  currentLuck: 2,
+  currentFlow: 0,
+  currentCol: 2,
+  selectedLuck: -1,
+  headerLeft: "大运　顺排 / 2004 起",
+  headerRight: "流年 第3-4年",
+  dots: null,
+  footer: true,
+});
+
+chart(document.getElementById("s-luck-a"), {
+  luck: LUCK5A,
+  flow: FLOW5A,
+  cellW: 43,
+  flowTop: 185,
+  flowStep: 26,
+  flowHeight: 25,
+  currentLuck: 2,
+  currentFlow: 2,
+  currentCol: 2,
+  selectedLuck: 2,
+  headerLeft: "大运 顺排 2004 1-5",
+  headerRight: "流年 第1-5年",
+  dots: 0,
+  footer: false,
+});
+
+chart(document.getElementById("s-luck-b"), {
+  luck: LUCK5A,
+  flow: FLOW5A,
+  cellW: 43,
+  flowTop: 185,
+  flowStep: 26,
+  flowHeight: 25,
+  currentLuck: -1,
+  currentFlow: -1,
+  currentCol: -1,
+  selectedLuck: 3,
+  headerLeft: "大运 顺排 2004 1-5",
+  headerRight: "流年 第1-5年",
+  dots: 0,
+  footer: false,
+});
+</script>
+</body>
+</html>
