@@ -234,13 +234,13 @@ void initialize_chart_position() {
 void refresh_luck_table() {
     if (!s_screen || !s_has_chart) return;
     char text[48];
-    std::snprintf(text, sizeof(text), "大运 %s %d %u-%u",
-                  s_chart.luck.forward ? "顺排" : "逆排",
-                  s_chart.luck.step[s_luck_first].start_year,
-                  (unsigned)(s_luck_first + 1),
-                  (unsigned)(s_luck_first + kVisibleLuck));
+    const int current_start = s_chart.luck.step[s_selected_luck].start_year;
+    std::snprintf(text, sizeof(text), "起运%d 大运%d-%d",
+                  s_chart.luck.step[0].start_year,
+                  current_start,
+                  current_start + BAZI_YEARS_PER_LUCK - 1);
     set_text(s_luck_header_left, text);
-    std::snprintf(text, sizeof(text), "流年 第%u-%u年",
+    std::snprintf(text, sizeof(text), "流年%u-%u",
                   (unsigned)(s_flow_row + 1),
                   (unsigned)(s_flow_row + kVisibleRows));
     set_text(s_luck_header_right, text);
@@ -315,9 +315,9 @@ void build_chart() {
                                 x, 100, 54, 24, LV_TEXT_ALIGN_CENTER);
     }
     s_luck_header_left = label(s_screen, "", &ganzhi_font_12, UI_TEXT_DIM,
-                               12, 132, 120, 14);
+                               12, 132, 144, 14);
     s_luck_header_right = label(s_screen, "", &ganzhi_font_12, UI_TEXT_DIM,
-                                132, 132, 84, 14, LV_TEXT_ALIGN_RIGHT);
+                                156, 132, 60, 14, LV_TEXT_ALIGN_RIGHT);
     for (int dot = 0; dot < 2; ++dot) {
         lv_obj_t *box = lv_obj_create(s_screen);
         lv_obj_remove_flag(box, LV_OBJ_FLAG_SCROLLABLE);

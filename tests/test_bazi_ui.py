@@ -172,7 +172,15 @@ assert "open_editor" not in chart_key, (
 assert "reset_luck_window()" in chart_key
 reset_window = function_body("reset_luck_window")
 assert "BAZI_LUCK_COUNT - kVisibleLuck" in reset_window
-assert '"大运 %s %d %u-%u"' in function_body("refresh_luck_table")
+refresh_body = function_body("refresh_luck_table")
+assert '"起运%d 大运%d-%d"' in refresh_body
+assert '"流年%u-%u"' in refresh_body
+assert "s_chart.luck.step[0].start_year" in refresh_body
+assert "s_chart.luck.step[s_selected_luck].start_year" in refresh_body
+assert "BAZI_YEARS_PER_LUCK - 1" in refresh_body
+assert '"大运 %s %d %u-%u"' not in source
+assert "12, 132, 144, 14" in source
+assert "156, 132, 60, 14" in source
 
 # Selected luck: the cursor moves first; the window follows only at an edge.
 assert "s_selected_luck" in source

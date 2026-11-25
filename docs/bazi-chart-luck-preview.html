@@ -121,6 +121,16 @@
     color: var(--text);
   }
 
+  .bar-meta {
+    position: absolute;
+    left: 146px; top: 7px;
+    width: 50px;
+    text-align: right;
+    font-size: 12px;
+    line-height: 14px;
+    color: var(--text-dim);
+  }
+
   .wifi {
     position: absolute;
     left: 18px; bottom: 8px;
@@ -347,9 +357,9 @@
 <body>
 <main class="page">
   <header class="intro">
-    <h1>八字盘面 · 5 列大运 + 20px 干支 + 长按切换</h1>
+    <h1>八字盘面 · 起运与当前大运范围</h1>
     <p>当前 8 列、每格 27px，干支横向几乎贴边；改为 <strong>5 列 × 43px</strong> 后，大运干支可用 <strong>20px</strong>（与四柱同字号），流年字 13px。10 个大运保留 6 个窗口：1-5、2-6、3-7、4-8、5-9、6-10。</p>
-    <p>短按上/下继续翻流年页；<strong>长按上/下</strong>移动大运的选中项，选中项走到窗口边缘时窗口才滑动。默认选中当前大运；选中项有顶部强调条和整列浅底。确定回到当前大运和当前流年页。</p>
+    <p>顶部不再显示「大运 顺排 年份 1-5」。标题行并列显示「起运2004 大运2024-2033」：起运固定，大运范围跟着选中项走；右侧保留「流年1-5」和两个页码点。</p>
   </header>
 
   <div class="legend">
@@ -371,25 +381,25 @@
     <figure class="recommended">
       <div class="bezel"><div class="screen wide" id="s-luck-a"></div></div>
       <figcaption>
-        <div class="title">5 列 · 默认选中当前大运 <span class="pill">按你选的方案</span></div>
-        每格 43px，大运干支 20px（与四柱同字号），横向只剩约 0.5px 边距；流年字 13px。默认选中当前大运丙戌：顶部强调条 + 整列浅底；当前流年丙午仍保留强调边框。
+        <div class="title">5 列 · 起运 2004 · 当前大运 2024-2033 <span class="pill">建议</span></div>
+        标题行显示起运 2004 和选中大运丙戌的十年 2024-2033；右侧流年1-5 + 页码点。选中丙戌，当前流年丙午仍保留强调边框。
       </figcaption>
     </figure>
 
     <figure>
       <div class="bezel"><div class="screen wide" id="s-luck-b"></div></div>
       <figcaption>
-        <div class="title">长按下键后：选中第 4 步（丁亥）</div>
-        长按一次，选中条从丙戌移到丁亥；窗口仍是 1-5，标题不变。选中列的 5 个流年格用浅底贯穿；当前年份已不在选中的大运里，所以流年格不再有强调边框。继续长按，选中项走到窗口边缘时窗口才滑动。
+        <div class="title">长按下键后：选中丁亥（2034-2043）</div>
+        标题行仍是起运 2004，大运范围变为 2034-2043；右侧流年页仍是 1-5。当前年份已不在选中的大运里，所以流年格不再有强调边框。
       </figcaption>
     </figure>
   </div>
 
   <div class="callout">
-    <b>选中状态：</b>顶部 2px 强调条 + 整列浅底。默认选中的是当前大运；长按上/下每次移动一个选中项，只有选中项走到窗口边缘时窗口才滑动，所以按一次通常只看到选中条移动，标题不变。当前流年的强调边框只在选中的大运就是当前大运时出现；切到别的 大运时不再显示当前年份高亮，避免两个高亮打架。确定回到当前大运和当前流年页。<br>
-    <b>这个方案的取舍：</b>5 列 × 43px 能把大运干支做到 20px，和四柱同字号，层级最强；代价是同时少看一个大运，窗口有 6 个位置。若更想多看一列，可以回到 6 列 × 36px + 16px。大运用长按、流年用短按，两套翻页不会打架。<br>
-    <b>按键冲突：</b>现在长按下键是回编辑页；改成“下一个大运”后，这个捷径取消，但长按确定本来就会回编辑页，所以编辑入口还在。如果不想丢长按下键的回编辑快捷，也可以改成「长按上 = 上一个大运、长按下 = 下一个大运、长按确定 = 编辑」。<br>
-    <b>窗口与选中项：</b>标题的 1-5、2-6 … 6-10 是窗口位置，不是选中项；选中项由顶部强调条表示。选中项走到窗口左右边缘时窗口才滑动一格，6 个窗口都能走到。
+    <b>我的建议：</b>两个事实都放在标题行最省空间：`起运2004 大运2024-2033`，右侧 `流年1-5` + 页码点。比原来的 `大运 顺排 2004 1-5` 更有信息量，也不会多占一行。<br>
+    <b>结束年怎么写：</b>起运 2004 的十年是 2004-2013，下一个大运从 2014 起。你举的 2004-2014 是「两个起运点之间」的写法，容易让人以为 11 年。建议写实际最后一年（2004-2013），或者写「2004 起十年」；如果一定要和下一个起运年对齐，再写 2004-2014。<br>
+    <b>空间与取舍：</b>12px 下 `起运2004 大运2024-2033` 约 135px，右侧 `流年1-5` + 两个页码点还能放下；写成「当前大运的流年范围：2024-2033」会太长。顺排/逆排和窗口 1-5 一并去掉；选中条表示当前大运，5 列 + 大运范围已经够定位。<br>
+    <b>流年页码：</b>保留 `流年1-5` 和两个页码点，否则不知道看的是每个大运的前五年还是后五年。
   </div>
 </main>
 
@@ -426,11 +436,12 @@ function charEl(ch) {
   return `<span class="${cls}">${ch}</span>`;
 }
 
-function shell() {
+function shell(startYear) {
   return `
     <div class="bar">
       <div class="wifi"><i></i><i></i><i></i></div>
       <div class="bar-title">八字排盘</div>
+      <div class="bar-meta">${startYear ? "起运" + startYear : ""}</div>
       <div class="battery"><div class="battery-frame"><span class="battery-fill"></span></div>99</div>
     </div>
     <div class="date">1990-06-24 12:04</div>
@@ -479,9 +490,9 @@ function pageDots(active) {
 
 function chart(el, opts) {
   const wide = opts.cellW >= 36;
-  el.innerHTML = shell() + `
-    <div class="hdr hdr-left" style="width:${wide ? 120 : 130}px">${opts.headerLeft}</div>
-    <div class="hdr hdr-right" style="left:${wide ? 132 : 140}px;width:${wide ? 84 : 88}px">${opts.headerRight}</div>
+  el.innerHTML = shell(opts.startYear) + `
+    <div class="hdr hdr-left" style="width:${wide ? 144 : 130}px">${opts.headerLeft}</div>
+    <div class="hdr hdr-right" style="left:${wide ? 156 : 140}px;width:${wide ? 60 : 88}px">${opts.headerRight}</div>
     ${opts.dots === null ? "" : pageDots(opts.dots)}
     ${luckCells(opts.luck, opts.cellW, opts.currentLuck, opts.selectedLuck, wide)}
     ${flowCells(opts.flow, opts.cellW, opts.currentFlow, opts.currentCol, opts.selectedLuck, opts.flowTop, opts.flowStep, opts.flowHeight)}
@@ -520,8 +531,8 @@ chart(document.getElementById("s-luck-a"), {
   currentFlow: 2,
   currentCol: 2,
   selectedLuck: 2,
-  headerLeft: "大运 顺排 2004 1-5",
-  headerRight: "流年 第1-5年",
+  headerLeft: "起运2004 大运2024-2033",
+  headerRight: "流年1-5",
   dots: 0,
   footer: false,
 });
@@ -537,8 +548,8 @@ chart(document.getElementById("s-luck-b"), {
   currentFlow: -1,
   currentCol: -1,
   selectedLuck: 3,
-  headerLeft: "大运 顺排 2004 1-5",
-  headerRight: "流年 第1-5年",
+  headerLeft: "起运2004 大运2034-2043",
+  headerRight: "流年1-5",
   dots: 0,
   footer: false,
 });
