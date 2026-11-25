@@ -517,14 +517,15 @@ void refresh_shake(void) {
         set_text(s_status_left, "时间未同步，请稍后重试");
         set_text(s_status_right, "");
         set_text(s_footer_primary, "确定重试");
-        set_text(s_footer_secondary, "返回键回起卦方式");
+        set_text(s_footer_secondary, "长按确定返回");
         return;
     }
     if (s_calendar_error) {
         set_text(s_status_left, "历法数据未覆盖");
         set_text(s_status_right, "");
         set_text(s_footer_primary, complete ? "确定重试" : "确定摇卦");
-        set_text(s_footer_secondary, "长按确定重摇");
+        set_text(s_footer_secondary,
+                 s_toss_count > 0 ? "长按确定重摇" : "长按确定返回");
         return;
     }
     if (s_shaking) {
@@ -555,7 +556,7 @@ void refresh_shake(void) {
         set_text(s_status_left, "按确定摇第一爻");
         set_text(s_status_right, "由下而上");
         set_text(s_footer_primary, "确定摇卦");
-        set_text(s_footer_secondary, "长按确定重摇");
+        set_text(s_footer_secondary, "长按确定返回");
         return;
     }
     const uint8_t last = s_toss_count - 1;
@@ -712,12 +713,6 @@ void build_shake(void) {
 }
 
 void shake_key(uint8_t btn, app_btn_event_t event) {
-    if (event == BTN_EVT_LONG && btn == BSP_BTN_OK) {
-        reset_manual_state();
-        s_time_ok = capture_manual_time();
-        build_shake();
-        return;
-    }
     if (event != BTN_EVT_CLICK || btn != BSP_BTN_OK) return;
     if (!s_time_ok) {
         s_time_ok = capture_manual_time();
@@ -1012,7 +1007,13 @@ bool on_back(void) {
             handled = false;
             break;
         case Mode::Shake:
-            build_method();
+            if (s_toss_count > 0) {
+                reset_manual_state();
+                s_time_ok = capture_manual_time();
+                build_shake();
+            } else {
+                build_method();
+            }
             break;
         case Mode::Chart:
             if (s_input.method == LIUYAO_METHOD_MANUAL) build_shake();

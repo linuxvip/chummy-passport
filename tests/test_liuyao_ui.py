@@ -70,10 +70,17 @@ assert 'lv_timer_create' in app
 assert '确定摇卦' in app
 assert '确定看盘' in app
 assert '长按确定重摇' in app
+assert '长按确定返回' in app
 assert '摇动中' in app
 assert '背' in app and '字' in app
 assert 'chart_has_change()' in app
 assert '无动爻' in app
+# Long OK is consumed by the registry before app on_key; the shake page must
+# reset in on_back when lines exist and return to the method page when empty.
+on_back = app.split('bool on_back(void)')[1].split('bool prepare_stop')[0]
+assert 'reset_manual_state();' in on_back
+assert 'build_method();' in on_back
+assert 's_toss_count > 0' in on_back
 assert 'apps/liuyao/liuyao_core.c' in cmake
 assert 'apps/liuyao/app_liuyao.cc' in cmake
 assert '&g_liuyao_app' in registry
