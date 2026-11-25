@@ -1,0 +1,760 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Passport OS 六爻排盘样式参考版，采用青绿色章节头、白底细网格、赭金标签和本卦变卦左右对照。">
+  <title>Passport OS 六爻排盘 · 案卷样式</title>
+  <style>
+/* Hallmark · shape: app screen · genre: editorial · theme: Passport paper docket (local app scene) · scope: app · states: cast setup, dual-hexagram chart · v2.0.0
+ * critique: the dual-hexagram sheet is the signature; teal identifies the task, ochre identifies field names, and five-element color stays on the chart data.
+ */
+/* Hallmark · waive 72 · Passport 320x240 fixed grid · chart rows need dense 16px height to fit all six lines */
+:root {
+  color-scheme: light;
+  --font-ui: "PingFang SC", "Source Han Sans SC", "Noto Sans CJK SC", sans-serif;
+  --font-data: "SFMono-Regular", "Cascadia Mono", "Noto Sans Mono", monospace;
+  --stage: #e9eeeb;
+  --stage-rule: #c5cfcb;
+  --stage-text: #243032;
+  --stage-dim: #5d6c6b;
+  --paper: #f6f5ef;
+  --surface: #fdfcf8;
+  --surface-soft: #edf4f2;
+  --header: #087f82;
+  --header-soft: #dff1ef;
+  --on-header: #fdfcf8;
+  --border: #d4d9d7;
+  --border-strong: #aab6b2;
+  --text: #283032;
+  --text-dim: #697576;
+  --label: #8d5c22;
+  --accent: #087f82;
+  --accent-ink: #056368;
+  --on-accent: #fdfcf8;
+  --cinnabar: #b43f3b;
+  --success: #247254;
+  --wood: #257650;
+  --fire: #b43f3b;
+  --earth: #9a641f;
+  --metal: #4c5a5e;
+  --water: #246789;
+  --shadow: #bac5c1;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+  overflow-x: clip;
+}
+
+html {
+  background: var(--stage);
+}
+
+body {
+  background: var(--stage);
+  color: var(--stage-text);
+  font-family: var(--font-ui);
+}
+
+.page {
+  width: min(1160px, calc(100% - 64px));
+  margin: 0 auto;
+  padding: 48px 0;
+}
+
+.intro {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(300px, 0.75fr);
+  gap: 56px;
+  align-items: end;
+  padding-bottom: 28px;
+  border-bottom: 1px solid var(--stage-rule);
+}
+
+h1 {
+  max-width: 760px;
+  margin: 0 0 12px;
+  color: var(--stage-text);
+  font-size: clamp(36px, 4.8vw, 60px);
+  font-weight: 500;
+  line-height: 1.05;
+  letter-spacing: -0.045em;
+  overflow-wrap: break-word;
+  min-width: 0;
+  text-wrap: balance;
+}
+
+.lead {
+  max-width: 680px;
+  margin: 0;
+  color: var(--stage-dim);
+  font-size: 18px;
+  line-height: 1.7;
+}
+
+.borrowed {
+  margin: 0;
+}
+
+.borrowed div {
+  display: grid;
+  grid-template-columns: 84px minmax(0, 1fr);
+  gap: 16px;
+  padding: 12px 0;
+  border-top: 1px solid var(--stage-rule);
+}
+
+.borrowed dt,
+.borrowed dd {
+  margin: 0;
+}
+
+.borrowed dt {
+  color: var(--label);
+  font-size: 13px;
+}
+
+.borrowed dd {
+  color: var(--stage-text);
+  font-size: 15px;
+  line-height: 1.55;
+}
+
+.boards {
+  display: grid;
+  grid-template-columns: repeat(3, 320px);
+  gap: 32px;
+  justify-content: center;
+  margin-top: 32px;
+}
+
+figure {
+  min-width: 0;
+  margin: 0;
+}
+
+figcaption {
+  padding-top: 12px;
+  color: var(--stage-dim);
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+figcaption strong {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--stage-text);
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.device {
+  position: relative;
+  width: 320px;
+  height: 240px;
+  overflow: clip;
+  background: var(--paper);
+  border: 1px solid var(--border-strong);
+  box-shadow: 8px 10px 0 var(--shadow);
+  color: var(--text);
+  font-size: 11px;
+}
+
+.status {
+  position: absolute;
+  inset: 0 0 auto;
+  display: flex;
+  align-items: center;
+  height: 26px;
+  padding: 0 12px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+
+.status strong {
+  color: var(--text);
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 25px;
+}
+
+.status-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+  color: var(--text);
+  font-family: var(--font-data);
+  font-size: 11px;
+}
+
+.wifi {
+  display: flex;
+  align-items: end;
+  gap: 1px;
+  width: 16px;
+  height: 13px;
+}
+
+.wifi i {
+  display: block;
+  width: 4px;
+  background: var(--border-strong);
+}
+
+.wifi i:nth-child(1) { height: 5px; }
+.wifi i:nth-child(2) { height: 9px; }
+.wifi i:nth-child(3) { height: 13px; background: var(--text); }
+
+.battery {
+  position: relative;
+  width: 24px;
+  height: 12px;
+  border: 2px solid var(--text);
+}
+
+.battery::after {
+  position: absolute;
+  top: 2px;
+  right: -5px;
+  width: 3px;
+  height: 6px;
+  background: var(--text);
+  content: "";
+}
+
+.battery span {
+  position: absolute;
+  inset: 2px auto 2px 2px;
+  width: 14px;
+  background: var(--success);
+}
+
+.section-band {
+  position: absolute;
+  top: 26px;
+  left: 0;
+  display: flex;
+  align-items: center;
+  width: 320px;
+  height: 24px;
+  padding: 0 12px;
+  background: var(--header);
+  color: var(--on-header);
+}
+
+.section-band strong {
+  font-size: 18px;
+  font-weight: 400;
+  line-height: 24px;
+  letter-spacing: 1px;
+}
+
+.section-band span {
+  margin-left: auto;
+  color: var(--on-header);
+  font-size: 11px;
+}
+
+.setup-body {
+  position: absolute;
+  top: 58px;
+  left: 12px;
+  display: grid;
+  grid-template-columns: 164px minmax(0, 1fr);
+  gap: 12px;
+  width: 296px;
+  height: 120px;
+}
+
+.form {
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr);
+  align-items: center;
+  height: 29px;
+  padding: 0 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+.form-row:last-child {
+  border-bottom: 0;
+}
+
+.form-row span:first-child {
+  color: var(--label);
+}
+
+.form-row span:last-child {
+  overflow: hidden;
+  color: var(--text);
+  text-align: right;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.method-note {
+  padding: 8px;
+  background: var(--header-soft);
+  border: 1px solid var(--border);
+}
+
+.method-note strong {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--text);
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.method-note p {
+  margin: 0;
+  color: var(--text);
+  font-size: 11px;
+  line-height: 16px;
+}
+
+.method-note em {
+  color: var(--label);
+  font-style: normal;
+}
+
+.primary-action {
+  position: absolute;
+  top: 192px;
+  left: 12px;
+  display: flex;
+  align-items: center;
+  width: 296px;
+  height: 28px;
+  padding: 0 12px;
+  background: var(--header);
+  color: var(--on-header);
+  font-size: 15px;
+}
+
+.primary-action span {
+  margin-left: auto;
+  font-size: 11px;
+}
+
+.chart-meta {
+  position: absolute;
+  top: 54px;
+  left: 8px;
+  width: 304px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+
+.meta-row {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr);
+  align-items: center;
+  height: 14px;
+  overflow: hidden;
+  border-bottom: 1px solid var(--border);
+}
+
+.meta-row:last-child {
+  border-bottom: 0;
+}
+
+.meta-row > span {
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--label);
+  padding: 0 4px;
+  border-right: 1px solid var(--border);
+}
+
+.meta-row > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-evenly;
+  min-width: 0;
+  color: var(--text);
+  padding: 0 4px;
+  font-size: 11px;
+  line-height: 13px;
+}
+
+.meta-row time {
+  font-size: 11px;
+}
+
+.pillar-day {
+  color: var(--cinnabar);
+}
+
+.hex-sheet {
+  position: absolute;
+  top: 102px;
+  left: 8px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  width: 304px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+
+.hex-column {
+  min-width: 0;
+}
+
+.hex-column + .hex-column {
+  border-left: 1px solid var(--border);
+}
+
+.hex-title {
+  display: flex;
+  justify-content: center;
+  align-items: baseline;
+  gap: 4px;
+  height: 17px;
+  padding: 0 4px;
+  color: var(--text);
+  font-size: 11px;
+  line-height: 17px;
+  text-align: center;
+}
+
+.hex-title span {
+  color: var(--text-dim);
+  font-size: 11px;
+}
+
+.hex-title strong {
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.hex-row {
+  display: grid;
+  grid-template-columns: 14px 50px 34px minmax(0, 1fr);
+  align-items: center;
+  height: 16px;
+  padding: 0 4px;
+  color: var(--text);
+  font-size: 11px;
+  line-height: 14px;
+}
+
+.hex-row.selected {
+  background: var(--header-soft);
+}
+
+.god {
+  color: var(--text-dim);
+}
+
+.relation.wood { color: var(--wood); }
+.relation.fire { color: var(--fire); }
+.relation.earth { color: var(--earth); }
+.relation.metal { color: var(--metal); }
+.relation.water { color: var(--water); }
+
+.hexline {
+  position: relative;
+  justify-self: center;
+  width: 28px;
+  height: 3px;
+  background: var(--text);
+}
+
+.hexline.yin {
+  background: linear-gradient(
+    to right,
+    var(--text) 0 12px,
+    transparent 12px 16px,
+    var(--text) 16px 28px
+  );
+}
+
+.position {
+  color: var(--accent-ink);
+  text-align: right;
+  white-space: nowrap;
+}
+
+.changed-row {
+  display: grid;
+  grid-template-columns: 50px 34px minmax(0, 1fr);
+  align-items: center;
+  height: 16px;
+  padding: 0 4px;
+  color: var(--text);
+  font-size: 11px;
+  line-height: 14px;
+}
+
+.changed-row.selected {
+  background: var(--header-soft);
+}
+
+.changed-row .position {
+  text-align: left;
+}
+
+.chart-footer {
+  position: absolute;
+  top: 220px;
+  left: 8px;
+  width: 304px;
+  height: 22px;
+  border-top: 1px solid var(--border);
+}
+
+.chart-footer p {
+  margin: 4px 0 0;
+  color: var(--text);
+  font-size: 11px;
+  line-height: 13px;
+}
+
+.chart-footer p span:last-child {
+  float: right;
+  color: var(--accent-ink);
+}
+
+.legend {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 56px;
+  margin-top: 40px;
+  padding-top: 24px;
+  border-top: 1px solid var(--stage-rule);
+}
+
+.legend h2 {
+  margin: 0 0 8px;
+  color: var(--stage-text);
+  font-size: 20px;
+  font-weight: 500;
+}
+
+.legend p {
+  margin: 0;
+  color: var(--stage-dim);
+  font-size: 14px;
+  line-height: 1.7;
+}
+
+.rule-list {
+  display: grid;
+  gap: 12px;
+}
+
+.rule {
+  display: grid;
+  grid-template-columns: 76px minmax(0, 1fr);
+  gap: 12px;
+  color: var(--stage-dim);
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.rule strong {
+  color: var(--stage-text);
+  font-weight: 400;
+}
+
+@media (max-width: 900px) {
+  .page {
+    width: min(100% - 32px, 640px);
+    padding-top: 32px;
+  }
+
+  .intro,
+  .legend {
+    grid-template-columns: 1fr;
+    gap: 28px;
+  }
+
+  .boards {
+    grid-template-columns: 320px;
+    gap: 32px;
+  }
+}
+
+@media (max-width: 380px) {
+  .boards {
+    justify-content: start;
+    width: 320px;
+  }
+}
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header class="intro">
+      <div>
+        <h1>把六爻盘做成一张<br>清楚的工作单</h1>
+        <p class="lead">时间起卦与数字起卦共用同一张案卷式盘面。两种方式都先显示取数与动爻结果，再进入八宫、纳甲和六亲排盘。</p>
+      </div>
+      <dl class="borrowed">
+        <div>
+          <dt>时间起卦</dt>
+          <dd>真太阳时才显示地点，标准时直接隐藏</dd>
+        </div>
+        <div>
+          <dt>数字起卦</dt>
+          <dd>按数字串奇偶拆分，分别取上下卦</dd>
+        </div>
+        <div>
+          <dt>结果统一</dt>
+          <dd>X → 阴变阳，O → 阳变阴，进入同一盘面</dd>
+        </div>
+      </dl>
+    </header>
+
+    <section class="boards" aria-label="参考样式改造">
+      <figure>
+        <div class="device">
+          <div class="status">
+            <strong>六爻排盘</strong>
+            <div class="status-meta">
+              <span class="wifi"><i></i><i></i><i></i></span>
+              <span>86%</span>
+              <span class="battery"><span></span></span>
+            </div>
+          </div>
+          <div class="section-band">
+            <strong>时间起卦</strong>
+            <span>农历年月日时</span>
+          </div>
+          <div class="setup-body">
+            <div class="form">
+              <div class="form-row"><span>事项</span><span>工作职位</span></div>
+              <div class="form-row"><span>时间</span><span>11-24 09:42</span></div>
+              <div class="form-row"><span>时间制</span><span>真太阳时</span></div>
+              <div class="form-row"><span>地点</span><span>上海 · 首页</span></div>
+            </div>
+            <aside class="method-note">
+              <strong>取数结果</strong>
+              <p>年支 7<br>月10 日16<br>上 33→1乾<br>下 39→7艮<br>动 39→3 <em>O →</em></p>
+            </aside>
+          </div>
+          <div class="primary-action">确定　开始排盘 <span>上下改值　长按返回</span></div>
+        </div>
+        <figcaption><strong>时间起卦</strong>使用真太阳时的时候显示地点，并自动带入首页城市；切回标准时间后，该行从表单中隐藏。</figcaption>
+      </figure>
+
+      <figure>
+        <div class="device">
+          <div class="status">
+            <strong>六爻排盘</strong>
+            <div class="status-meta">
+              <span class="wifi"><i></i><i></i><i></i></span>
+              <span>86%</span>
+              <span class="battery"><span></span></span>
+            </div>
+          </div>
+          <div class="section-band">
+            <strong>数字起卦</strong>
+            <span>一组数字</span>
+          </div>
+          <div class="setup-body">
+            <div class="form">
+              <div class="form-row"><span>事项</span><span>工作职位</span></div>
+              <div class="form-row"><span>数字</span><span>2 7 5 1 8</span></div>
+              <div class="form-row"><span>位数</span><span>奇数 2 / 3</span></div>
+              <div class="form-row"><span>时辰</span><span>巳时 6</span></div>
+            </div>
+            <aside class="method-note">
+              <strong>拆分结果</strong>
+              <p>奇数 2+3<br>上 27→1乾<br>下 518→6坎<br>动 13→1 <em>X →</em></p>
+            </aside>
+          </div>
+          <div class="primary-action">确定　开始排盘 <span>上下改数　长按返回</span></div>
+        </div>
+        <figcaption><strong>数字起卦</strong>偶数位平均拆分，奇数位前段少一位；两段和分别取上下卦，再加时辰数取动爻。</figcaption>
+      </figure>
+
+      <figure>
+        <div class="device">
+          <div class="status">
+            <div class="status-meta">
+              <span class="wifi"><i></i><i></i><i></i></span>
+              <span>86%</span>
+              <span class="battery"><span></span></span>
+            </div>
+          </div>
+          <div class="section-band">
+            <span>工作职位</span>
+          </div>
+          <div class="chart-meta">
+            <div class="meta-row">
+              <span>日期</span>
+              <div><time>2026-11-24 09:42　十月十六</time></div>
+            </div>
+            <div class="meta-row">
+              <span>干支</span>
+              <div>
+                <span>丙午年</span>
+                <span class="pillar-day">己亥月</span>
+                <span class="pillar-day">壬寅日</span>
+                <span>乙巳时</span>
+              </div>
+            </div>
+            <div class="meta-row">
+              <span>旬空</span>
+              <div><span>辰巳　世二应五　时间起卦</span></div>
+            </div>
+          </div>
+          <div class="hex-sheet">
+            <section class="hex-column" aria-label="本卦天山遁">
+              <div class="hex-title"><span>本卦</span><strong>天山遁</strong></div>
+              <div class="hex-row"><span class="god">虎</span><span class="relation earth">父母壬戌</span><span class="hexline"></span><span class="position"></span></div>
+              <div class="hex-row"><span class="god">蛇</span><span class="relation metal">兄弟壬申</span><span class="hexline"></span><span class="position">应</span></div>
+              <div class="hex-row"><span class="god">勾</span><span class="relation fire">官鬼壬午</span><span class="hexline"></span><span class="position"></span></div>
+              <div class="hex-row selected"><span class="god">雀</span><span class="relation metal">兄弟丙申</span><span class="hexline"></span><span class="position">O →</span></div>
+              <div class="hex-row"><span class="god">龙</span><span class="relation fire">官鬼丙午</span><span class="hexline yin"></span><span class="position"></span></div>
+              <div class="hex-row"><span class="god">玄</span><span class="relation earth">父母丙辰</span><span class="hexline yin"></span><span class="position">世</span></div>
+            </section>
+            <section class="hex-column" aria-label="变卦天地否">
+              <div class="hex-title"><span>变卦</span><strong>天地否</strong></div>
+              <div class="changed-row"><span class="relation earth">父母壬戌</span><span class="hexline"></span><span class="position"></span></div>
+              <div class="changed-row"><span class="relation metal">兄弟壬申</span><span class="hexline"></span><span class="position"></span></div>
+              <div class="changed-row"><span class="relation fire">官鬼壬午</span><span class="hexline"></span><span class="position"></span></div>
+              <div class="changed-row selected"><span class="relation wood">妻财乙卯</span><span class="hexline yin"></span></div>
+              <div class="changed-row"><span class="relation fire">官鬼乙巳</span><span class="hexline yin"></span></div>
+              <div class="changed-row"><span class="relation earth">父母乙未</span><span class="hexline yin"></span></div>
+            </section>
+          </div>
+          <div class="chart-footer">
+            <p><span>上下选爻　确定详参</span><span>长按确定回起卦</span></p>
+          </div>
+        </div>
+        <figcaption><strong>双卦排盘</strong>时间法得到天山遁，三爻阳变阴标 O →，变卦为天地否。两种起卦方式最终都进入这张同一结构的盘面。</figcaption>
+      </figure>
+    </section>
+
+    <section class="legend">
+      <div>
+        <h2>两种起卦，落到同一盘面</h2>
+        <p>起卦方式只决定如何得到六爻与动爻。得到结果后，八宫、世应、纳甲、六亲、六神、伏神和日月关系都走同一套离线规则。</p>
+      </div>
+      <div class="rule-list">
+        <div class="rule"><strong>校正地点</strong>仅真太阳时出现，默认复用首页城市</div>
+        <div class="rule"><strong>数字起卦</strong>偶数位平分，奇数位前段少一位</div>
+        <div class="rule"><strong>统一排盘</strong>两种方法生成相同的本卦、变卦与六爻数据</div>
+        <div class="rule"><strong>标准时间</strong>隐藏地点，直接用设备当前时区</div>
+      </div>
+    </section>
+  </main>
+</body>
+</html>

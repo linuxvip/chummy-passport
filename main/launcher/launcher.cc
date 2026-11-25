@@ -98,6 +98,7 @@ IconPalette icon_palette(passport_app_id_t id) {
         case APP_ID_REMINDERS: return {0xF3D86B, 0x463A16, 0x786317, 0xF1E8C4};
         case APP_ID_LISTS: return {0x73DF97, 0x183C27, 0x3D7A55, 0xDCEDDF};
         case APP_ID_BAZI: return {0xF17D66, 0x45211D, 0xA34B3E, 0xF1DDD7};
+        case APP_ID_LIUYAO: return {0x39C7C3, 0x123C3C, 0x14777A, 0xD8EEEB};
         case APP_ID_CALENDAR: return {0x7DBCF6, 0x18364E, 0x3C6690, 0xDDE9F3};
         case APP_ID_SETTINGS: return {0xB0C2CE, 0x28343C, 0x58635D, 0xE4E7E3};
         default: return {0xD9CFB9, 0x29343B, 0x5B5145, 0xE4E7E3};
@@ -239,6 +240,25 @@ constexpr IconGlyph kIconGlyphs[] = {
         "..##..##..##..##.",
         "..#...#...#...#..",
         "..#...#...#...#..",
+        ".................",
+        ".................",
+    }},
+    {APP_ID_LIUYAO, {  // six yao lines with changing marks
+        ".................",
+        "..#############..",
+        ".................",
+        "..####...####....",
+        ".................",
+        "..#############..",
+        ".................",
+        "..####...####....",
+        ".................",
+        "..#############..",
+        ".................",
+        "..####...####....",
+        ".................",
+        "..#############..",
+        ".....O.....X.....",
         ".................",
         ".................",
     }},

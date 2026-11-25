@@ -21,6 +21,8 @@ all_chars.txt
 ui_chars.txt
 tests/font_report.txt
 .impeccable/
+.hallmark/
+docs/.hallmark/
 
 # Generated firmware and local validation artifacts
 *.uf2

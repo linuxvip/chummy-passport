@@ -38,6 +38,7 @@ extern const passport_app_t g_netease_app;
 extern const passport_app_t g_reminders_app;
 extern const passport_app_t g_lists_app;
 extern const passport_app_t g_bazi_app;
+extern const passport_app_t g_liuyao_app;
 extern const passport_app_t g_calendar_app;
 
 namespace {
@@ -53,6 +54,7 @@ const passport_app_t *s_apps[] = {
     &g_reminders_app,
     &g_lists_app,
     &g_bazi_app,
+    &g_liuyao_app,
     &g_calendar_app,
     &g_settings_app,   // 设置放最后(应用惯用收尾位置)
 };
@@ -61,7 +63,7 @@ constexpr size_t kAppCount = sizeof(s_apps) / sizeof(s_apps[0]);
 bool feedback_allowed(passport_app_id_t id) {
     return id == APP_ID_HOME || id == APP_ID_LAUNCHER || id == APP_ID_SETTINGS ||
            id == APP_ID_WIFI || id == APP_ID_REMINDERS || id == APP_ID_LISTS || id == APP_ID_BAZI ||
-           id == APP_ID_CALENDAR;
+           id == APP_ID_CALENDAR || id == APP_ID_LIUYAO;
 }
 std::atomic<passport_app_id_t> s_active_id{APP_ID_LAUNCHER};
 wake_gate_t s_wake_gate{};

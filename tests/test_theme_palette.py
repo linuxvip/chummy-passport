@@ -9,6 +9,7 @@ header = (ROOT / "main/ui/ui_palette.h").read_text()
 pixel = (ROOT / "main/ui/ui_pixel.c").read_text()
 home = (ROOT / "main/apps/home/app_home.cc").read_text()
 bazi = (ROOT / "main/apps/bazi/app_bazi.cc").read_text()
+liuyao = (ROOT / "main/apps/liuyao/app_liuyao.cc").read_text()
 calendar = (ROOT / "main/apps/calendar/app_calendar.cc").read_text()
 
 for declaration in (
@@ -66,6 +67,7 @@ assert "s_ui_theme == UI_THEME_PAPER" in pixel
 assert "s_ui_theme == UI_THEME_NIGHT" in pixel
 assert "ui_theme_element_color" in home
 assert "ui_theme_element_color" in bazi
+assert "ui_theme_element_color" in liuyao
 assert "ui_theme_element_color" in calendar
 for theme in names:
     entries = re.findall(

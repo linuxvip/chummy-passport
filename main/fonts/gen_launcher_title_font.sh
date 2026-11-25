@@ -4,7 +4,7 @@ set -euo pipefail
 PROJ="$(cd -- "$(dirname -- "$0")/../.." && pwd)"
 OTF="$PROJ/managed_components/lvgl__lvgl/scripts/built_in_font/SourceHanSansSC-Normal.otf"
 OUT="$PROJ/main/fonts/launcher_title_20.c"
-SYMBOLS="小智城市收音机音乐播放器备忘提醒事项清单八字排盘万年历设置"
+SYMBOLS="小智城市收音机音乐播放器备忘提醒事项清单八字六爻排盘万年历设置"
 
 cd "$PROJ"
 npx --yes lv_font_conv \

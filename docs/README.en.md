@@ -4,7 +4,7 @@
 
 **A small device worth keeping in your daily routine.**
 
-Community firmware for the FoloToy AI Passport, based on ESP32-C3 with 8 MB Flash. Version `1.0.0` brings eight launchable apps together with the Home dashboard, shared settings, Wi-Fi setup, themes, audio, battery reporting, and power management.
+Community firmware for the FoloToy AI Passport, based on ESP32-C3 with 8 MB Flash. Version `1.0.0` brings nine launchable apps together with the Home dashboard, shared settings, Wi-Fi setup, themes, audio, battery reporting, and power management.
 
 **Ask Xiaozhi to adjust the volume, play music or radio, and set reminders on the device.**
 
@@ -27,13 +27,13 @@ People have suggested many personal improvements. Because everyone uses the hard
 | “Play traffic radio from Shenzhen” | Find a station by city and keywords, then open Radio to play it |
 | “Remind me to drink water in ten minutes” or “Remind me to read every day at 9 pm” | Save a one-time or recurring reminder with an on-device alert and chime |
 | “Add checklist items: keys, phone, umbrella” or “Mark umbrella as done” | Operate the device's single shared checklist and its item completion state |
-| “Open Bazi” or “Go to Home” | Open the requested app or screen |
+| “Open Bazi”, “Open Liuyao”, or “Go to Home” | Open the requested app or screen |
 
 You can also ask for today's AI news. Robot expressions and an audio waveform follow listening and speech, longer text expands into a reading area, and all six themes are supported.
 
 Voice tools require a network connection and Xiaozhi configuration. NetEase playback also depends on your account and available tracks; radio depends on the online directory. Opening another app or starting media playback ends the current Xiaozhi conversation. Double-press OK again for further voice control. The device must remain powered on for reminders to trigger.
 
-## Home and eight apps
+## Home and nine apps
 
 Home is the system's base screen. Press OK to enter the application picker, which uses the **Passport Flow** full-page carousel. Each page focuses on one app inside a large icon ring, with a position rail and indicators for the device's Up, Down, and OK buttons. Short Up/Down presses move one app, long presses move by four, and OK opens the focused app. Long-press OK to return Home.
 
@@ -46,6 +46,7 @@ Home is the system's base screen. Press OK to enter the application picker, whic
 | Reminders | One-time and recurring reminders, chimes, and snooze | Works offline; uses the device clock |
 | Lists | View, check off, and manage tasks | Works offline |
 | Bazi chart | Four pillars, a horizontal luck-cycle row, and vertically scrolling flow years | Works offline; supports birth dates from 1900 to 2100 |
+| Liuyao chart | Time or numeric casting, paired primary and changed hexagrams, six relatives, Shi-Ying, and plain-language hexagram meaning in landscape | Works offline |
 | Perpetual calendar | Month grid with lunar dates, solar terms and each day's Ganzhi; day details include a 6 × 2 twelve-shichen hour-stem table and year/month jump | Works offline; supports 1900–2100 |
 | Settings | Volume, brightness, screen timeout, themes, late-Zi rule, Wi-Fi, key sounds, diagnostics, and restoring defaults | Wi-Fi settings require network configuration |
 

@@ -1,0 +1,1202 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Passport OS 六爻排盘应用的五屏 240×320 交互设计预览，包含时间起卦、数字起卦、六爻盘、单爻详参和取用参断。">
+  <title>Passport OS 六爻排盘 · 界面设计</title>
+  <style>
+/* Hallmark · shape: app screen · genre: technical · theme: Passport travel instrument (locked project system) · scope: app · states: setup, casting, chart, line detail, use-spirit review · v2.0.0
+ * critique: the six-line scan table is the signature; one axis carries line, relation, Na Jia, Shi-Ying and change instead of splitting the chart into cards.
+ * sweep: slopLint clean 0 FAIL / 0 REFLEX / 0 WARN · finish review: in-thread ship · no external imagery
+ */
+/* Hallmark · pre-emit critique: P5 H5 E4 S5 R4 V4 · weakest: E, five simultaneous 240px screens compress annotations; each screen keeps one primary read and moves secondary facts to its own state. */
+
+:root {
+  color-scheme: dark;
+  --font-ui: "PingFang SC", "Source Han Sans SC", "Noto Sans CJK SC", sans-serif;
+  --font-data: "SFMono-Regular", "Cascadia Mono", "Noto Sans Mono", monospace;
+  --stage: #0e1211;
+  --stage-rule: #35413d;
+  --stage-text: #eee7d6;
+  --stage-dim: #aaa99d;
+  --stage-caption: #c7c1b2;
+  --paper: #181b1c;
+  --surface: #202526;
+  --surface-alt: #303738;
+  --surface-deep: #141819;
+  --border: #59605d;
+  --text: #eee7d6;
+  --text-dim: #b3b2a5;
+  --accent: #ddb36c;
+  --on-accent: #181b1c;
+  --danger: #f09b87;
+  --want: #e28a72;
+  --wood: #82c89a;
+  --fire: #e28a72;
+  --earth: #ddb36c;
+  --metal: #e2ded0;
+  --water: #79b8d8;
+  --shadow: #070908;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+  overflow-x: clip;
+}
+
+html {
+  background: var(--stage);
+}
+
+body {
+  background: var(--stage);
+  color: var(--stage-text);
+  font-family: var(--font-ui);
+}
+
+a {
+  color: var(--accent);
+  text-underline-offset: 0.2em;
+}
+
+a:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+.page {
+  width: min(1360px, calc(100% - 64px));
+  margin: 0 auto;
+  padding: 44px 0 48px;
+}
+
+.intro {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(280px, 0.8fr);
+  gap: 56px;
+  align-items: end;
+  padding-bottom: 28px;
+  border-bottom: 1px solid var(--stage-rule);
+}
+
+h1 {
+  margin: 0 0 12px;
+  color: var(--stage-text);
+  font-size: clamp(34px, 4.4vw, 58px);
+  font-weight: 500;
+  line-height: 1.05;
+  letter-spacing: -0.045em;
+  overflow-wrap: break-word;
+  min-width: 0;
+  text-wrap: balance;
+}
+
+.lead {
+  max-width: 650px;
+  margin: 0;
+  color: var(--stage-dim);
+  font-size: 18px;
+  line-height: 1.7;
+}
+
+.axioms {
+  display: grid;
+  gap: 0;
+  margin: 0;
+}
+
+.axioms div {
+  display: grid;
+  grid-template-columns: 80px minmax(0, 1fr);
+  gap: 16px;
+  padding: 12px 0;
+  border-top: 1px solid var(--stage-rule);
+}
+
+.axioms dt,
+.axioms dd {
+  margin: 0;
+}
+
+.axioms dt {
+  color: var(--stage-caption);
+  font-size: 13px;
+}
+
+.axioms dd {
+  color: var(--stage-text);
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+.context {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+  margin: 24px 0 8px;
+  color: var(--stage-caption);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.context span + span {
+  padding-left: 20px;
+  border-left: 1px solid var(--stage-rule);
+}
+
+.boards {
+  display: grid;
+  grid-template-columns: repeat(5, 240px);
+  gap: 24px;
+  justify-content: space-between;
+  margin-top: 28px;
+}
+
+figure {
+  min-width: 0;
+  margin: 0;
+}
+
+figcaption {
+  min-height: 66px;
+  padding-top: 12px;
+  color: var(--stage-dim);
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+figcaption strong {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--stage-text);
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.device {
+  position: relative;
+  width: 240px;
+  height: 320px;
+  overflow: clip;
+  background: var(--paper);
+  border: 1px solid var(--border);
+  box-shadow: 10px 12px 0 var(--shadow);
+  color: var(--text);
+}
+
+.status {
+  position: absolute;
+  inset: 0 0 auto;
+  display: flex;
+  align-items: center;
+  height: 26px;
+  padding: 0 8px 0 12px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+
+.status strong {
+  color: var(--text);
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 25px;
+}
+
+.status-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+  color: var(--text);
+  font-family: var(--font-data);
+  font-size: 12px;
+}
+
+.wifi {
+  display: flex;
+  align-items: end;
+  gap: 1px;
+  width: 16px;
+  height: 13px;
+}
+
+.wifi i {
+  display: block;
+  width: 4px;
+  background: var(--text-dim);
+}
+
+.wifi i:nth-child(1) { height: 5px; }
+.wifi i:nth-child(2) { height: 9px; }
+.wifi i:nth-child(3) { height: 13px; background: var(--text); }
+
+.battery {
+  position: relative;
+  width: 24px;
+  height: 12px;
+  border: 2px solid var(--text);
+}
+
+.battery::after {
+  position: absolute;
+  top: 2px;
+  right: -5px;
+  width: 3px;
+  height: 6px;
+  background: var(--text);
+  content: "";
+}
+
+.battery span {
+  position: absolute;
+  inset: 2px auto 2px 2px;
+  width: 14px;
+  background: var(--wood);
+}
+
+.screen-title {
+  position: absolute;
+  top: 34px;
+  left: 12px;
+  width: 216px;
+  margin: 0;
+  color: var(--text);
+  font-size: 20px;
+  font-weight: 400;
+  line-height: 24px;
+  letter-spacing: 1px;
+}
+
+.screen-note {
+  position: absolute;
+  top: 58px;
+  left: 12px;
+  width: 216px;
+  margin: 0;
+  color: var(--text-dim);
+  font-size: 12px;
+  line-height: 16px;
+}
+
+.field-list {
+  position: absolute;
+  top: 78px;
+  left: 12px;
+  width: 216px;
+}
+
+.field {
+  display: grid;
+  grid-template-columns: 46px minmax(0, 1fr);
+  align-items: center;
+  height: 24px;
+  padding: 0 8px;
+  color: var(--text);
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.field span:last-child {
+  overflow: hidden;
+  text-align: right;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.field.selected {
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+.field.action {
+  margin-top: 4px;
+  border: 1px solid var(--accent);
+  color: var(--accent);
+}
+
+.footer {
+  position: absolute;
+  top: 272px;
+  left: 12px;
+  width: 216px;
+  border-top: 1px solid var(--border);
+}
+
+.footer p {
+  margin: 4px 0 0;
+  color: var(--text);
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.footer p + p {
+  margin-top: 1px;
+  color: var(--text-dim);
+  text-align: right;
+}
+
+.cast-head {
+  position: absolute;
+  top: 34px;
+  left: 12px;
+  width: 216px;
+}
+
+.cast-head strong {
+  display: block;
+  color: var(--text);
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 20px;
+}
+
+.cast-head span {
+  display: block;
+  margin-top: 2px;
+  color: var(--text-dim);
+  font-size: 12px;
+  line-height: 16px;
+}
+
+.cast-result {
+  position: absolute;
+  top: 88px;
+  left: 12px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 54px;
+  align-items: center;
+  width: 216px;
+  height: 72px;
+  padding: 0 12px;
+  background: var(--surface-alt);
+  border: 1px solid var(--accent);
+}
+
+.cast-result .label {
+  color: var(--text-dim);
+  font-size: 12px;
+  line-height: 16px;
+}
+
+.cast-result .value {
+  margin-top: 2px;
+  color: var(--text);
+  font-size: 28px;
+  line-height: 32px;
+  font-variant-numeric: tabular-nums;
+}
+
+.cast-result .name {
+  color: var(--accent);
+  font-size: 16px;
+  line-height: 20px;
+  text-align: right;
+}
+
+.cast-result .number {
+  margin-top: 2px;
+  color: var(--text-dim);
+  font-family: var(--font-data);
+  font-size: 12px;
+  line-height: 16px;
+  text-align: right;
+}
+
+.toss-stack {
+  position: absolute;
+  top: 170px;
+  left: 12px;
+  width: 216px;
+}
+
+.toss-row {
+  display: grid;
+  grid-template-columns: 26px 38px minmax(0, 1fr) 42px;
+  align-items: center;
+  height: 13px;
+  color: var(--text-dim);
+  font-size: 11px;
+  line-height: 13px;
+}
+
+.toss-row.current {
+  color: var(--accent);
+}
+
+.toss-row .glyph {
+  position: relative;
+  justify-self: start;
+  width: 30px;
+  height: 3px;
+  background: currentColor;
+}
+
+.toss-row .glyph.yin {
+  width: 30px;
+  background: linear-gradient(
+    to right,
+    currentColor 0 13px,
+    transparent 13px 17px,
+    currentColor 17px 30px
+  );
+}
+
+.toss-row .glyph.empty {
+  height: 1px;
+  background: var(--border);
+}
+
+.toss-row .glyph.moving::after {
+  position: absolute;
+  top: 5px;
+  right: 12px;
+  width: 4px;
+  height: 4px;
+  background: var(--accent);
+  content: "";
+  transform: rotate(45deg);
+}
+
+.toss-row .state {
+  text-align: right;
+}
+
+.chart-date {
+  position: absolute;
+  top: 31px;
+  left: 12px;
+  width: 216px;
+  color: var(--text-dim);
+  font-size: 11px;
+  line-height: 15px;
+}
+
+.chart-date .empty-badge {
+  float: right;
+  padding: 0 4px;
+  border: 1px solid var(--border);
+  color: var(--text);
+}
+
+.hex-pair {
+  position: absolute;
+  top: 47px;
+  left: 12px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 14px minmax(0, 1fr);
+  align-items: center;
+  width: 216px;
+  color: var(--text);
+  line-height: 1;
+}
+
+.hex-pair > div {
+  display: grid;
+  justify-items: center;
+}
+
+.hex-pair small {
+  color: var(--text-dim);
+  font-size: 9px;
+  line-height: 11px;
+}
+
+.hex-pair strong {
+  color: var(--text);
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 20px;
+}
+
+.hex-pair .change {
+  color: var(--text-dim);
+  font-size: 12px;
+  text-align: center;
+}
+
+.palace {
+  position: absolute;
+  top: 82px;
+  left: 12px;
+  width: 216px;
+  color: var(--text-dim);
+  font-size: 11px;
+  line-height: 14px;
+}
+
+.chart-head {
+  position: absolute;
+  top: 96px;
+  left: 12px;
+  display: grid;
+  grid-template-columns: 24px 54px 40px 30px minmax(0, 1fr);
+  width: 216px;
+  color: var(--text-dim);
+  font-size: 11px;
+  line-height: 13px;
+}
+
+.chart-head .right {
+  text-align: right;
+}
+
+.lines {
+  position: absolute;
+  top: 110px;
+  left: 12px;
+  width: 216px;
+}
+
+.line-row {
+  display: grid;
+  grid-template-columns: 24px 54px 40px 30px minmax(0, 1fr);
+  align-items: center;
+  height: 26px;
+  padding: 0 1px;
+  color: var(--text);
+  font-size: 11px;
+  line-height: 16px;
+}
+
+.line-row.selected {
+  background: var(--surface-alt);
+  outline: 1px solid var(--accent);
+  outline-offset: -1px;
+}
+
+.line-row .god {
+  color: var(--text-dim);
+}
+
+.line-row .relation.wood { color: var(--wood); }
+.line-row .relation.fire { color: var(--fire); }
+.line-row .relation.earth { color: var(--earth); }
+.line-row .relation.metal { color: var(--metal); }
+.line-row .relation.water { color: var(--water); }
+
+.hexline {
+  position: relative;
+  justify-self: center;
+  width: 32px;
+  height: 3px;
+  background: var(--text);
+}
+
+.hexline.yin {
+  width: 32px;
+  background: linear-gradient(
+    to right,
+    var(--text) 0 14px,
+    transparent 14px 18px,
+    var(--text) 18px 32px
+  );
+}
+
+.line-row .position {
+  color: var(--text);
+  text-align: right;
+  white-space: nowrap;
+}
+
+.line-row.selected .position,
+.line-row .position.active {
+  color: var(--accent);
+}
+
+.line-row .changed {
+  overflow: hidden;
+  color: var(--text-dim);
+  text-align: right;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.line-row.selected .changed {
+  color: var(--text);
+}
+
+.detail-kicker {
+  position: absolute;
+  top: 33px;
+  left: 12px;
+  color: var(--text-dim);
+  font-size: 11px;
+  line-height: 15px;
+}
+
+.detail-title {
+  position: absolute;
+  top: 49px;
+  left: 12px;
+  width: 216px;
+  color: var(--text);
+  font-size: 20px;
+  line-height: 24px;
+}
+
+.detail-title span {
+  color: var(--accent);
+  font-size: 12px;
+}
+
+.detail-line {
+  position: absolute;
+  top: 82px;
+  left: 12px;
+  display: grid;
+  grid-template-columns: 54px minmax(0, 1fr);
+  align-items: center;
+  width: 216px;
+  height: 44px;
+  padding: 0 12px;
+  background: var(--surface-alt);
+  border: 1px solid var(--border);
+}
+
+.detail-line .meaning {
+  color: var(--text-dim);
+  font-size: 11px;
+  line-height: 15px;
+}
+
+.detail-line .drawing {
+  justify-self: end;
+}
+
+.detail-line .drawing i {
+  position: relative;
+  display: block;
+  width: 48px;
+  height: 4px;
+  background: var(--accent);
+}
+
+.detail-line .drawing i::after {
+  position: absolute;
+  top: 8px;
+  right: 21px;
+  width: 5px;
+  height: 5px;
+  background: var(--accent);
+  content: "";
+  transform: rotate(45deg);
+}
+
+.detail-grid {
+  position: absolute;
+  top: 132px;
+  left: 12px;
+  width: 216px;
+}
+
+.detail-row {
+  display: grid;
+  grid-template-columns: 46px minmax(0, 1fr);
+  align-items: center;
+  min-height: 18px;
+  padding: 0 4px;
+  border-bottom: 1px solid var(--surface-alt);
+  color: var(--text);
+  font-size: 11px;
+  line-height: 16px;
+}
+
+.detail-row span:first-child {
+  color: var(--text-dim);
+}
+
+.detail-row strong {
+  font-weight: 400;
+}
+
+.detail-row .accent {
+  color: var(--accent);
+}
+
+.tag-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.tag {
+  padding: 0 4px;
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-size: 11px;
+  line-height: 15px;
+}
+
+.use-spirit {
+  position: absolute;
+  top: 34px;
+  left: 12px;
+  width: 216px;
+}
+
+.use-spirit .caption {
+  color: var(--text-dim);
+  font-size: 11px;
+  line-height: 15px;
+}
+
+.use-spirit .name {
+  margin-top: 2px;
+  color: var(--text);
+  font-size: 20px;
+  line-height: 24px;
+}
+
+.use-spirit .name span {
+  color: var(--wood);
+}
+
+.relation-band {
+  position: absolute;
+  top: 71px;
+  left: 12px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  width: 216px;
+  border: 1px solid var(--border);
+}
+
+.relation-band div {
+  min-height: 32px;
+  padding: 8px;
+  color: var(--text);
+  font-size: 11px;
+  line-height: 15px;
+}
+
+.relation-band div:nth-child(odd) {
+  border-right: 1px solid var(--border);
+}
+
+.relation-band div:nth-child(-n + 2) {
+  border-bottom: 1px solid var(--border);
+}
+
+.relation-band small {
+  display: block;
+  color: var(--text-dim);
+  font-size: 9px;
+  line-height: 12px;
+}
+
+.use-list {
+  position: absolute;
+  top: 158px;
+  left: 12px;
+  width: 216px;
+}
+
+.use-list .use-row {
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr);
+  align-items: center;
+  min-height: 25px;
+  padding: 0 4px;
+  border-bottom: 1px solid var(--surface-alt);
+  color: var(--text);
+  font-size: 11px;
+  line-height: 16px;
+}
+
+.use-list .use-row span:first-child {
+  color: var(--text-dim);
+}
+
+.use-list .use-row.selected {
+  background: var(--accent);
+  border-bottom-color: var(--accent);
+  color: var(--on-accent);
+}
+
+.use-list .use-row.selected span:first-child {
+  color: var(--on-accent);
+}
+
+.legend {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(0, 0.7fr);
+  gap: 56px;
+  margin-top: 40px;
+  padding-top: 24px;
+  border-top: 1px solid var(--stage-rule);
+}
+
+.legend h2 {
+  margin: 0 0 12px;
+  color: var(--stage-text);
+  font-size: 20px;
+  font-weight: 500;
+  line-height: 1.25;
+  text-wrap: balance;
+}
+
+.legend p {
+  margin: 0;
+  color: var(--stage-dim);
+  font-size: 14px;
+  line-height: 1.7;
+}
+
+.legend-list {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+}
+
+.legend-item {
+  display: grid;
+  grid-template-columns: 70px minmax(0, 1fr);
+  align-items: center;
+  color: var(--stage-caption);
+  font-size: 13px;
+}
+
+.legend-item strong {
+  color: var(--stage-text);
+  font-size: 14px;
+  font-weight: 400;
+}
+
+.symbol {
+  position: relative;
+  width: 44px;
+  height: 4px;
+  background: var(--stage-text);
+}
+
+.symbol.yin {
+  background: linear-gradient(
+    to right,
+    var(--stage-text) 0 19px,
+    transparent 19px 25px,
+    var(--stage-text) 25px 44px
+  );
+}
+
+.symbol.sh {
+  width: auto;
+  height: auto;
+  background: none;
+  color: var(--accent);
+  font-size: 14px;
+}
+
+.symbol.change {
+  width: auto;
+  height: auto;
+  background: none;
+  color: var(--accent);
+  font-family: var(--font-data);
+  font-size: 14px;
+}
+
+.foot {
+  display: flex;
+  justify-content: space-between;
+  gap: 24px;
+  margin-top: 20px;
+  color: var(--stage-dim);
+  font-size: 12px;
+}
+
+.foot a {
+  white-space: nowrap;
+}
+
+a:active {
+  color: var(--stage-text);
+}
+
+@media (max-width: 1340px) {
+  .boards {
+    grid-template-columns: repeat(3, 240px);
+    justify-content: center;
+  }
+}
+
+@media (max-width: 880px) {
+  .page {
+    width: min(100% - 32px, 640px);
+    padding-top: 28px;
+  }
+
+  .intro,
+  .legend {
+    grid-template-columns: 1fr;
+    gap: 28px;
+  }
+
+  .boards {
+    grid-template-columns: 240px;
+  }
+
+  figcaption {
+    min-height: 0;
+  }
+
+  .context span + span {
+    padding-left: 0;
+    border-left: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto;
+  }
+}
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header class="intro">
+      <div>
+        <h1>六爻排盘<br>时间数字，皆可成卦</h1>
+        <p class="lead">为 Passport OS 设计。时间起卦与数字起卦先给出取数和动爻，再共用同一套六爻盘面与专业标注。</p>
+      </div>
+      <dl class="axioms">
+        <div>
+          <dt>产品定位</dt>
+          <dd>离线排盘与规则核对工具，不输出自动吉凶</dd>
+        </div>
+        <div>
+          <dt>目标使用者</dt>
+          <dd>能自行取用神、判断旺衰与变向的六爻实践者</dd>
+        </div>
+        <div>
+          <dt>核心动作</dt>
+          <dd>选择时间或数字起卦，校对取数后立即查盘</dd>
+        </div>
+      </dl>
+    </header>
+
+    <div class="context" aria-label="样盘条件">
+      <span>样盘时间 2026-11-24 09:42</span>
+      <span>丙午年 己亥月 壬寅日 乙巳时</span>
+      <span>旬空 辰巳</span>
+    </div>
+
+    <section class="boards" aria-label="五屏界面">
+      <figure>
+        <div class="device">
+          <div class="status">
+            <strong>六爻起卦</strong>
+            <div class="status-meta">
+              <span class="wifi"><i></i><i></i><i></i></span>
+              <span>86%</span>
+              <span class="battery"><span></span></span>
+            </div>
+          </div>
+          <p class="screen-title">起卦方式</p>
+          <p class="screen-note">真太阳时才显示地点，标准时间直接隐藏</p>
+          <div class="field-list">
+            <div class="field selected"><span>问事</span><span>工作职位</span></div>
+            <div class="field"><span>起卦</span><span>时间起卦</span></div>
+            <div class="field"><span>时间</span><span>11-24 09:42</span></div>
+            <div class="field"><span>时间制</span><span>真太阳时</span></div>
+            <div class="field"><span>地点</span><span>上海 · 首页</span></div>
+            <div class="field"><span>卦象</span><span>乾上 艮下</span></div>
+            <div class="field"><span>动爻</span><span>三爻 O →</span></div>
+            <div class="field action"><span>开始</span><span>生成六爻盘</span></div>
+          </div>
+          <div class="footer">
+            <p>上下选择 · 确定修改</p>
+            <p>长按下键起卦</p>
+          </div>
+        </div>
+        <figcaption><strong>01 起卦方式</strong>真太阳时才显示地点并自动带入首页城市；标准时间隐藏地点，不受经度修正影响。</figcaption>
+      </figure>
+
+      <figure>
+        <div class="device">
+          <div class="status">
+            <strong>六爻起卦</strong>
+            <div class="status-meta">
+              <span class="wifi"><i></i><i></i><i></i></span>
+              <span>86%</span>
+              <span class="battery"><span></span></span>
+            </div>
+          </div>
+          <div class="cast-head">
+            <strong>数字起卦　奇数 2 / 3</strong>
+            <span>输入一组数字，自动拆分并取上下卦</span>
+          </div>
+          <div class="cast-result">
+            <div>
+              <div class="label">起卦数字</div>
+              <div class="value">27518</div>
+            </div>
+            <div>
+              <div class="name">乾上</div>
+              <div class="number">坎下 · X →</div>
+            </div>
+          </div>
+          <div class="toss-stack" aria-label="数字生成的六爻">
+            <div class="toss-row"><span>上六</span><span class="glyph"></span><span>乾上</span><span class="state">阳爻</span></div>
+            <div class="toss-row"><span>五爻</span><span class="glyph"></span><span></span><span class="state">阳爻</span></div>
+            <div class="toss-row"><span>四爻</span><span class="glyph"></span><span></span><span class="state">阳爻</span></div>
+            <div class="toss-row"><span>三爻</span><span class="glyph yin"></span><span></span><span class="state">阴爻</span></div>
+            <div class="toss-row"><span>二爻</span><span class="glyph"></span><span>坎下</span><span class="state">阳爻</span></div>
+            <div class="toss-row current"><span>初爻</span><span class="glyph yin"></span><span></span><span class="state">X →</span></div>
+          </div>
+          <div class="footer">
+            <p>上下改数字 · 长按确定起卦</p>
+            <p>长按确定回方式页</p>
+          </div>
+        </div>
+        <figcaption><strong>02 数字起卦</strong>输入 27518 后按奇数 2/3 拆分，得到乾上、坎下与初爻阴变阳，确认后生成同一套六爻盘。</figcaption>
+      </figure>
+
+      <figure>
+        <div class="device">
+          <div class="status">
+            <strong>六爻排盘</strong>
+            <div class="status-meta">
+              <span class="wifi"><i></i><i></i><i></i></span>
+              <span>86%</span>
+              <span class="battery"><span></span></span>
+            </div>
+          </div>
+          <div class="chart-date">己亥月　壬寅日　乙巳时 <span class="empty-badge">空辰巳</span></div>
+          <div class="hex-pair">
+            <div><small>本卦</small><strong>天山遁</strong></div>
+            <span class="change">之</span>
+            <div><small>变卦</small><strong>天地否</strong></div>
+          </div>
+          <div class="palace">乾宫二世　世二应五　工作职位</div>
+          <div class="chart-head">
+            <span>六神</span><span>六亲纳甲</span><span>爻画</span><span>位</span><span class="right">变爻</span>
+          </div>
+          <div class="lines">
+            <div class="line-row">
+              <span class="god">白虎</span><span class="relation earth">父母壬戌</span><span class="hexline"></span><span class="position"></span><span class="changed"></span>
+            </div>
+            <div class="line-row">
+              <span class="god">螣蛇</span><span class="relation metal">兄弟壬申</span><span class="hexline"></span><span class="position">应</span><span class="changed"></span>
+            </div>
+            <div class="line-row">
+              <span class="god">勾陈</span><span class="relation fire">官鬼壬午</span><span class="hexline"></span><span class="position"></span><span class="changed"></span>
+            </div>
+            <div class="line-row selected">
+              <span class="god">朱雀</span><span class="relation metal">兄弟丙申</span><span class="hexline"></span><span class="position">O →</span><span class="changed">妻财乙卯</span>
+            </div>
+            <div class="line-row">
+              <span class="god">青龙</span><span class="relation fire">官鬼丙午</span><span class="hexline yin"></span><span class="position"></span><span class="changed"></span>
+            </div>
+            <div class="line-row">
+              <span class="god">玄武</span><span class="relation earth">父母丙辰</span><span class="hexline yin"></span><span class="position">世</span><span class="changed"></span>
+            </div>
+          </div>
+          <div class="footer">
+            <p>上下选爻 · 确定看详参</p>
+            <p>长按确定回起卦页</p>
+          </div>
+        </div>
+        <figcaption><strong>03 六爻主盘</strong>时间起卦得到天山遁，三爻 O → 阳变阴；右侧变爻为天地否，世应不再另开一页。</figcaption>
+      </figure>
+
+      <figure>
+        <div class="device">
+          <div class="status">
+            <strong>六爻详参</strong>
+            <div class="status-meta">
+              <span class="wifi"><i></i><i></i><i></i></span>
+              <span>86%</span>
+              <span class="battery"><span></span></span>
+            </div>
+          </div>
+          <div class="detail-kicker">天山遁　三爻　朱雀</div>
+          <div class="detail-title">兄弟丙申 <span>O →</span></div>
+          <div class="detail-line">
+            <span class="meaning">阳爻<br>变阴</span>
+            <span class="drawing"><i></i></span>
+          </div>
+          <div class="detail-grid">
+            <div class="detail-row"><span>变爻</span><strong class="accent">妻财乙卯　化出</strong></div>
+            <div class="detail-row"><span>月建</span><strong>亥水　泄申金</strong></div>
+            <div class="detail-row"><span>日辰</span><strong>寅木　金克木</strong></div>
+            <div class="detail-row"><span>旬空</span><strong>辰巳　本爻不空</strong></div>
+            <div class="detail-row"><span>冲合</span><strong>无月破　巳申合</strong></div>
+            <div class="detail-row"><span>伏神</span><strong>子孙甲子　初爻伏</strong></div>
+            <div class="tag-row" aria-label="爻状态">
+              <span class="tag">阳变阴</span><span class="tag">化妻财</span><span class="tag">兄弟爻</span>
+            </div>
+          </div>
+          <div class="footer">
+            <p>上下换爻 · 确定参断</p>
+            <p>长按确定回主盘</p>
+          </div>
+        </div>
+        <figcaption><strong>04 单爻详参</strong>只展开当前爻，把旺衰、空破、冲合和伏神放回同一条阅读线，不把整盘拆成连续翻页。</figcaption>
+      </figure>
+
+      <figure>
+        <div class="device">
+          <div class="status">
+            <strong>六爻参断</strong>
+            <div class="status-meta">
+              <span class="wifi"><i></i><i></i><i></i></span>
+              <span>86%</span>
+              <span class="battery"><span></span></span>
+            </div>
+          </div>
+          <div class="use-spirit">
+            <div class="caption">当前取用　工作职位</div>
+            <div class="name">官鬼 <span>四爻</span></div>
+          </div>
+          <div class="relation-band">
+            <div><small>用神</small>壬午火</div>
+            <div><small>原神</small>甲寅木</div>
+            <div><small>忌神</small>甲子水</div>
+            <div><small>仇神</small>壬戌土</div>
+          </div>
+          <div class="use-list">
+            <div class="use-row selected"><span>用神</span><span>官鬼壬午　四爻</span></div>
+            <div class="use-row"><span>旺衰</span><span>月克　日生　不空</span></div>
+            <div class="use-row"><span>生克</span><span>日寅木生午火</span></div>
+            <div class="use-row"><span>伏神</span><span>妻财甲寅　二爻伏</span></div>
+          </div>
+          <div class="footer">
+            <p>上下换用神 · 确定定位</p>
+            <p>长按回主盘 · 不判吉凶</p>
+          </div>
+        </div>
+        <figcaption><strong>05 取用参断</strong>类别只给建议，不强制取神；用神、原神、忌神、仇神和关键状态集中核对。</figcaption>
+      </figure>
+    </section>
+
+    <section class="legend">
+      <div>
+        <h2>爻线就是这套界面的骨架</h2>
+        <p>阴变阳标 X →，阳变阴标 O →，变化方向不再依赖单个“动”字。五行仅给六亲纳甲着色，文字始终保留；所有信息都落在六条水平轴上。</p>
+      </div>
+      <div class="legend-list" aria-label="爻线语法">
+        <div class="legend-item"><span class="symbol" aria-hidden="true"></span><strong>阳爻</strong></div>
+        <div class="legend-item"><span class="symbol yin" aria-hidden="true"></span><strong>阴爻</strong></div>
+        <div class="legend-item"><span class="symbol change" aria-hidden="true">X →</span><strong>阴变阳</strong></div>
+        <div class="legend-item"><span class="symbol change" aria-hidden="true">O →</span><strong>阳变阴</strong></div>
+        <div class="legend-item"><span class="symbol sh" aria-hidden="true">世应</span><strong>宫位归属</strong></div>
+      </div>
+    </section>
+
+    <footer class="foot">
+      <span>样盘信息仅用于界面评审，尚未接入固件计算。</span>
+      <a href="liuyao-app-design.md">查看设计文档</a>
+    </footer>
+  </main>
+</body>
+</html>

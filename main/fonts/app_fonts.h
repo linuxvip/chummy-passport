@@ -36,6 +36,10 @@ LV_FONT_DECLARE(ui_font_20);
 // Display readout (大读数): Montserrat 32 digits, '.', ':', space and "NET",
 // copied from LVGL's built-in font by tools/gen_digit_font.py.
 LV_FONT_DECLARE(ui_digits_32);
+// Liuyao chart terminology and hexagram names. The 12px face is the compact
+// two-hexagram table; the 20px face emphasizes the centered gua names.
+LV_FONT_DECLARE(liuyao_font_12);
+LV_FONT_DECLARE(liuyao_title_20);
 
 #ifdef __cplusplus
 }

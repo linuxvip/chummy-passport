@@ -284,6 +284,7 @@ static void system_monitor_task(void *arg) {
 static void handle_serial_command(int c) {
     if (c == 'R') { app_registry_switch_to(APP_ID_REMINDERS); return; }
     if (c == 'N') { app_registry_switch_to(APP_ID_NETEASE); return; }
+    if (c == 'V') { app_registry_switch_to(APP_ID_LIUYAO); return; }
     // Diagnostic equivalent of the resolved physical double-click. It uses
     // the same wake/lifecycle/one-shot conversation path, not a direct mic call.
     if (c == 'x') { app_registry_dispatch_key(BSP_BTN_OK, BTN_EVT_DOUBLE, 600); return; }

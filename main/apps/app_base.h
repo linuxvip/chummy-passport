@@ -20,6 +20,7 @@ typedef enum {
     APP_ID_REMINDERS,
     APP_ID_LISTS,
     APP_ID_BAZI,
+    APP_ID_LIUYAO,
     APP_ID_CALENDAR,
     APP_ID_COUNT
 } passport_app_id_t;

@@ -8,7 +8,7 @@ Embedded ESP32-C3 firmware with LVGL on a 240×320 screen. This is not a web, iO
 
 ## Users and purpose
 
-The owner and people using the same AI Passport hardware use its physical buttons, display, microphone and speaker for Xiaozhi voice control, radio, music, reminders, lists, timers and other small utilities.
+The owner and people using the same AI Passport hardware use its physical buttons, display, microphone and speaker for Xiaozhi voice control, radio, music, reminders, lists, timers, Bazi, Liuyao and other small utilities.
 
 ## Operating context
 
@@ -19,6 +19,7 @@ The device has three physical buttons. Wi-Fi and personal information are config
 - ESP32-C3, 8 MB Flash, no PSRAM; preserve memory for Wi-Fi, encrypted connections and recording.
 - App switching must release foreground resources. No black "returning" screens.
 - Default system theme is classic green; keep the alternative travel theme and existing button semantics.
+- Liuyao uses an app-local landscape rotation and must restore portrait before leaving.
 
 ## Evidence
 

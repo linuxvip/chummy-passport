@@ -19,9 +19,7 @@
 
 static const char *TAG = "uicap";
 
-#define SHOT_W 240
-#define SHOT_H 320
-#define HEX_PER_LINE 120 /* 每行 120 字节 -> 240 个 hex 字符 */
+#define HEX_PER_LINE 120 /* Keep one console line bounded for 240 or 320px widths. */
 
 static const char kHexDigits[] = "0123456789abcdef";
 
@@ -31,11 +29,11 @@ static const char kHexDigits[] = "0123456789abcdef";
  * 而是这条带子 —— 于是 15KB 的缓冲就能"分批"拿到整屏内容。
  */
 static void render_band(lv_display_t *disp, lv_obj_t *scr, lv_draw_buf_t *db,
-                        int32_t y0, int32_t rows) {
+                        int32_t width, int32_t y0, int32_t rows) {
     lv_area_t band;
     band.x1 = 0;
     band.y1 = y0;
-    band.x2 = SHOT_W - 1;
+    band.x2 = width - 1;
     band.y2 = y0 + rows - 1;
 
     lv_layer_t layer;
@@ -102,7 +100,13 @@ void ui_capture_dump_hex(void) {
         return;
     }
 
-    const size_t stride = (size_t)SHOT_W * 2u;
+    const int32_t width = lv_display_get_horizontal_resolution(disp);
+    const int32_t height = lv_display_get_vertical_resolution(disp);
+    if (width <= 0 || height <= 0) {
+        printf("--SHOT-ERR no-size--\n");
+        return;
+    }
+    const size_t stride = (size_t)width * 2u;
     uint8_t *buf = NULL;
     int32_t rows = 0;
     const int32_t candidates[] = {32, 16, 8, 4};
@@ -119,27 +123,28 @@ void ui_capture_dump_hex(void) {
         return;
     }
 
-    ESP_LOGI(TAG, "capture start: %dx%d, band=%d rows, free=%u largest=%u", SHOT_W, SHOT_H,
+    ESP_LOGI(TAG, "capture start: %dx%d, band=%d rows, free=%u largest=%u",
+             (int)width, (int)height,
              (int)rows, (unsigned)esp_get_free_heap_size(),
              (unsigned)heap_caps_get_largest_free_block(MALLOC_CAP_8BIT | MALLOC_CAP_INTERNAL));
 
     // 先排一次布局，避免截到上一次 layout 未更新的中间态。
     lv_obj_update_layout(scr);
 
-    printf("--SHOT-BEGIN %d %d--\n", SHOT_W, SHOT_H);
+    printf("--SHOT-BEGIN %d %d--\n", (int)width, (int)height);
     uint32_t line_idx = 0;
-    for (int32_t y = 0; y < SHOT_H; y += rows) {
+    for (int32_t y = 0; y < height; y += rows) {
         int32_t r = rows;
-        if (y + r > SHOT_H) r = SHOT_H - y;
+        if (y + r > height) r = height - y;
 
         memset(buf, 0, stride * (size_t)r);
         lv_draw_buf_t db;
-        if (lv_draw_buf_init(&db, (uint32_t)SHOT_W, (uint32_t)r, LV_COLOR_FORMAT_RGB565,
+        if (lv_draw_buf_init(&db, (uint32_t)width, (uint32_t)r, LV_COLOR_FORMAT_RGB565,
                              (uint32_t)stride, buf, (uint32_t)(stride * (size_t)r)) != LV_RESULT_OK) {
             printf("--SHOT-ERR buf-init--\n");
             break;
         }
-        render_band(disp, scr, &db, y, r);
+        render_band(disp, scr, &db, width, y, r);
         dump_hex(buf, stride * (size_t)r, &line_idx);
         vTaskDelay(1);  // 别把 USB CDC 与其它任务饿死
     }

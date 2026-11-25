@@ -78,6 +78,12 @@ python3 tests/test_home_element_colors.py
 "$test_dir/bazi-core"
 python3 tests/test_bazi_ui.py
 "${CC:-cc}" -std=c11 -Wall -Wextra -Werror -fsanitize=address,undefined \
+    -Imain tests/test_liuyao_core.c main/apps/liuyao/liuyao_core.c \
+    main/apps/bazi/bazi_core.c main/apps/bazi/bazi_almanac.c -lm \
+    -o "$test_dir/liuyao-core"
+"$test_dir/liuyao-core"
+python3 tests/test_liuyao_ui.py
+"${CC:-cc}" -std=c11 -Wall -Wextra -Werror -fsanitize=address,undefined \
     -Imain tests/test_calendar_core.c main/apps/calendar/calendar_core.c \
     main/apps/bazi/bazi_almanac.c main/apps/bazi/bazi_core.c \
     -lm -o "$test_dir/calendar-core"
