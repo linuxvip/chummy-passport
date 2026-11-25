@@ -58,7 +58,8 @@ assert 'label(box, value, &buddy_font_16, UI_TEXT, 44, y, 252, 20);' in app
 assert 'label(box, kind, &buddy_font_16, UI_WARNING, 8, 2, 132, 22, LV_TEXT_ALIGN_CENTER);' in app
 assert 'ui_pixel_label(box, meaning, &buddy_font_16, UI_TEXT)' in app
 assert 'lv_obj_set_size(body, 140, 112);' in app
-assert 'meta_row_text(meta, 40, "旬空", text);' in app
+assert 'label(meta, "旬空", &buddy_font_16, UI_WARNING, 4, 40, 36, 20);' in app
+assert 'label(meta, text, &buddy_font_16, UI_TEXT, 44, 40, 252, 20, LV_TEXT_ALIGN_CENTER);' in app
 assert 'home_profile_get(&profile)' in app
 assert 'BAZI_TIME_STANDARD' in app
 assert '"六爻排盘-%s"' in app

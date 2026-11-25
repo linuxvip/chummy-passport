@@ -875,7 +875,8 @@ void build_chart(void) {
                   bazi_branch_text(s_chart.empty_branch[1]),
                   liuyao_palace_name(s_chart.palace),
                   liuyao_palace_state_text(s_chart.palace_index));
-    meta_row_text(meta, 40, "旬空", text);
+    label(meta, "旬空", &buddy_font_16, UI_WARNING, 4, 40, 36, 20);
+    label(meta, text, &buddy_font_16, UI_TEXT, 44, 40, 252, 20, LV_TEXT_ALIGN_CENTER);
 
     // The chart uses the full height; the old bottom hint row is gone.
     lv_obj_t *sheet = panel(s_screen, 8, 89, 304, 143);
