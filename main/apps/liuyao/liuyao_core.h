@@ -10,11 +10,10 @@ extern "C" {
 #endif
 
 #define LIUYAO_LINE_COUNT 6
-#define LIUYAO_MAX_DIGITS 12
 
 typedef enum {
     LIUYAO_METHOD_TIME = 0,
-    LIUYAO_METHOD_NUMBER = 1,
+    LIUYAO_METHOD_MANUAL = 1,
 } liuyao_method_t;
 
 typedef enum {
@@ -85,8 +84,8 @@ typedef struct {
     uint8_t zi_rule;
     uint8_t city_id;
     int32_t longitude_e4;
-    char digits[LIUYAO_MAX_DIGITS + 1];
-    uint8_t digit_count;
+    // 手动摇卦：初爻到上爻的 6/7/8/9；时间起卦忽略。
+    uint8_t line_values[LIUYAO_LINE_COUNT];
 } liuyao_input_t;
 
 typedef struct {
@@ -118,6 +117,7 @@ typedef struct {
     uint8_t upper_number;
     uint8_t lower_number;
     uint8_t moving_line;
+    uint8_t moving_mask;
     uint8_t original_id;
     uint8_t changed_id;
     uint8_t palace;

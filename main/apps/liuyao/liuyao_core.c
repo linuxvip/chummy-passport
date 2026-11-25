@@ -264,7 +264,8 @@ uint8_t liuyao_minute_step(uint8_t minute, int delta) {
 
 bool liuyao_input_valid(const liuyao_input_t *input) {
     if (!input) return false;
-    if (input->method > LIUYAO_METHOD_NUMBER) return false;
+    if (input->method != LIUYAO_METHOD_TIME &&
+        input->method != LIUYAO_METHOD_MANUAL) return false;
     if (input->time_mode != BAZI_TIME_STANDARD &&
         input->time_mode != BAZI_TIME_TRUE_SOLAR) return false;
     if (input->zi_rule != BAZI_ZI_EARLY && input->zi_rule != BAZI_ZI_LATE) return false;
@@ -272,30 +273,12 @@ bool liuyao_input_valid(const liuyao_input_t *input) {
         input->month < 1 || input->month > 12 ||
         input->day < 1 || input->day > liuyao_input_max_day(input->year, input->month) ||
         input->hour > 23 || input->minute > 59) return false;
-    if (input->method == LIUYAO_METHOD_NUMBER) {
-        if (input->digit_count < 2 || input->digit_count > LIUYAO_MAX_DIGITS)
-            return false;
-        for (uint8_t i = 0; i < input->digit_count; ++i) {
-            if (input->digits[i] < '0' || input->digits[i] > '9') return false;
+    if (input->method == LIUYAO_METHOD_MANUAL) {
+        for (uint8_t i = 0; i < LIUYAO_LINE_COUNT; ++i) {
+            if (input->line_values[i] < 6 || input->line_values[i] > 9)
+                return false;
         }
     }
-    return true;
-}
-
-static bool fill_number_preview(liuyao_chart_t *chart) {
-    const uint8_t count = chart->input.digit_count;
-    const uint8_t cut = count % 2 == 0 ? count / 2 : count / 2;
-    uint16_t first = 0;
-    uint16_t second = 0;
-    for (uint8_t i = 0; i < cut; ++i) first += (uint8_t)(chart->input.digits[i] - '0');
-    for (uint8_t i = cut; i < count; ++i) second += (uint8_t)(chart->input.digits[i] - '0');
-    chart->first_sum = first;
-    chart->second_sum = second;
-    chart->upper_number = mod8_one_based(first);
-    chart->lower_number = mod8_one_based(second);
-    chart->hour_number = (uint8_t)(chart->hour_branch + 1);
-    chart->moving_line = mod6_one_based((unsigned)chart->upper_number +
-                                        chart->lower_number + chart->hour_number);
     return true;
 }
 
@@ -338,7 +321,7 @@ static void fill_lines(liuyao_chart_t *chart) {
         line->changed_element = bazi_element_of_branch(changed.branch);
         line->changed_relative = relation_for(chart->palace_element,
                                                line->changed_element);
-        line->moving = chart->moving_line == i + 1;
+        line->moving = ((chart->original_id ^ chart->changed_id) >> i) & 1U;
         line->empty = line->branch == chart->empty_branch[0] ||
                       line->branch == chart->empty_branch[1];
         line->month_break = branch_clashes(line->branch, chart->month_branch);
@@ -385,18 +368,34 @@ bool liuyao_chart_create(const liuyao_input_t *input, liuyao_chart_t *chart) {
     chart->hour_branch = almanac.hour_branch;
     set_empty_branches(chart->day_stem, chart->day_branch, chart->empty_branch);
 
-    if (input->method == LIUYAO_METHOD_NUMBER) {
-        fill_number_preview(chart);
+    if (input->method == LIUYAO_METHOD_MANUAL) {
+        uint8_t bits = 0;
+        uint8_t mask = 0;
+        for (uint8_t i = 0; i < LIUYAO_LINE_COUNT; ++i) {
+            const uint8_t value = input->line_values[i];
+            if (value == 7 || value == 9) bits |= (uint8_t)(1U << i);
+            if (value == 6 || value == 9) mask |= (uint8_t)(1U << i);
+        }
+        chart->original_id = bits;
+        chart->changed_id = (uint8_t)(bits ^ mask);
+        chart->moving_mask = mask;
+        chart->moving_line = 0;
+        for (uint8_t i = 0; i < LIUYAO_LINE_COUNT; ++i) {
+            if (mask & (uint8_t)(1U << i)) {
+                chart->moving_line = (uint8_t)(i + 1);
+                break;
+            }
+        }
+        chart->lower_number = trigram_number_from_bits((uint8_t)(bits & 7U));
+        chart->upper_number = trigram_number_from_bits((uint8_t)((bits >> 3) & 7U));
     } else {
         fill_time_preview(chart);
+        const uint8_t lower_bits = kTrigramBits[chart->lower_number - 1];
+        const uint8_t upper_bits = kTrigramBits[chart->upper_number - 1];
+        chart->original_id = (uint8_t)(lower_bits | (upper_bits << 3));
+        chart->moving_mask = (uint8_t)(1U << (chart->moving_line - 1));
+        chart->changed_id = (uint8_t)(chart->original_id ^ chart->moving_mask);
     }
-
-    const uint8_t lower_bits = kTrigramBits[chart->lower_number - 1];
-    const uint8_t upper_bits = kTrigramBits[chart->upper_number - 1];
-    chart->original_id = (uint8_t)(lower_bits | (upper_bits << 3));
-    chart->changed_id = chart->original_id;
-    const uint8_t moving_bit = (uint8_t)(1U << (chart->moving_line - 1));
-    chart->changed_id ^= moving_bit;
     chart->palace = palace_for_hex(chart->original_id, &chart->palace_index);
     chart->palace_element = kPalaceElements[chart->palace];
     chart->shi = (uint8_t[]){6, 1, 2, 3, 4, 5, 4, 3}[chart->palace_index];

@@ -53,63 +53,58 @@ static void test_time_method(void) {
     assert(chart.lines[1].hidden[0].relative == LIUYAO_RELATIVE_WEALTH);
 }
 
-static void test_number_method(void) {
-    liuyao_input_t input = base_input(LIUYAO_METHOD_NUMBER);
-    strcpy(input.digits, "27518");
-    input.digit_count = 5;
+static void test_manual_method(void) {
+    liuyao_input_t input = base_input(LIUYAO_METHOD_MANUAL);
+    const uint8_t sample[6] = {8, 8, 9, 8, 7, 6};
+    memcpy(input.line_values, sample, sizeof(sample));
     liuyao_chart_t chart;
     assert(liuyao_chart_create(&input, &chart));
-    assert(chart.original_id == 58);
-    assert(chart.changed_id == 59);
-    assert(strcmp(liuyao_hex_name(chart.original_id), "天水讼") == 0);
-    assert(strcmp(liuyao_hex_name(chart.changed_id), "天泽履") == 0);
-    assert(chart.first_sum == 9);
-    assert(chart.second_sum == 14);
-    assert(chart.upper_number == 1);
-    assert(chart.lower_number == 6);
-    assert(chart.moving_line == 1);
-    assert(!chart.lines[0].yang);
-    assert(chart.lines[0].moving);
+    assert(chart.original_id == 20);
+    assert(chart.changed_id == 48);
+    assert(strcmp(liuyao_hex_name(chart.original_id), "水山蹇") == 0);
+    assert(strcmp(liuyao_hex_name(chart.changed_id), "风地观") == 0);
+    assert(chart.moving_mask == 0x24);
+    assert(chart.moving_line == 3);
+    assert(!chart.lines[0].moving && !chart.lines[1].moving);
+    assert(chart.lines[2].moving && chart.lines[5].moving);
+    assert(chart.lines[2].yang && chart.lines[5].yang == false);
+    assert(!chart.lines[0].yang && !chart.lines[3].yang);
+    assert(chart.lines[4].yang);
 
-    strcpy(input.digits, "275183");
-    input.digit_count = 6;
+    const uint8_t still[6] = {7, 8, 7, 8, 7, 8};
+    memcpy(input.line_values, still, sizeof(still));
     assert(liuyao_chart_create(&input, &chart));
-    assert(chart.first_sum == 14);
-    assert(chart.second_sum == 12);
-    assert(chart.upper_number == 6);
-    assert(chart.lower_number == 4);
+    assert(chart.original_id == chart.changed_id);
+    assert(chart.moving_mask == 0);
+    assert(chart.moving_line == 0);
+    for (uint8_t i = 0; i < 6; ++i) assert(!chart.lines[i].moving);
 
-    strcpy(input.digits, "0000");
-    input.digit_count = 4;
+    const uint8_t old[6] = {6, 6, 6, 6, 6, 6};
+    memcpy(input.line_values, old, sizeof(old));
     assert(liuyao_chart_create(&input, &chart));
-    assert(chart.upper_number == 8);
-    assert(chart.lower_number == 8);
-
-    input.hour = 11;
-    strcpy(input.digits, "111");
-    input.digit_count = 3;
-    assert(liuyao_chart_create(&input, &chart));
-    assert(chart.hour_number == 7);
-    assert(chart.upper_number == 1 && chart.lower_number == 2);
-    assert(chart.moving_line == 4);
+    assert(chart.original_id == 0);
+    assert(chart.changed_id == 63);
+    assert(chart.moving_mask == 0x3F);
+    for (uint8_t i = 0; i < 6; ++i) assert(chart.lines[i].moving && !chart.lines[i].yang);
 }
 
 static void test_validation_and_boundaries(void) {
-    liuyao_input_t input = base_input(LIUYAO_METHOD_NUMBER);
+    liuyao_input_t manual = base_input(LIUYAO_METHOD_MANUAL);
     liuyao_chart_t chart;
-    strcpy(input.digits, "7");
-    input.digit_count = 1;
-    assert(!liuyao_chart_create(&input, &chart));
+    const uint8_t good[6] = {6, 7, 8, 9, 7, 8};
+    memcpy(manual.line_values, good, sizeof(good));
+    assert(liuyao_chart_create(&manual, &chart));
+    uint8_t bad[6] = {5, 7, 8, 9, 7, 8};
+    memcpy(manual.line_values, bad, sizeof(bad));
+    assert(!liuyao_chart_create(&manual, &chart));
+    bad[0] = 10;
+    memcpy(manual.line_values, bad, sizeof(bad));
+    assert(!liuyao_chart_create(&manual, &chart));
+    manual.method = 2;
+    memcpy(manual.line_values, good, sizeof(good));
+    assert(!liuyao_chart_create(&manual, &chart));
 
-    strcpy(input.digits, "1234567890123");
-    input.digit_count = 13;
-    assert(!liuyao_chart_create(&input, &chart));
-
-    strcpy(input.digits, "12A4");
-    input.digit_count = 4;
-    assert(!liuyao_chart_create(&input, &chart));
-
-    input = base_input(LIUYAO_METHOD_TIME);
+    liuyao_input_t input = base_input(LIUYAO_METHOD_TIME);
     input.year = 2026;
     input.month = 2;
     input.day = 30;
@@ -148,7 +143,7 @@ static void test_validation_and_boundaries(void) {
 
 int main(void) {
     test_time_method();
-    test_number_method();
+    test_manual_method();
     test_validation_and_boundaries();
     puts("liuyao core: PASS");
     return 0;
