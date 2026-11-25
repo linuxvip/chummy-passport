@@ -17,6 +17,15 @@ assert 'fill_time_preview(chart)' in core
 assert 'fill_number_preview(chart)' in core
 assert '"时间起卦"' in app and '"数字起卦"' in app
 assert 'set_landscape(false);' in app and 'set_landscape(true);' in app
+# Landscape chart must put the physical keys on the top edge, which is the
+# opposite rotation from LV_DISPLAY_ROTATION_90 (keys on the bottom edge).
+assert 'LV_DISPLAY_ROTATION_270' in app
+# Wi-Fi signal sits on the left like the other apps, not next to the battery.
+assert 'ui_pixel_wifi_bars_create(top, UI_STATUS_WIFI_X' in app
+# The chart has no bottom hint row; the meaning page uses the shared top bar.
+assert '"确定看卦意' not in app
+assert 'add_top_bar("六爻排盘-卦意")' in app
+assert 'add_band("卦意"' not in app
 assert 'void cast_current_time(void)' in app
 assert 'cast_current_time();' in app
 assert 'open_editor(LIUYAO_METHOD_NUMBER);' in app
@@ -37,7 +46,6 @@ assert 'label(box, value, &buddy_font_16, UI_TEXT, 44, y, 252, 20);' in app
 assert 'meta_row_text(meta, 40, "旬空", text);' in app
 assert 'home_profile_get(&profile)' in app
 assert 'BAZI_TIME_TRUE_SOLAR' in app
-assert 'const int wifi_x = width - 96;' in app
 assert '"六爻排盘-%s"' in app
 assert 'add_top_bar(title);' in app
 assert 'add_top_bar("六爻排盘-起卦方式");' in app

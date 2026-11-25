@@ -36,8 +36,10 @@ int screen_height(void) {
 }
 
 void set_landscape(bool landscape) {
+    // 270 keeps the three physical keys on the top edge when the device is
+    // held horizontally. 90 puts them on the bottom edge.
     const lv_display_rotation_t wanted =
-        landscape ? LV_DISPLAY_ROTATION_90 : LV_DISPLAY_ROTATION_0;
+        landscape ? LV_DISPLAY_ROTATION_270 : LV_DISPLAY_ROTATION_0;
     lv_display_t *display = lv_display_get_default();
     if (display && lv_display_get_rotation(display) != wanted)
         lv_display_set_rotation(display, wanted);
@@ -231,17 +233,19 @@ void update_status(void) {
 
 void add_top_bar(const char *title) {
     const int width = screen_width();
-    const int wifi_x = width - 96;
     lv_obj_t *top = block(s_screen, 0, 0, width, 26, UI_SURFACE);
     lv_obj_set_style_border_width(top, 1, 0);
     lv_obj_set_style_border_side(top, LV_BORDER_SIDE_BOTTOM, 0);
     lv_obj_set_style_border_color(top, lv_color_hex(UI_BORDER), 0);
+    // Match the other apps: signal on the left, title after it, battery right.
+    ui_pixel_wifi_bars_create(top, UI_STATUS_WIFI_X, 18, s_wifi_bars);
     if (title && title[0]) {
         const bool compact = width <= 240;
-        label(top, title, compact ? &liuyao_font_12 : &buddy_font_16,
-              UI_TEXT, 12, compact ? 5 : 2, wifi_x - 20, compact ? 16 : 21);
+        lv_obj_t *name = label(top, title,
+                               compact ? &liuyao_font_12 : &buddy_font_16,
+                               UI_TEXT, 0, 0, width - 78, compact ? 16 : 24);
+        lv_obj_align(name, LV_ALIGN_LEFT_MID, 42, 0);
     }
-    ui_pixel_wifi_bars_create(top, wifi_x, 20, s_wifi_bars);
     s_battery = ui_pixel_battery_create(
         top, width - 28, 7, UI_TEXT, &lv_font_montserrat_14);
     update_status();
@@ -718,7 +722,7 @@ void add_chart_rows(void) {
         const liuyao_line_t &line = s_chart.lines[visual];
         lv_obj_t *left = lv_obj_create(s_screen);
         lv_obj_remove_flag(left, LV_OBJ_FLAG_SCROLLABLE);
-        lv_obj_set_pos(left, 8, 115 + i * 16);
+        lv_obj_set_pos(left, 8, 115 + i * 19);
         lv_obj_set_size(left, 152, 16);
         lv_obj_set_style_radius(left, 0, 0);
         lv_obj_set_style_pad_all(left, 0, 0);
@@ -743,7 +747,7 @@ void add_chart_rows(void) {
 
         lv_obj_t *right = lv_obj_create(s_screen);
         lv_obj_remove_flag(right, LV_OBJ_FLAG_SCROLLABLE);
-        lv_obj_set_pos(right, 161, 115 + i * 16);
+        lv_obj_set_pos(right, 161, 115 + i * 19);
         lv_obj_set_size(right, 151, 16);
         lv_obj_set_style_radius(right, 0, 0);
         lv_obj_set_style_pad_all(right, 0, 0);
@@ -811,20 +815,20 @@ void build_chart(void) {
                   liuyao_palace_state_text(s_chart.palace_index));
     meta_row_text(meta, 40, "旬空", text);
 
-    lv_obj_t *sheet = panel(s_screen, 8, 89, 304, 127);
+    // The chart uses the full height; the old bottom hint row is gone.
+    lv_obj_t *sheet = panel(s_screen, 8, 89, 304, 143);
     (void)sheet;
-    block(s_screen, 160, 89, 1, 127, UI_BORDER);
+    block(s_screen, 160, 89, 1, 143, UI_BORDER);
     add_hex_title(1, "本卦", liuyao_hex_name(s_chart.original_id));
     add_hex_title(0, "变卦", liuyao_hex_name(s_chart.changed_id));
     add_chart_rows();
-    add_footer("确定看卦意  长按返回", "", 218);
     lv_screen_load(s_screen);
 }
 
 void meaning_column(uint8_t right, const char *kind, const char *name,
                     const char *meaning) {
     const int x = right ? 164 : 8;
-    lv_obj_t *box = panel(s_screen, x, 58, 148, 148);
+    lv_obj_t *box = panel(s_screen, x, 34, 148, 172);
     label(box, kind, &liuyao_font_12, UI_WARNING, 8, 5, 132, 15,
           LV_TEXT_ALIGN_CENTER);
     lv_obj_t *title = label(box, name, &liuyao_title_20, UI_TEXT,
@@ -833,7 +837,7 @@ void meaning_column(uint8_t right, const char *kind, const char *name,
                            9, 22, 132, 24, LV_TEXT_ALIGN_CENTER);
     lv_obj_t *body = ui_pixel_label(box, meaning, &liuyao_font_12, UI_TEXT);
     lv_obj_set_pos(body, 4, 50);
-    lv_obj_set_size(body, 140, 90);
+    lv_obj_set_size(body, 140, 114);
     lv_label_set_long_mode(body, LV_LABEL_LONG_WRAP);
     lv_obj_set_style_text_align(body, LV_TEXT_ALIGN_LEFT, 0);
     lv_obj_set_style_text_line_space(body, 2, 0);
@@ -847,8 +851,7 @@ void build_meaning(void) {
     set_landscape(true);
     s_screen = lv_obj_create(nullptr);
     ui_pixel_background(s_screen);
-    add_top_bar("");
-    add_band("卦意", "");
+    add_top_bar("六爻排盘-卦意");
     meaning_column(0, "本卦", liuyao_hex_name(s_chart.original_id),
                    liuyao_hex_explanation(s_chart.original_id));
     meaning_column(1, "变卦", liuyao_hex_name(s_chart.changed_id),
