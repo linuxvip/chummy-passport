@@ -147,6 +147,10 @@ const char *marker_text(const liuyao_line_t &line) {
     return line.yang ? "O →" : "X →";
 }
 
+bool chart_has_change(void) {
+    return s_chart.changed_id != s_chart.original_id;
+}
+
 bool local_time(int *year, int *month, int *day, int *hour, int *minute) {
     time_t now = time(nullptr);
     if (now < 1700000000) return false;
@@ -806,6 +810,8 @@ void add_chart_rows(void) {
         label(left, position, &liuyao_font_12, UI_TEXT, 131, 0, 21, 15,
               LV_TEXT_ALIGN_CENTER);
 
+        if (!chart_has_change()) continue;
+
         lv_obj_t *right = lv_obj_create(s_screen);
         lv_obj_remove_flag(right, LV_OBJ_FLAG_SCROLLABLE);
         lv_obj_set_pos(right, 161, 115 + i * 19);
@@ -881,7 +887,12 @@ void build_chart(void) {
     (void)sheet;
     block(s_screen, 160, 89, 1, 143, UI_BORDER);
     add_hex_title(1, "本卦", liuyao_hex_name(s_chart.original_id));
-    add_hex_title(0, "变卦", liuyao_hex_name(s_chart.changed_id));
+    if (chart_has_change()) {
+        add_hex_title(0, "变卦", liuyao_hex_name(s_chart.changed_id));
+    } else {
+        label(s_screen, "无动爻", &liuyao_title_20, UI_TEXT_DIM,
+              160, 90, 152, 24, LV_TEXT_ALIGN_CENTER);
+    }
     add_chart_rows();
     lv_screen_load(s_screen);
 }
@@ -915,8 +926,13 @@ void build_meaning(void) {
     add_top_bar("六爻排盘-卦意");
     meaning_column(0, "本卦", liuyao_hex_name(s_chart.original_id),
                    liuyao_hex_explanation(s_chart.original_id));
-    meaning_column(1, "变卦", liuyao_hex_name(s_chart.changed_id),
-                   liuyao_hex_explanation(s_chart.changed_id));
+    if (chart_has_change()) {
+        meaning_column(1, "变卦", liuyao_hex_name(s_chart.changed_id),
+                       liuyao_hex_explanation(s_chart.changed_id));
+    } else {
+        label(s_screen, "无动爻", &liuyao_title_20, UI_TEXT_DIM,
+              164, 100, 148, 24, LV_TEXT_ALIGN_CENTER);
+    }
     add_footer("确定回盘  长按回盘", "", 214);
     lv_screen_load(s_screen);
 }

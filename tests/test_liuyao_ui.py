@@ -72,6 +72,8 @@ assert '确定看盘' in app
 assert '长按确定重摇' in app
 assert '摇动中' in app
 assert '背' in app and '字' in app
+assert 'chart_has_change()' in app
+assert '无动爻' in app
 assert 'apps/liuyao/liuyao_core.c' in cmake
 assert 'apps/liuyao/app_liuyao.cc' in cmake
 assert '&g_liuyao_app' in registry
