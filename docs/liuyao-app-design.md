@@ -455,6 +455,7 @@
 - 卦名：20px，使用已覆盖的 `ui_font_20`；缺字时改用 `buddy_font_16`。
 - 摇卦页钱面：20px `liuyao_title_20` 的“背/字”。
 - 详参标题：20px。
+- 卦意页“本卦/变卦”标签与解读正文：16px `buddy_font_16`；卦名保持 20px `liuyao_title_20`。
 - 正文与底部说明：16px。
 - 爻值与取数过程：Montserrat 14 或现有 32px 数字字体。
 

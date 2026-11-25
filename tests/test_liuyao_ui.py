@@ -55,6 +55,9 @@ for line_label in ('初爻', '二爻', '三爻', '四爻', '五爻', '上爻'):
 assert '世%u应%u' not in app
 assert 'label(box, name, &buddy_font_16, UI_WARNING, 4, y, 36, 20);' in app
 assert 'label(box, value, &buddy_font_16, UI_TEXT, 44, y, 252, 20);' in app
+assert 'label(box, kind, &buddy_font_16, UI_WARNING, 8, 2, 132, 22, LV_TEXT_ALIGN_CENTER);' in app
+assert 'ui_pixel_label(box, meaning, &buddy_font_16, UI_TEXT)' in app
+assert 'lv_obj_set_size(body, 140, 112);' in app
 assert 'meta_row_text(meta, 40, "旬空", text);' in app
 assert 'home_profile_get(&profile)' in app
 assert 'BAZI_TIME_STANDARD' in app

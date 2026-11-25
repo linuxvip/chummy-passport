@@ -896,15 +896,14 @@ void meaning_column(uint8_t right, const char *kind, const char *name,
                     const char *meaning) {
     const int x = right ? 164 : 8;
     lv_obj_t *box = panel(s_screen, x, 34, 148, 172);
-    label(box, kind, &liuyao_font_12, UI_WARNING, 8, 5, 132, 15,
-          LV_TEXT_ALIGN_CENTER);
+    label(box, kind, &buddy_font_16, UI_WARNING, 8, 2, 132, 22, LV_TEXT_ALIGN_CENTER);
     lv_obj_t *title = label(box, name, &liuyao_title_20, UI_TEXT,
-                            8, 22, 132, 24, LV_TEXT_ALIGN_CENTER);
+                            8, 26, 132, 24, LV_TEXT_ALIGN_CENTER);
     lv_obj_t *bold = label(box, name, &liuyao_title_20, UI_TEXT,
-                           9, 22, 132, 24, LV_TEXT_ALIGN_CENTER);
-    lv_obj_t *body = ui_pixel_label(box, meaning, &liuyao_font_12, UI_TEXT);
-    lv_obj_set_pos(body, 4, 50);
-    lv_obj_set_size(body, 140, 114);
+                           9, 26, 132, 24, LV_TEXT_ALIGN_CENTER);
+    lv_obj_t *body = ui_pixel_label(box, meaning, &buddy_font_16, UI_TEXT);
+    lv_obj_set_pos(body, 4, 54);
+    lv_obj_set_size(body, 140, 112);
     lv_label_set_long_mode(body, LV_LABEL_LONG_WRAP);
     lv_obj_set_style_text_align(body, LV_TEXT_ALIGN_LEFT, 0);
     lv_obj_set_style_text_line_space(body, 2, 0);
