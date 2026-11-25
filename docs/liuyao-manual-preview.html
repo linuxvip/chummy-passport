@@ -1,0 +1,751 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Passport OS 六爻排盘手动摇卦设计稿：去掉数字起卦，改为三枚铜钱摇六次的 240×320 页面与摇动动效。">
+  <title>Passport OS 六爻排盘 · 手动摇卦设计稿</title>
+  <style>
+/* Passport travel-instrument palette, read from main/ui/ui_pixel.c (UI_THEME_TRAVEL).
+ * Device geometry follows main/apps/liuyao/app_liuyao.cc at 240×320. */
+:root {
+  color-scheme: dark;
+  --font-ui: "PingFang SC", "Source Han Sans SC", "Noto Sans CJK SC", "Microsoft YaHei", sans-serif;
+  --font-data: "SFMono-Regular", "Cascadia Mono", "Noto Sans Mono", monospace;
+  --stage: #0e1211;
+  --stage-rule: #35413d;
+  --stage-text: #eee7d6;
+  --stage-dim: #aaa99d;
+  --paper: #181b1c;
+  --surface: #202526;
+  --surface-alt: #303738;
+  --border: #59605d;
+  --text: #eee7d6;
+  --text-dim: #b3b2a5;
+  --accent: #ddb36c;
+  --on-accent: #181b1c;
+  --danger: #f09b87;
+  --wood: #82c89a;
+  --metal: #e2ded0;
+  --water: #79b8d8;
+  --shadow: #070908;
+}
+
+* { box-sizing: border-box; }
+
+html, body { margin: 0; min-height: 100%; }
+body {
+  background: var(--stage);
+  color: var(--stage-text);
+  font-family: var(--font-ui);
+  -webkit-font-smoothing: antialiased;
+}
+
+.page {
+  width: min(1360px, calc(100% - 64px));
+  margin: 0 auto;
+  padding: 44px 0 48px;
+}
+
+.intro {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(300px, 0.9fr);
+  gap: 56px;
+  align-items: end;
+  padding-bottom: 28px;
+  border-bottom: 1px solid var(--stage-rule);
+}
+
+.eyebrow {
+  margin: 0 0 12px;
+  color: var(--accent);
+  font-size: 12px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+}
+
+h1 {
+  margin: 0 0 12px;
+  font-size: clamp(34px, 4.4vw, 56px);
+  font-weight: 500;
+  line-height: 1.05;
+  letter-spacing: -0.04em;
+}
+
+.lead {
+  max-width: 640px;
+  margin: 0;
+  color: var(--stage-dim);
+  font-size: 17px;
+  line-height: 1.75;
+}
+
+.axioms { display: grid; margin: 0; }
+
+.axioms div {
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr);
+  gap: 16px;
+  padding: 10px 0;
+  border-top: 1px solid var(--stage-rule);
+}
+
+.axioms dt { color: var(--accent); font-size: 13px; }
+.axioms dd { margin: 0; color: var(--stage-dim); font-size: 14px; line-height: 1.5; }
+
+.boards {
+  display: grid;
+  grid-template-columns: repeat(4, 240px);
+  gap: 40px;
+  padding: 36px 0 8px;
+  justify-content: space-between;
+}
+
+figure { min-width: 0; margin: 0; }
+
+figcaption {
+  min-height: 92px;
+  padding-top: 14px;
+  color: var(--stage-dim);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+figcaption strong {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--stage-text);
+  font-size: 15px;
+  font-weight: 500;
+}
+
+/* ---- device ---- */
+.device {
+  position: relative;
+  width: 240px;
+  height: 320px;
+  overflow: clip;
+  background: var(--paper);
+  border: 1px solid var(--border);
+  box-shadow: 10px 12px 0 var(--shadow);
+  color: var(--text);
+}
+
+.status {
+  position: absolute;
+  inset: 0 0 auto;
+  height: 26px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+
+.wifi {
+  position: absolute;
+  left: 18px;
+  top: 9px;
+  display: flex;
+  align-items: end;
+  gap: 1px;
+  width: 16px;
+  height: 11px;
+}
+
+.wifi i { display: block; width: 4px; background: var(--text); }
+.wifi i:nth-child(1) { height: 4px; }
+.wifi i:nth-child(2) { height: 7px; }
+.wifi i:nth-child(3) { height: 11px; }
+
+.app-title {
+  position: absolute;
+  left: 42px;
+  top: 0;
+  height: 25px;
+  display: flex;
+  align-items: center;
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 400;
+  letter-spacing: 0;
+}
+
+.batt {
+  position: absolute;
+  right: 8px;
+  top: 7px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--text);
+  font-family: var(--font-data);
+  font-size: 11px;
+  line-height: 1;
+}
+
+.battery {
+  position: relative;
+  width: 20px;
+  height: 10px;
+  border: 2px solid var(--text);
+}
+
+.battery::after {
+  position: absolute;
+  top: 1px;
+  right: -5px;
+  width: 3px;
+  height: 4px;
+  background: var(--text);
+  content: "";
+}
+
+.battery span {
+  position: absolute;
+  inset: 1px auto 1px 1px;
+  width: 11px;
+  background: var(--wood);
+}
+
+/* 24px accent band: matches add_band() */
+.band {
+  position: absolute;
+  top: 26px;
+  left: 0;
+  right: 0;
+  height: 24px;
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+.band-title {
+  position: absolute;
+  left: 12px;
+  top: 0;
+  display: flex;
+  align-items: center;
+  height: 24px;
+  font-size: 20px;
+  line-height: 24px;
+  letter-spacing: 1px;
+}
+
+.band-meta {
+  position: absolute;
+  right: 8px;
+  top: 5px;
+  font-size: 12px;
+  line-height: 15px;
+}
+
+/* coin tray */
+.tray {
+  position: absolute;
+  left: 8px;
+  top: 58px;
+  width: 224px;
+  height: 90px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+
+.coin {
+  position: absolute;
+  top: 21px;
+  width: 48px;
+  height: 48px;
+  border: 2px solid var(--border);
+  border-radius: 50%;
+  background: var(--surface-alt);
+  color: var(--text);
+}
+
+.coin:nth-child(1) { left: 24px; }
+.coin:nth-child(2) { left: 88px; }
+.coin:nth-child(3) { left: 152px; }
+
+.coin .face {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  line-height: 1;
+  letter-spacing: 0;
+}
+
+.coin.empty::after {
+  position: absolute;
+  inset: 14px;
+  border: 1px dashed var(--border);
+  border-radius: 50%;
+  content: "";
+}
+
+.coin.shaking {
+  border-color: var(--accent);
+}
+
+.coin .face.b { opacity: 0; }
+
+/* motion ticks: 1px accent strokes, functional motion cue only */
+.coin.shaking::before,
+.coin.shaking::after {
+  position: absolute;
+  top: 21px;
+  width: 2px;
+  height: 6px;
+  background: var(--accent);
+  content: "";
+}
+
+.coin.shaking::before { left: -9px; }
+.coin.shaking::after { right: -9px; }
+
+@keyframes coin-a {
+  0%   { transform: translate(0, 0) rotate(0deg); }
+  25%  { transform: translate(-5px, -3px) rotate(-7deg); }
+  50%  { transform: translate(4px, 2px) rotate(5deg); }
+  75%  { transform: translate(-3px, -2px) rotate(-4deg); }
+  100% { transform: translate(0, 0) rotate(0deg); }
+}
+
+@keyframes coin-b {
+  0%   { transform: translate(0, 0) rotate(0deg); }
+  25%  { transform: translate(4px, 3px) rotate(6deg); }
+  50%  { transform: translate(-5px, -2px) rotate(-6deg); }
+  75%  { transform: translate(3px, 2px) rotate(4deg); }
+  100% { transform: translate(0, 0) rotate(0deg); }
+}
+
+@keyframes face-a {
+  0%, 49% { opacity: 1; }
+  50%, 100% { opacity: 0; }
+}
+
+@keyframes face-b {
+  0%, 49% { opacity: 0; }
+  50%, 100% { opacity: 1; }
+}
+
+.live .coin.shaking:nth-child(1) { animation: coin-a 120ms linear infinite; }
+.live .coin.shaking:nth-child(2) { animation: coin-b 120ms linear infinite; }
+.live .coin.shaking:nth-child(3) { animation: coin-a 120ms linear infinite 60ms; }
+.live .coin.shaking .face.a { animation: face-a 120ms steps(1) infinite; }
+.live .coin.shaking .face.b { animation: face-b 120ms steps(1) infinite; }
+.live .coin.shaking:nth-child(3) .face.a { animation-delay: 60ms; }
+.live .coin.shaking:nth-child(3) .face.b { animation-delay: 60ms; }
+
+/* deterministic still frame for the PNG */
+html.still .coin.shaking,
+html.still .coin.shaking .face { animation: none !important; }
+html.still .coin.shaking:nth-child(1) { transform: translate(-5px, -3px) rotate(-7deg); }
+html.still .coin.shaking:nth-child(2) { transform: translate(4px, 3px) rotate(6deg); }
+html.still .coin.shaking:nth-child(3) { transform: translate(3px, -2px) rotate(4deg); }
+html.still .coin.shaking.res-a .face.a { opacity: 1; }
+html.still .coin.shaking.res-a .face.b { opacity: 0; }
+html.still .coin.shaking.res-b .face.a { opacity: 0; }
+html.still .coin.shaking.res-b .face.b { opacity: 1; }
+
+/* status line under the tray */
+.tray-status {
+  position: absolute;
+  left: 8px;
+  top: 152px;
+  width: 224px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12px;
+  line-height: 15px;
+}
+
+.tray-status .hint { color: var(--text-dim); }
+.tray-status .live { color: var(--accent); }
+.tray-status .sum { color: var(--text); }
+.tray-status .sum b { font-family: var(--font-data); font-weight: 400; color: var(--accent); }
+
+/* six-line stack */
+.stack {
+  position: absolute;
+  left: 8px;
+  top: 174px;
+  width: 224px;
+}
+
+.stack-row {
+  display: grid;
+  grid-template-columns: 30px 44px 40px 60px 40px;
+  align-items: center;
+  height: 16px;
+  padding: 0 4px;
+  color: var(--text-dim);
+  font-size: 12px;
+  line-height: 15px;
+  border-bottom: 1px solid var(--border);
+}
+
+.stack-row:first-child { border-top: 1px solid var(--border); }
+
+.stack-row .name { color: var(--text-dim); }
+.stack-row .toss {
+  font-family: var(--font-data);
+  font-size: 11px;
+  letter-spacing: 1px;
+  color: var(--text-dim);
+}
+.stack-row .value { color: var(--text-dim); }
+.stack-row .value b { font-family: var(--font-data); font-weight: 400; }
+.stack-row .value.old { color: var(--text); }
+.stack-row .value.old b { color: var(--accent); }
+.stack-row .mark { color: var(--accent); text-align: right; }
+
+.stack-row.current {
+  background: var(--surface-alt);
+  border-bottom-color: var(--border);
+  box-shadow: inset 2px 0 0 var(--accent);
+}
+
+.stack-row.current .name { color: var(--text); }
+
+.stack-row.filled .name { color: var(--text); }
+
+.glyph {
+  position: relative;
+  width: 28px;
+  height: 3px;
+  background: var(--text);
+}
+
+.glyph.yin { background: transparent; }
+
+.glyph.yin::before,
+.glyph.yin::after {
+  position: absolute;
+  top: 0;
+  width: 12px;
+  height: 3px;
+  background: var(--text);
+  content: "";
+}
+
+.glyph.yin::before { left: 0; }
+.glyph.yin::after { right: 0; }
+
+.glyph.empty { background: transparent; }
+.glyph.empty::before,
+.glyph.empty::after { background: transparent; }
+
+/* footer */
+.footer {
+  position: absolute;
+  top: 272px;
+  left: 8px;
+  width: 224px;
+  border-top: 1px solid var(--border);
+  font-size: 12px;
+  line-height: 15px;
+}
+
+.footer .primary {
+  position: absolute;
+  top: 4px;
+  left: 0;
+  color: var(--text);
+}
+
+.footer .primary.dim { color: var(--text-dim); }
+
+.footer .secondary {
+  position: absolute;
+  top: 18px;
+  right: 0;
+  color: var(--text-dim);
+}
+
+/* method page rows (reuses build_method geometry) */
+.method-row {
+  position: absolute;
+  left: 8px;
+  width: 224px;
+  height: 48px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+
+.method-row.selected {
+  background: var(--surface-alt);
+  border: 2px solid var(--accent);
+}
+
+.method-row .method-name {
+  position: absolute;
+  left: 12px;
+  top: 6px;
+  font-size: 20px;
+  line-height: 24px;
+  letter-spacing: 1px;
+  color: var(--text);
+}
+
+.method-row .method-desc {
+  position: absolute;
+  left: 12px;
+  top: 30px;
+  font-size: 12px;
+  line-height: 15px;
+  color: var(--text-dim);
+}
+
+.method-row.selected .method-name { color: var(--text); }
+.method-row.selected .method-desc { color: var(--text-dim); }
+
+/* spec section */
+.spec {
+  margin-top: 26px;
+  padding-top: 24px;
+  border-top: 1px solid var(--stage-rule);
+  display: grid;
+  grid-template-columns: 1.15fr 0.85fr;
+  gap: 56px;
+}
+
+.spec h2 {
+  margin: 0 0 14px;
+  font-size: 19px;
+  font-weight: 500;
+}
+
+.timeline {
+  display: grid;
+  grid-template-columns: 108px minmax(0, 1fr);
+  gap: 0;
+  border-top: 1px solid var(--stage-rule);
+}
+
+.timeline > div {
+  padding: 10px 12px 10px 0;
+  border-bottom: 1px solid var(--stage-rule);
+  color: var(--stage-dim);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.timeline .t { color: var(--accent); font-family: var(--font-data); font-size: 12px; }
+
+.spec ul { margin: 0; padding-left: 18px; }
+.spec li { margin-bottom: 9px; color: var(--stage-dim); font-size: 14px; line-height: 1.55; }
+.spec li b { color: var(--stage-text); font-weight: 500; }
+
+.rules {
+  margin-top: 22px;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1px;
+  background: var(--stage-rule);
+  border: 1px solid var(--stage-rule);
+}
+
+.rules div { padding: 12px 14px; background: var(--stage); }
+.rules strong { display: block; margin-bottom: 4px; color: var(--stage-text); font-size: 14px; font-weight: 500; }
+.rules span { color: var(--stage-dim); font-size: 12px; line-height: 1.5; }
+
+@media (max-width: 1180px) {
+  .boards { grid-template-columns: repeat(2, 240px); justify-content: start; row-gap: 48px; }
+  .intro, .spec { grid-template-columns: 1fr; gap: 28px; }
+}
+  </style>
+</head>
+<body>
+<div class="page">
+  <header class="intro">
+    <div>
+      <p class="eyebrow">Passport OS · 六爻排盘</p>
+      <h1>手动摇卦</h1>
+      <p class="lead">
+        起卦方式去掉“数字起卦”，换成三枚铜钱的手动摇卦。每按一次确定摇一爻：
+        三枚钱面碰撞翻面约 720ms，落定后记录背/字与爻值，由初爻向上堆满六爻，
+        再进入现有的横屏双卦盘面。页面沿用竖屏 240×320、26px 顶栏、24px 强调色章节条、
+        方角面板与 12px 底部按键提示。
+      </p>
+    </div>
+    <dl class="axioms">
+      <div><dt>输入</dt><dd>设备只有上、下、确定三颗实体键，没有加速度计；“摇”由确定键触发，不是甩动设备。</dd></div>
+      <div><dt>规则</dt><dd>背面为阳计 3，字面为阴计 2；三背 9 老阳，三字 6 老阴，两背一字 8 少阴，一背两字 7 少阳。</dd></div>
+      <div><dt>动效</dt><dd>720ms 抖动与翻面，随后 200ms 落定、180ms 爻线落入；确定可跳过，不常驻循环。</dd></div>
+      <div><dt>边界</dt><dd>六爻各自独立，可能出现 0–6 个动爻；无动爻时不伪造变卦。</dd></div>
+    </dl>
+  </header>
+
+  <section class="boards" aria-label="四屏设计稿">
+    <!-- 01 method -->
+    <figure>
+      <div class="device">
+        <div class="status">
+          <span class="wifi"><i></i><i></i><i></i></span>
+          <strong class="app-title">六爻排盘-起卦方式</strong>
+          <span class="batt">86%<span class="battery"><span></span></span></span>
+        </div>
+        <div class="method-row" style="top:96px">
+          <span class="method-name">时间起卦</span>
+          <span class="method-desc">当前时间直接起卦</span>
+        </div>
+        <div class="method-row selected" style="top:154px">
+          <span class="method-name">手动摇卦</span>
+          <span class="method-desc">三枚铜钱摇六次</span>
+        </div>
+        <div class="footer">
+          <span class="primary">上下选择　确定进入</span>
+          <span class="secondary">长按确定返回</span>
+        </div>
+      </div>
+      <figcaption><strong>01 起卦方式</strong>数字起卦改为手动摇卦；时间起卦保持直接读取设备时间。上下切换，确定进入选中的方式。</figcaption>
+    </figure>
+
+    <!-- 02 idle -->
+    <figure>
+      <div class="device">
+        <div class="status">
+          <span class="wifi"><i></i><i></i><i></i></span>
+          <strong class="app-title">六爻排盘-手动摇卦</strong>
+          <span class="batt">86%<span class="battery"><span></span></span></span>
+        </div>
+        <div class="band">
+          <span class="band-title">手动摇卦</span>
+          <span class="band-meta">第 1 / 6 爻</span>
+        </div>
+        <div class="tray">
+          <div class="coin empty"><span class="face a"></span><span class="face b"></span></div>
+          <div class="coin empty"><span class="face a"></span><span class="face b"></span></div>
+          <div class="coin empty"><span class="face a"></span><span class="face b"></span></div>
+        </div>
+        <div class="tray-status">
+          <span class="hint">按确定开始摇第一爻</span>
+          <span class="hint">由下而上</span>
+        </div>
+        <div class="stack">
+          <div class="stack-row"><span class="name">上爻</span><span class="toss"></span><span class="glyph empty"></span><span class="value">未摇</span><span class="mark"></span></div>
+          <div class="stack-row"><span class="name">五爻</span><span class="toss"></span><span class="glyph empty"></span><span class="value">未摇</span><span class="mark"></span></div>
+          <div class="stack-row"><span class="name">四爻</span><span class="toss"></span><span class="glyph empty"></span><span class="value">未摇</span><span class="mark"></span></div>
+          <div class="stack-row"><span class="name">三爻</span><span class="toss"></span><span class="glyph empty"></span><span class="value">未摇</span><span class="mark"></span></div>
+          <div class="stack-row"><span class="name">二爻</span><span class="toss"></span><span class="glyph empty"></span><span class="value">未摇</span><span class="mark"></span></div>
+          <div class="stack-row current"><span class="name">初爻</span><span class="toss">—</span><span class="glyph empty"></span><span class="value">待摇</span><span class="mark"></span></div>
+        </div>
+        <div class="footer">
+          <span class="primary">确定摇卦</span>
+          <span class="secondary">长按确定重摇</span>
+        </div>
+      </div>
+      <figcaption><strong>02 待摇</strong>六个空爻位固定由下而上；当前爻行用表面色高亮。三枚钱面在落定后保留，方便逐爻核对背/字。</figcaption>
+    </figure>
+
+    <!-- 03 shaking -->
+    <figure>
+      <div class="device live">
+        <div class="status">
+          <span class="wifi"><i></i><i></i><i></i></span>
+          <strong class="app-title">六爻排盘-手动摇卦</strong>
+          <span class="batt">86%<span class="battery"><span></span></span></span>
+        </div>
+        <div class="band">
+          <span class="band-title">手动摇卦</span>
+          <span class="band-meta">第 3 / 6 爻</span>
+        </div>
+        <div class="tray">
+          <div class="coin shaking res-a"><span class="face a">背</span><span class="face b">字</span></div>
+          <div class="coin shaking res-b"><span class="face a">背</span><span class="face b">字</span></div>
+          <div class="coin shaking res-a"><span class="face a">背</span><span class="face b">字</span></div>
+        </div>
+        <div class="tray-status">
+          <span class="live">摇动中…</span>
+          <span class="hint">约 0.7 秒</span>
+        </div>
+        <div class="stack">
+          <div class="stack-row"><span class="name">上爻</span><span class="toss"></span><span class="glyph empty"></span><span class="value">未摇</span><span class="mark"></span></div>
+          <div class="stack-row"><span class="name">五爻</span><span class="toss"></span><span class="glyph empty"></span><span class="value">未摇</span><span class="mark"></span></div>
+          <div class="stack-row"><span class="name">四爻</span><span class="toss"></span><span class="glyph empty"></span><span class="value">未摇</span><span class="mark"></span></div>
+          <div class="stack-row current"><span class="name">三爻</span><span class="toss">—</span><span class="glyph empty"></span><span class="value">摇动中</span><span class="mark"></span></div>
+          <div class="stack-row filled"><span class="name">二爻</span><span class="toss">背背字</span><span class="glyph yin"></span><span class="value">少阴 <b>8</b></span><span class="mark"></span></div>
+          <div class="stack-row filled"><span class="name">初爻</span><span class="toss">背背字</span><span class="glyph yin"></span><span class="value">少阴 <b>8</b></span><span class="mark"></span></div>
+        </div>
+        <div class="footer">
+          <span class="primary dim">摇卦中…</span>
+          <span class="secondary">确定可跳过</span>
+        </div>
+      </div>
+      <figcaption><strong>03 摇动中</strong>三枚钱面每 60ms 交替背/字，钱体左右错位抖动；约 720ms 后落定。确定键可立即跳过动画，不叠加下一爻。</figcaption>
+    </figure>
+
+    <!-- 04 complete -->
+    <figure>
+      <div class="device">
+        <div class="status">
+          <span class="wifi"><i></i><i></i><i></i></span>
+          <strong class="app-title">六爻排盘-手动摇卦</strong>
+          <span class="batt">86%<span class="battery"><span></span></span></span>
+        </div>
+        <div class="band">
+          <span class="band-title">手动摇卦</span>
+          <span class="band-meta">第 6 / 6 爻 · 已成</span>
+        </div>
+        <div class="tray">
+          <div class="coin"><span class="face a">字</span><span class="face b"></span></div>
+          <div class="coin"><span class="face a">字</span><span class="face b"></span></div>
+          <div class="coin"><span class="face a">字</span><span class="face b"></span></div>
+        </div>
+        <div class="tray-status">
+          <span class="sum">本卦 <b>水山蹇</b></span>
+          <span class="sum">之 <b>风地观</b></span>
+        </div>
+        <div class="stack">
+          <div class="stack-row filled"><span class="name">上爻</span><span class="toss">字字字</span><span class="glyph yin"></span><span class="value old">老阴 <b>6</b></span><span class="mark">X →</span></div>
+          <div class="stack-row filled"><span class="name">五爻</span><span class="toss">字字背</span><span class="glyph"></span><span class="value">少阳 <b>7</b></span><span class="mark"></span></div>
+          <div class="stack-row filled"><span class="name">四爻</span><span class="toss">字背背</span><span class="glyph yin"></span><span class="value">少阴 <b>8</b></span><span class="mark"></span></div>
+          <div class="stack-row filled"><span class="name">三爻</span><span class="toss">背背背</span><span class="glyph"></span><span class="value old">老阳 <b>9</b></span><span class="mark">O →</span></div>
+          <div class="stack-row filled"><span class="name">二爻</span><span class="toss">背背字</span><span class="glyph yin"></span><span class="value">少阴 <b>8</b></span><span class="mark"></span></div>
+          <div class="stack-row filled"><span class="name">初爻</span><span class="toss">背背字</span><span class="glyph yin"></span><span class="value">少阴 <b>8</b></span><span class="mark"></span></div>
+        </div>
+        <div class="footer">
+          <span class="primary">确定看盘</span>
+          <span class="secondary">长按确定重摇</span>
+        </div>
+      </div>
+      <figcaption><strong>04 六爻已成</strong>样盘：本卦水山蹇之卦风地观，三爻老阳 O →、上爻老阴 X →。逐爻保留三枚钱面与 6/7/8/9，确定进入横屏双卦盘面。</figcaption>
+    </figure>
+  </section>
+
+  <section class="spec">
+    <div>
+      <h2>摇一爻的动效时序</h2>
+      <div class="timeline" aria-label="动效时序">
+        <div class="t">0ms</div><div><b>起摇</b><br>确定键按下，钱面开始交替，当前爻行高亮</div>
+        <div class="t">0–360ms</div><div><b>抖动翻面</b><br>120ms 一轮，共三轮；三枚钱相位错开约 60ms</div>
+        <div class="t">360–560ms</div><div><b>落定</b><br>钱面停在最终背/字，强调色描边退回普通边界</div>
+        <div class="t">560–740ms</div><div><b>爻线落入</b><br>本爻线写入堆栈，下一爻行成为当前行</div>
+      </div>
+      <div class="rules">
+        <div><strong>老阳 9</strong><span>背背背 · 阳动 O →<br>本卦阳爻，变卦转阴</span></div>
+        <div><strong>少阴 8</strong><span>两背一字 · 阴静<br>本卦阴爻，不变</span></div>
+        <div><strong>少阳 7</strong><span>一背两字 · 阳静<br>本卦阳爻，不变</span></div>
+        <div><strong>老阴 6</strong><span>字字字 · 阴动 X →<br>本卦阴爻，变卦转阳</span></div>
+      </div>
+    </div>
+    <div>
+      <h2>实现约定</h2>
+      <ul>
+        <li><b>按键：</b>确定单击摇一爻；六爻完成后进入横屏盘面。长按确定清空重摇，返回键回到起卦方式。</li>
+        <li><b>随机：</b>每枚钱独立取背/字，使用设备随机源；同一爻落定后不再变化，六爻全部保留在盘面可核对。</li>
+        <li><b>动效边界：</b>只使用位置抖动与钱面切换，不引入图片、帧缓冲或常驻循环；按下确定可跳过，连续按键不叠加。</li>
+        <li><b>字体：</b>“手动摇卦”“铜钱”“重摇”“静”等新增字需补进 <code>liuyao_font_12</code> 与 <code>liuyao_title_20</code> 子集并跑字体检查。</li>
+        <li><b>核心：</b>现有 <code>liuyao_chart_create()</code> 只支持单一动爻；手动摇卦需接受六爻 6/7/8/9 数组并支持 0–6 个动爻。</li>
+      </ul>
+    </div>
+  </section>
+</div>
+<script>
+  if (new URLSearchParams(location.search).has("still")) {
+    document.documentElement.classList.add("still");
+  }
+</script>
+</body>
+</html>
