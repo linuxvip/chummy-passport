@@ -7,6 +7,7 @@
 #include "ui_pixel.h"
 #include "ui/pixel_scene.h"
 #include "app_fonts.h"
+#include "esp_heap_caps.h"
 #include "esp_log.h"
 #include "lvgl.h"
 
@@ -27,6 +28,11 @@ constexpr int kGlyphSpan = 54;
 constexpr size_t kMaxTiles = 10;
 constexpr int kTileX = (240 - kCardW) / 2;
 constexpr int kCardCenterY = (kViewportH - kCardH) / 2;
+// Scaling the full 240x295 card asks LVGL for a large temporary buffer. After
+// leaving a heavy app the largest internal block can be ~64 KB, so fall back to
+// scaling the 64px icon instead of leaving the draw task retrying a failed
+// allocation while the registry waits for the LVGL lock.
+constexpr size_t kEntryCardAnimMinLargest = 96 * 1024;
 
 // 旅行仪器配色:与首页(app_home.cc)完全同源,风格统一。
 #define kBg (UI_BG)          // 屏底炭黑
@@ -541,15 +547,35 @@ void start_entry() {
     set_key_feedback(BSP_BTN_OK, true);
     s_entry_app = app->id;
     AppTile &tile = s_tiles[s_selected_index];
+    const size_t largest = heap_caps_get_largest_free_block(MALLOC_CAP_INTERNAL);
     lv_anim_delete(tile.card, entry_scale_anim);
-    lv_anim_t anim;
-    lv_anim_init(&anim);
-    lv_anim_set_var(&anim, tile.card);
-    lv_anim_set_exec_cb(&anim, entry_scale_anim);
-    lv_anim_set_values(&anim, 256, 96);
-    lv_anim_set_duration(&anim, 220);
-    lv_anim_set_path_cb(&anim, lv_anim_path_ease_in_out);
-    lv_anim_start(&anim);
+    if (largest >= kEntryCardAnimMinLargest) {
+        lv_anim_t anim;
+        lv_anim_init(&anim);
+        lv_anim_set_var(&anim, tile.card);
+        lv_anim_set_exec_cb(&anim, entry_scale_anim);
+        lv_anim_set_values(&anim, 256, 96);
+        lv_anim_set_duration(&anim, 220);
+        lv_anim_set_path_cb(&anim, lv_anim_path_ease_in_out);
+        lv_anim_start(&anim);
+        ESP_LOGI(TAG, "Entry: card scale, largest=%u", (unsigned)largest);
+    } else if (tile.icon != nullptr) {
+        lv_obj_set_style_transform_scale(tile.card, 256, 0);
+        lv_anim_delete(tile.icon, icon_scale_anim);
+        lv_anim_t anim;
+        lv_anim_init(&anim);
+        lv_anim_set_var(&anim, tile.icon);
+        lv_anim_set_exec_cb(&anim, icon_scale_anim);
+        lv_anim_set_values(&anim, 256, 128);
+        lv_anim_set_duration(&anim, 180);
+        lv_anim_set_path_cb(&anim, lv_anim_path_ease_in_out);
+        lv_anim_start(&anim);
+        ESP_LOGW(TAG, "Entry: low heap, icon scale only, largest=%u",
+                 (unsigned)largest);
+    } else {
+        ESP_LOGW(TAG, "Entry: low heap, no scale, largest=%u",
+                 (unsigned)largest);
+    }
     lv_timer_create(commit_entry, 230, nullptr);
 }
 

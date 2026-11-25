@@ -48,5 +48,9 @@ assert 's_scroll_thumb' not in launcher
 assert 'lv_anim_path_overshoot' in launcher
 assert 'move_selection(direction * (event == BTN_EVT_LONG ? 4 : 1));' in launcher
 assert 'lv_timer_create(commit_entry, 230' in launcher
+assert '#include "esp_heap_caps.h"' in launcher
+assert 'constexpr size_t kEntryCardAnimMinLargest = 96 * 1024;' in launcher
+assert 'heap_caps_get_largest_free_block(MALLOC_CAP_INTERNAL)' in launcher
+assert 'Entry: low heap, icon scale only' in launcher
 assert 'kMaxTiles = 10' in launcher
 print(f'Launcher: {len(registered)} titles fit Passport Flow pages, wheel motion and entry animation: PASS')
