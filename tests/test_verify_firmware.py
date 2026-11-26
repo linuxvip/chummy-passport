@@ -15,7 +15,7 @@ def table():
                                p.label.encode().ljust(16, b'\0'), 0) for p in (
         v.Partition(1, 2, 0x9000, 0x6000, 'nvs'),
         v.Partition(1, 1, 0xF000, 0x1000, 'phy_init'),
-        v.Partition(1, 0x82, 0x420000, 0x200000, 'storage'),
+        v.Partition(1, 0x82, v.STORAGE_OFFSET, v.STORAGE_SIZE, 'storage'),
         v.Partition(0, 0, 0x10000, v.APP_MAX_SIZE, 'factory'),
         v.Partition(1, 2, v.CARDID_OFFSET, v.CARDID_SIZE, 'cardid')))
     raw += b'\xeb\xeb' + b'\xff' * 14 + hashlib.md5(raw).digest()

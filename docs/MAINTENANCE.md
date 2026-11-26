@@ -33,6 +33,10 @@ python3 tools/verify_firmware.py build
 
 构建产物位于忽略的 `build-public/`，不提交到 Git。交付时以 `docs/CURRENT.md` 记录的大小和 SHA256 为准。
 
+### Flash 分区变更
+
+分区偏移变化不能沿用“只更新应用分区”的流程。修改前先完整读取并校验 8 MiB Flash，备份 `cardid` 和 `storage` 中的有效文件；新应用可能覆盖旧布局所在的区域。迁移时分别写入匹配的 bootloader、分区表和应用，不要用从 `0x0` 开始的合并镜像覆盖合并空白区的 NVS；给移动后的 `cardid` 写入备份数据，并用相同 SPIFFS 参数重建目标尺寸的 `storage`，最后读回校验全部分区。
+
 ## 交接
 
 `firmware/snapshot-manifest.json` 如存在，保存快照文件 SHA256 和来源提交，仅供追溯。源码快照不包含可再生成的 `build-public/` 和 `managed_components/`。

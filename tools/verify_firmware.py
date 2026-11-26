@@ -20,9 +20,11 @@ EXPECTED_IMAGES = (
 FLASH_SIZE = 8 * 1024 * 1024
 PARTITION_TABLE_OFFSET = 0x8000
 PARTITION_TABLE_SIZE = 0xC00
-APP_MAX_SIZE = 0x400000
-CARDID_OFFSET = 0x410000
+APP_MAX_SIZE = 0x600000
+CARDID_OFFSET = 0x610000
 CARDID_SIZE = 0x4000
+STORAGE_OFFSET = 0x620000
+STORAGE_SIZE = 0x40000
 RECOVERY_OFFSET = 0x700000
 RECOVERY_SIZE = 0x100000
 ENTRY = struct.Struct("<HBBII16sI")
@@ -96,7 +98,7 @@ def verify_protected_layout(merged: bytes, build_dir: Path) -> None:
     expected = {
         "nvs": Partition(1, 2, 0x9000, 0x6000, "nvs"),
         "phy_init": Partition(1, 1, 0xF000, 0x1000, "phy_init"),
-        "storage": Partition(1, 0x82, 0x420000, 0x200000, "storage"),
+        "storage": Partition(1, 0x82, STORAGE_OFFSET, STORAGE_SIZE, "storage"),
         "factory": Partition(0, 0, 0x10000, APP_MAX_SIZE, "factory"),
         "cardid": Partition(1, 2, CARDID_OFFSET, CARDID_SIZE, "cardid"),
     }

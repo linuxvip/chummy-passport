@@ -113,7 +113,7 @@ def main() -> None:
                                     authoritative_snapshot=source_name, file_count=len(source),
                                     note='Source ZIP and per-file hashes identify this candidate; reference HEAD alone does not.'),
                         files=files, public_defaults_verified=True,
-                        app_partition_remaining=0x400000-len(app),
+                        app_partition_remaining=0x600000-len(app),
                         published=False, private_device_data_included=False)
         (stage/'manifest.json').write_text(json.dumps(manifest, ensure_ascii=False, indent=2)+'\n', encoding='utf-8')
         checksums = ''.join(digest(path.read_bytes())+'  '+path.name+'\n'
