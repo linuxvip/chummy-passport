@@ -63,24 +63,27 @@ assert "sizeof(pressed)" in ble
 assert "sizeof(released)" in ble
 
 assert "BTN_EVT_LONG" in app
-assert "Media" in controls and "Arrows" in controls and "Mouse" not in controls
-assert "Mode::Media" in app
+assert "Video" in controls and "Presentation" in controls
+assert "Camera" in controls and "Music" in controls and "Mouse" not in controls
+assert "Mode::Video" in app
 assert "cycle_mode(s_mode" in app
 assert "ble_retry()" in app
 assert "nvs_set_u8(handle, kModeKey" in app
 assert "nvs_get_u8(handle, kModeKey" in app
+assert "ui_camera_countdown_start" in app
+assert "kCameraDelays[] = {0, 3, 5, 10}" in app
 
-assert '"手机遥控"' in ui
+assert '"BLE 工具箱"' in ui
 assert '"等待手机连接"' in ui
-assert '"手机确认连接"' in ui
+assert '"请在手机上确认"' in ui
 assert '"上一条"' in ui and '"下一条"' in ui
-assert '"长按上/下换模式"' in ui
+assert '"长按上/下换工具"' in ui
 assert '"长按确定返回设置"' not in ui
 assert "app_registry_keep_awake()" in ui
 assert "void ui_key_event" in ui and "ui_key_event(button, event)" in app
 assert "lv_timer_set_repeat_count(s_press_timer, 1)" in ui
-assert "s_up_panel = panel(s_screen, 12, 116, 104, 70, UI_SURFACE, UI_BORDER)" in ui
-assert "s_down_panel = panel(s_screen, 124, 116, 104, 70, UI_SURFACE, UI_BORDER)" in ui
+assert "s_up_panel = panel(s_screen, 12, 138, 104, 56, UI_SURFACE, UI_BORDER)" in ui
+assert "s_down_panel = panel(s_screen, 124, 138, 104, 56, UI_SURFACE, UI_BORDER)" in ui
 assert '"最近 播放暂停"' in ui
 for x, y, width in re.findall(
     r"panel\(s_screen, (\d+), (\d+), (\d+), \d+", ui
@@ -89,7 +92,7 @@ for x, y, width in re.findall(
 
 assert "APP_ID_REMOTE" in app_header
 assert "APP_ID_REMOTE" not in settings
-assert '"手机遥控"' not in settings
+assert '"BLE 工具箱"' not in settings
 assert registry.count("&g_remote_app") == 1, "remote must be a launcher app"
 
 print("Remote BLE HID: direct GATT service, security, lifecycle, launcher entry and compact UI PASS")

@@ -55,7 +55,7 @@ struct Command {
 };
 
 std::atomic<BleState> s_state{BleState::Off};
-std::atomic<Mode> s_mode{Mode::Media};
+std::atomic<Mode> s_mode{Mode::Video};
 std::atomic<bool> s_connected{false};
 std::atomic<bool> s_advertising{false};
 std::atomic<uint32_t> s_passkey{0};
@@ -508,8 +508,8 @@ void send_action(Action action) {
 
     int result;
     const Mode mode = s_mode.load(std::memory_order_acquire);
-    if (mode == Mode::Media) {
-        const ConsumerReport pressed = consumer_report(action);
+    if (mode != Mode::Presentation) {
+        const ConsumerReport pressed = consumer_report(mode, action);
         const ConsumerReport released{};
         std::memcpy(s_consumer_value, &pressed, sizeof(pressed));
         result = notify_report(s_consumer_report_handle, s_consumer_value,
@@ -519,7 +519,7 @@ void send_action(Action action) {
         notify_report(s_consumer_report_handle, s_consumer_value,
                       sizeof(s_consumer_value), s_consumer_subscribed);
     } else {
-        const KeyboardReport pressed = keyboard_report(action);
+        const KeyboardReport pressed = keyboard_report(mode, action);
         const KeyboardReport released{};
         std::memcpy(s_keyboard_value, &pressed, sizeof(pressed));
         result = notify_report(s_keyboard_report_handle, s_keyboard_value,
