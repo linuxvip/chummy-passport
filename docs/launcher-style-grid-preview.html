@@ -1,0 +1,423 @@
+<!doctype html>
+<html lang="zh-CN">
+<meta charset="utf-8">
+<title>Passport OS · 应用网格风格预览</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; min-height: 100%; }
+  body {
+    width: 1080px;
+    min-height: 800px;
+    overflow: hidden;
+    background:
+      radial-gradient(circle at 20% 20%, rgba(56, 232, 225, .08), transparent 28%),
+      radial-gradient(circle at 80% 84%, rgba(241, 125, 102, .08), transparent 30%),
+      #0b0e0f;
+    color: #eee7d6;
+    font-family: "Hiragino Sans GB", "PingFang SC", sans-serif;
+  }
+  .page { position: relative; width: 100%; min-height: 800px; padding: 42px 54px; }
+  .eyebrow {
+    color: #878983;
+    font: 600 12px/1.2 "SFMono-Regular", Menlo, monospace;
+    letter-spacing: .22em;
+  }
+  h1 {
+    margin: 12px 0 0;
+    color: #f3eedf;
+    font-size: 36px;
+    font-weight: 650;
+    letter-spacing: .04em;
+  }
+  .lede { width: 520px; margin-top: 10px; color: #9da29d; font-size: 15px; line-height: 1.6; }
+  .stage {
+    display: flex;
+    align-items: flex-start;
+    gap: 68px;
+    margin-top: 36px;
+  }
+  .preview-wrap { flex: 0 0 500px; }
+  .preview-label {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 480px;
+    margin-bottom: 12px;
+    color: #858b86;
+    font: 600 11px/1 "SFMono-Regular", Menlo, monospace;
+    letter-spacing: .13em;
+  }
+  .preview-label b { color: #f17d66; font-weight: 650; }
+  .frame {
+    position: relative;
+    width: 480px;
+    height: 640px;
+    overflow: hidden;
+    border: 1px solid #343b3c;
+    background: #111617;
+    box-shadow: 0 28px 80px rgba(0, 0, 0, .45);
+  }
+  .device {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 240px;
+    height: 320px;
+    overflow: hidden;
+    transform: scale(2);
+    transform-origin: top left;
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, .025), transparent 25%),
+      #181b1c;
+    color: #eee7d6;
+  }
+  .topbar {
+    position: relative;
+    height: 26px;
+    display: flex;
+    align-items: center;
+    padding: 0 8px;
+    border-bottom: 1px solid #3a4140;
+    background: #141819;
+  }
+  .wifi { width: 17px; height: 13px; display: flex; align-items: flex-end; gap: 2px; }
+  .wifi i { display: block; width: 3px; background: #e7e3d7; }
+  .wifi i:nth-child(1) { height: 4px; }
+  .wifi i:nth-child(2) { height: 7px; }
+  .wifi i:nth-child(3) { height: 10px; }
+  .wifi i:nth-child(4) { height: 13px; }
+  .top-title {
+    margin-left: 13px;
+    font-size: 16px;
+    font-weight: 600;
+    letter-spacing: .04em;
+  }
+  .battery {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    color: #e7e3d7;
+    font: 12px/1 "SFMono-Regular", Menlo, monospace;
+  }
+  .battery b {
+    position: relative;
+    display: block;
+    width: 25px;
+    height: 11px;
+    border: 1px solid currentColor;
+  }
+  .battery b:before {
+    content: "";
+    position: absolute;
+    left: 2px;
+    top: 2px;
+    bottom: 2px;
+    width: 18px;
+    background: #8dc2b3;
+  }
+  .battery b:after {
+    content: "";
+    position: absolute;
+    right: -3px;
+    top: 3px;
+    width: 2px;
+    height: 5px;
+    background: currentColor;
+  }
+  .context {
+    position: absolute;
+    left: 12px;
+    right: 12px;
+    top: 31px;
+    height: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    color: #858b86;
+    font: 12px/1 "SFMono-Regular", Menlo, monospace;
+    letter-spacing: .08em;
+  }
+  .context em { color: #d8d3c5; font-style: normal; }
+  .grid {
+    position: absolute;
+    left: 14px;
+    top: 48px;
+    width: 212px;
+    display: grid;
+    grid-template-columns: repeat(3, 64px);
+    grid-auto-rows: 70px;
+    column-gap: 10px;
+    row-gap: 10px;
+  }
+  .app {
+    --ink: #b0c2ce;
+    --tile: #28343c;
+    position: relative;
+    height: 70px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    padding-top: 1px;
+    color: var(--ink);
+  }
+  .app .icon-stage {
+    position: relative;
+    width: 48px;
+    height: 48px;
+    display: grid;
+    place-items: center;
+    border: 0;
+    background: transparent;
+    opacity: .72;
+  }
+  .app svg {
+    width: 28px;
+    height: 28px;
+    stroke: currentColor;
+    fill: none;
+    stroke-width: 1.65;
+    stroke-linecap: square;
+    stroke-linejoin: miter;
+  }
+  .app span {
+    margin-top: 4px;
+    color: #aaa79e;
+    font-size: 12px;
+    line-height: 16px;
+    white-space: nowrap;
+  }
+  .app.selected {
+    background: color-mix(in srgb, #202526 72%, transparent);
+    outline: 1px solid color-mix(in srgb, var(--ink) 74%, transparent);
+    outline-offset: 2px;
+  }
+  .app.selected:before {
+    content: "";
+    position: absolute;
+    left: 2px;
+    top: 0;
+    width: 17px;
+    height: 2px;
+    background: var(--ink);
+  }
+  .app.selected .icon-stage {
+    border: 0;
+    background: transparent;
+    opacity: 1;
+  }
+  .app.selected span { color: #f3eedf; font-weight: 650; }
+  .footer {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 43px;
+    padding-top: 4px;
+    border-top: 1px solid #353c3b;
+    background: #131718;
+    color: #858b86;
+    text-align: center;
+    font-size: 12px;
+    line-height: 16px;
+  }
+  .footer b { color: #d7d2c4; font-weight: 550; }
+  .ai { --ink: #31d1df; --tile: #123b44; }
+  .radio { --ink: #ffc45a; --tile: #493514; }
+  .music { --ink: #ff7887; --tile: #48202a; }
+  .reminder { --ink: #f3d86b; --tile: #463a16; }
+  .list { --ink: #73df97; --tile: #183c27; }
+  .bazi { --ink: #f17d66; --tile: #45211d; }
+  .liuyao { --ink: #39c7c3; --tile: #123c3c; }
+  .calendar { --ink: #7dbcf6; --tile: #18364e; }
+  .settings { --ink: #b0c2ce; --tile: #28343c; }
+  .notes {
+    flex: 1;
+    padding-top: 26px;
+  }
+  .notes h2 {
+    margin: 0;
+    color: #f1ecdc;
+    font-size: 25px;
+    font-weight: 600;
+    letter-spacing: .03em;
+  }
+  .notes > p {
+    width: 370px;
+    margin: 10px 0 0;
+    color: #939a94;
+    font-size: 14px;
+    line-height: 1.65;
+  }
+  .rule {
+    width: 360px;
+    height: 1px;
+    margin: 25px 0 22px;
+    background: #2e3433;
+  }
+  .principle {
+    width: 360px;
+    display: grid;
+    grid-template-columns: 74px 1fr;
+    gap: 13px 18px;
+    color: #a2a79f;
+    font-size: 13px;
+    line-height: 1.5;
+  }
+  .principle dt {
+    color: #575f5b;
+    font: 600 10px/1.8 "SFMono-Regular", Menlo, monospace;
+    letter-spacing: .12em;
+  }
+  .principle dd { margin: 0; }
+  .switch-card {
+    width: 360px;
+    margin-top: 26px;
+    border: 1px solid #343a38;
+    background: #141819;
+  }
+  .switch-card header {
+    height: 29px;
+    padding: 0 12px;
+    display: flex;
+    align-items: center;
+    border-bottom: 1px solid #303634;
+    color: #8b928c;
+    font: 9px/1 "SFMono-Regular", Menlo, monospace;
+    letter-spacing: .13em;
+  }
+  .setting-row {
+    height: 42px;
+    padding: 0 12px;
+    display: flex;
+    align-items: center;
+    color: #d7d2c4;
+    font-size: 14px;
+  }
+  .setting-row span { margin-left: auto; color: #f17d66; }
+  .setting-row small { margin-left: 8px; color: #6d746f; }
+  .legend {
+    display: flex;
+    gap: 18px;
+    margin-top: 13px;
+    color: #777f79;
+    font-size: 11px;
+  }
+  .legend i {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    margin-right: 6px;
+    background: currentColor;
+  }
+  .legend .focus { color: #f17d66; }
+</style>
+<svg width="0" height="0" style="position:absolute">
+  <symbol id="i-ai" viewBox="0 0 24 24">
+    <path d="M8 4h8v3H8zM6 8h12v10H6zM9 12h2m3 0h2M9 15h6M10 18v2m4-2v2M5 11H3m18 0h-2"/>
+  </symbol>
+  <symbol id="i-radio" viewBox="0 0 24 24">
+    <path d="M4 8h16v12H4zM7 5l5 3M7 12h7M7 16h4M17 12v1m0 3v1"/>
+  </symbol>
+  <symbol id="i-music" viewBox="0 0 24 24">
+    <path d="M9 17V6l10-2v12M6 20a3 3 0 1 0 0-6 3 3 0 0 0 0 6Zm13-4a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"/>
+  </symbol>
+  <symbol id="i-bell" viewBox="0 0 24 24">
+    <path d="M6 17h12l-2-3v-4a4 4 0 0 0-8 0v4zM10 20h4M12 4V2"/>
+  </symbol>
+  <symbol id="i-list" viewBox="0 0 24 24">
+    <path d="M6 6h13M6 10h13M6 14h9M6 18h6M19 15l2 2 3-4"/>
+  </symbol>
+  <symbol id="i-bazi" viewBox="0 0 24 24">
+    <path d="M5 4h5v7H5zm9 0h5v7h-5zM5 14h5v6H5zm9 0h5v6h-5zM7 6v3m10-3v3m-10 9v-2m10 2v-2"/>
+  </symbol>
+  <symbol id="i-liuyao" viewBox="0 0 24 24">
+    <path d="M5 5h14M8 9h8M5 13h14M8 17h8M5 21h14M8 7h8M5 11h14M8 15h8M5 19h14"/>
+  </symbol>
+  <symbol id="i-calendar" viewBox="0 0 24 24">
+    <path d="M4 6h16v14H4zM8 3v5m8-5v5M4 10h16M8 14h2m4 0h2M8 17h2"/>
+  </symbol>
+  <symbol id="i-settings" viewBox="0 0 24 24">
+    <path d="M4 6h16M4 12h16M4 18h16M9 4v4M15 10v4M8 16v4"/>
+  </symbol>
+</svg>
+
+<main class="page">
+  <div class="eyebrow">PASSPORT OS / APPLICATION SELECTOR</div>
+  <h1>应用网格 · 九宫布局</h1>
+  <p class="lede">新增第二种应用选择页风格。九个应用一屏全显，保留三个实体键的操作方式；设置页可在单页轮播与应用网格之间切换并持久保存。</p>
+
+  <section class="stage">
+    <div class="preview-wrap">
+      <div class="preview-label"><span>240 × 320 / 06 OF 09 SELECTED</span><b>GRID STYLE</b></div>
+      <div class="frame">
+        <div class="device">
+          <div class="topbar">
+            <div class="wifi"><i></i><i></i><i></i><i></i></div>
+            <div class="top-title">选择应用</div>
+            <div class="battery">98%<b></b></div>
+          </div>
+
+          <div class="context"><span>GRID 3x3</span><span><em>06</em> / 09</span></div>
+
+          <div class="grid">
+            <div class="app ai">
+              <div class="icon-stage"><svg><use href="#i-ai"/></svg></div><span>小智 AI</span>
+            </div>
+            <div class="app radio">
+              <div class="icon-stage"><svg><use href="#i-radio"/></svg></div><span>城市收音机</span>
+            </div>
+            <div class="app music">
+              <div class="icon-stage"><svg><use href="#i-music"/></svg></div><span>音乐播放器</span>
+            </div>
+            <div class="app reminder">
+              <div class="icon-stage"><svg><use href="#i-bell"/></svg></div><span>备忘提醒</span>
+            </div>
+            <div class="app list">
+              <div class="icon-stage"><svg><use href="#i-list"/></svg></div><span>事项清单</span>
+            </div>
+            <div class="app bazi selected">
+              <div class="icon-stage"><svg><use href="#i-bazi"/></svg></div><span>八字排盘</span>
+            </div>
+            <div class="app liuyao">
+              <div class="icon-stage"><svg><use href="#i-liuyao"/></svg></div><span>六爻排盘</span>
+            </div>
+            <div class="app calendar">
+              <div class="icon-stage"><svg><use href="#i-calendar"/></svg></div><span>万年历</span>
+            </div>
+            <div class="app settings">
+              <div class="icon-stage"><svg><use href="#i-settings"/></svg></div><span>设置</span>
+            </div>
+          </div>
+
+          <div class="footer"><b>上下逐项 · 长按跨行</b><br>确定打开 · 长按确定返回</div>
+        </div>
+      </div>
+    </div>
+
+    <aside class="notes">
+      <h2>一屏总览，焦点仍然唯一</h2>
+      <p>网格负责“看见全部”，应用身份色和几何焦点负责“当前在哪里”。未选中项不显示外框，避免九个卡片同时争夺注意力。</p>
+
+      <div class="rule"></div>
+      <dl class="principle">
+        <dt>LAYOUT</dt><dd>3 × 3 固定九宫格，全部 9 个应用同屏，无滚动。</dd>
+        <dt>FOCUS</dt><dd>身份色细框、顶部短线、浅色底与高亮标题组成四重焦点。</dd>
+        <dt>MOTION</dt><dd>焦点切换 100ms 渐显；打开应用只缩放入口图标。</dd>
+      </dl>
+
+      <div class="switch-card">
+        <header>SETTINGS / 风格切换</header>
+        <div class="setting-row">应用页样式 <span>应用网格</span><small>确定切换</small></div>
+      </div>
+
+      <div class="legend">
+        <span class="focus"><i></i>当前选择</span>
+        <span><i></i>应用身份色</span>
+        <span>六套主题自动适配</span>
+      </div>
+    </aside>
+  </section>
+</main>
+</html>

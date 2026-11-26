@@ -5,6 +5,7 @@ python3 tests/test_xiaozhi_face_power.py
 python3 tests/check_digit_font.py
 python3 tests/check_title_glyphs.py
 python3 tests/check_launcher_apps.py
+python3 tests/test_launcher_grid_ui.py
 python3 tests/test_boot_splash.py
 test_dir="$(mktemp -d /tmp/passport-host.XXXXXX)"
 trap 'rm -rf -- "$test_dir"' EXIT

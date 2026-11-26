@@ -2,6 +2,7 @@
 
 #include "apps/app_base.h"
 #include "apps/home/home_layout.h"
+#include "launcher/launcher_style.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -20,6 +21,7 @@ uint8_t settings_get_volume(void);
 uint8_t settings_get_brightness(void);
 bool settings_get_late_zi(void);
 home_layout_t settings_get_home_layout(void);
+launcher_style_t settings_get_launcher_style(void);
 
 extern const passport_app_t g_settings_app;
 

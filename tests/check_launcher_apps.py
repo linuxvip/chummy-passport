@@ -6,7 +6,7 @@ root=Path(__file__).resolve().parents[1]
 registry=(root/'main/launcher/app_registry.cc').read_text(encoding='utf-8')
 array=registry.split('const passport_app_t *s_apps[] = {',1)[1].split('};',1)[0]
 registered=re.findall(r'&g_(\w+)_app',array)
-launcher_glyphs={chr(int(c,16)) for c in re.findall(r'/\* U\+([0-9A-Fa-f]{4,6})',(root/'main/fonts/buddy_font_16.c').read_text(encoding='utf-8'))}
+launcher_glyphs={chr(int(c,16)) for c in re.findall(r'/\* U\+([0-9A-Fa-f]{4,6})',(root/'main/fonts/launcher_font_12.c').read_text(encoding='utf-8'))}
 title_glyphs={chr(int(c,16)) for c in re.findall(r'/\* U\+([0-9A-Fa-f]{4,6})',(root/'main/fonts/launcher_title_20.c').read_text(encoding='utf-8'))}
 apps={}
 for path in (root/'main').rglob('*.cc'):
@@ -53,4 +53,4 @@ assert 'constexpr size_t kEntryCardAnimMinLargest = 96 * 1024;' in launcher
 assert 'heap_caps_get_largest_free_block(MALLOC_CAP_INTERNAL)' in launcher
 assert 'Entry: low heap, icon scale only' in launcher
 assert 'kMaxTiles = 10' in launcher
-print(f'Launcher: {len(registered)} titles fit Passport Flow pages, wheel motion and entry animation: PASS')
+print(f'Launcher: {len(registered)} titles fit Flow and grid fonts, wheel motion and entry animation: PASS')

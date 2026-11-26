@@ -17,7 +17,7 @@ void launcher_ui_show(void);
 // 隐藏 Launcher 主界面（进入子应用前调用）
 void launcher_ui_hide(void);
 
-// Launcher 界面按键处理（UP/DOWN 翻卡片，OK 进入）
+// Launcher 界面按键处理（Flow 翻页 / Grid 跨行，OK 进入）
 void launcher_ui_on_key(uint8_t btn, app_btn_event_t event);
 
 // 更新状态栏信息（电池、时间）

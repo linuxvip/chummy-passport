@@ -22,6 +22,7 @@ static uint8_t s_volume=80,s_brightness=80;
 static uint16_t s_timeout=60;
 static bool s_late_zi=false;
 static home_layout_t s_home_layout=HOME_LAYOUT_ALMANAC;
+static launcher_style_t s_launcher_style=LAUNCHER_STYLE_FLOW;
 static std::atomic<int64_t> s_outdoor_until_us{0};
 static std::atomic<uint8_t> s_outdoor_restore{80};
 static int master_brightness=80;

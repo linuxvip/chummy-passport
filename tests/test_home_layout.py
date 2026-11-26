@@ -19,8 +19,9 @@ for value in (
 for label in ("命海拾遗", "极简四柱", "天气生活", "人物志"):
     assert label in layout
 
-assert "constexpr size_t kRowCount = 11;" in settings
+assert "constexpr size_t kRowCount = 12;" in settings
 assert '"首页样式"' in settings
+assert '"应用页样式"' in settings
 assert 'nvs_set_u8(handle, "home_layout"' in settings
 assert 'nvs_get_u8(handle, "home_layout"' in settings
 assert "s_home_layout = HOME_LAYOUT_ALMANAC;" in settings
