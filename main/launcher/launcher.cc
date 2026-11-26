@@ -29,17 +29,18 @@ constexpr int kIconSize = 64;
 constexpr int kGlyphSpan = 54;
 constexpr size_t kMaxTiles = 10;
 constexpr size_t kGridColumns = 3;
-constexpr size_t kGridRows = 3;
-constexpr size_t kGridMaxTiles = 9;
+constexpr size_t kGridRows = 4;
+constexpr size_t kGridMaxTiles = 12;
 static_assert(kGridColumns * kGridRows == kGridMaxTiles,
-              "launcher grid must remain 3 x 3");
+              "launcher grid must remain 3 x 4");
 constexpr int kGridTileW = 64;
-constexpr int kGridTileH = 70;
+constexpr int kGridTileH = 55;
 constexpr int kGridColumnGap = 10;
-constexpr int kGridRowGap = 10;
+constexpr int kGridRowGap = 4;
 constexpr int kGridLeft = 14;
 constexpr int kGridTop = 44;
-constexpr int kGridIconSize = 48;
+constexpr int kGridIconSize = 38;
+constexpr int kGridLabelY = 36;
 constexpr int kGridFooterRuleY = 279;
 constexpr int kTileX = (240 - kCardW) / 2;
 constexpr int kCardCenterY = (kViewportH - kCardH) / 2;
@@ -133,6 +134,7 @@ IconPalette icon_palette(passport_app_id_t id) {
         case APP_ID_BAZI: return {0xF17D66, 0x45211D, 0xA34B3E, 0xF1DDD7};
         case APP_ID_LIUYAO: return {0x39C7C3, 0x123C3C, 0x14777A, 0xD8EEEB};
         case APP_ID_CALENDAR: return {0x7DBCF6, 0x18364E, 0x3C6690, 0xDDE9F3};
+        case APP_ID_REMOTE: return {0x69E5C1, 0x173A35, 0x1E735D, 0xD8F0E8};
         case APP_ID_SETTINGS: return {0xB0C2CE, 0x28343C, 0x58635D, 0xE4E7E3};
         default: return {0xD9CFB9, 0x29343B, 0x5B5145, 0xE4E7E3};
     }
@@ -309,6 +311,25 @@ constexpr IconGlyph kIconGlyphs[] = {
         "..#...#...#...#..",
         "..#...#...#...#..",
         "..############...",
+        ".................",
+        ".................",
+        ".................",
+    }},
+    {APP_ID_REMOTE, {  // phone showing up/down controls
+        ".................",
+        "....#########....",
+        "....#.......#....",
+        "....#...#...#....",
+        "....#..###..#....",
+        "....#.......#....",
+        "....#.......#....",
+        "....#..###..#....",
+        "....#...#...#....",
+        "....#.......#....",
+        "....#########....",
+        "........#........",
+        "......#####......",
+        ".....#######.....",
         ".................",
         ".................",
         ".................",
@@ -742,7 +763,7 @@ void build_grid_ui_locked() {
     s_catalogue = ui_pixel_label(s_screen, "选择应用", &buddy_font_16, UI_TEXT);
     ui_pixel_status_text_align(s_catalogue, 42, 112, LV_TEXT_ALIGN_LEFT);
 
-    s_grid_context = ui_pixel_label(s_screen, "GRID 3x3", &launcher_font_12,
+    s_grid_context = ui_pixel_label(s_screen, "GRID 3x4", &launcher_font_12,
                                     UI_TEXT_DIM);
     lv_obj_set_pos(s_grid_context, 12, 31);
     lv_obj_set_size(s_grid_context, 100, 14);
@@ -791,7 +812,7 @@ void build_grid_ui_locked() {
 
         tile.label = ui_pixel_label(tile.box, app_chinese_name(tile.id),
                                     &launcher_font_12, UI_TEXT_DIM);
-        lv_obj_set_pos(tile.label, 0, 51);
+        lv_obj_set_pos(tile.label, 0, kGridLabelY);
         lv_obj_set_size(tile.label, kGridTileW, 16);
         lv_obj_set_style_text_align(tile.label, LV_TEXT_ALIGN_CENTER, 0);
         lv_label_set_long_mode(tile.label, LV_LABEL_LONG_DOT);

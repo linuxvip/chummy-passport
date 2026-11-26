@@ -40,19 +40,17 @@ top = integer("kGridTop")
 icon = integer("kGridIconSize")
 footer_rule = integer("kGridFooterRuleY")
 
-assert columns == 3 and rows == 3 and max_tiles == 9
+assert columns == 3 and rows == 4 and max_tiles == 12
 assert left + columns * tile_w + (columns - 1) * gap_x <= 240
 assert top + rows * tile_h + (rows - 1) * gap_y <= footer_rule
 assert icon <= tile_w
-assert "lv_obj_set_pos(tile.label, 0, 51);" in launcher
+assert "lv_obj_set_pos(tile.label, 0, kGridLabelY);" in launcher
 assert "lv_obj_set_size(tile.label, kGridTileW, 16);" in launcher
 
 app_array = registry.split("const passport_app_t *s_apps[] = {", 1)[1].split("};", 1)[0]
 registered = re.findall(r"&g_(\w+)_app", app_array)
-assert len(registered) == max_tiles, (
-    f"grid expects {max_tiles} registered apps, found {len(registered)}; "
-    "add pagination before expanding the grid"
-)
+assert len(registered) == 10
+assert len(registered) <= max_tiles
 
 assert "LAUNCHER_STYLE_FLOW = 0" in style_header
 assert "LAUNCHER_STYLE_GRID = 1" in style_header
@@ -91,9 +89,9 @@ assert '"确定打开 · 长按确定返回"' in launcher
 
 launcher_glyphs = glyphs("launcher_font_12")
 buddy_glyphs = glyphs("buddy_font_16")
-for text in ("上下逐项 · 长按跨行", "确定打开 · 长按确定返回", "GRID 3x3"):
+for text in ("上下逐项 · 长按跨行", "确定打开 · 长按确定返回", "GRID 3x4"):
     assert set(text) - {" "} <= launcher_glyphs, f"launcher font missing {text!r}"
 for text in ("单页轮播", "应用网格", "应用页样式"):
     assert set(text) - {" "} <= buddy_glyphs, f"buddy font missing {text!r}"
 
-print("Launcher styles: Flow default, 3x3 grid, persistence and key mapping: PASS")
+print("Launcher styles: Flow default, 3x4 grid, persistence and key mapping: PASS")

@@ -21,6 +21,9 @@ idf_component_register(
         "apps/liuyao/app_liuyao.cc"
         "apps/calendar/calendar_core.c"
         "apps/calendar/app_calendar.cc"
+        "apps/remote/app_remote.cc"
+        "apps/remote/remote_ui.cc"
+        "apps/remote/ble_hid_remote.cc"
         "apps/xiaozhi/opus_encoder_storage.cc"
         "boot_chime.c"
         "ui_sfx.c"
@@ -89,6 +92,7 @@ idf_component_register(
         "apps/bazi"
         "apps/liuyao"
         "apps/calendar"
+        "apps/remote"
         "ui"
         "fonts"
     REQUIRES
@@ -102,6 +106,7 @@ idf_component_register(
         mbedtls
         esp_codec_dev
         esp_audio_codec
+        bt
         esp_timer
         esp_pm
         spi_flash

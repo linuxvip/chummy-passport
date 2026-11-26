@@ -26,7 +26,7 @@ const passport_app_t g_radio_app=app(APP_ID_RADIO),g_xiaozhi_app=app(APP_ID_XIAO
  g_wifi_app=app(APP_ID_WIFI),g_settings_app=app(APP_ID_SETTINGS),g_home_app=app(APP_ID_HOME),
  g_netease_app=app(APP_ID_NETEASE),g_reminders_app=app(APP_ID_REMINDERS),g_lists_app=app(APP_ID_LISTS),
  g_bazi_app=app(APP_ID_BAZI),g_liuyao_app=app(APP_ID_LIUYAO),
- g_calendar_app=app(APP_ID_CALENDAR);
+ g_calendar_app=app(APP_ID_CALENDAR),g_remote_app=app(APP_ID_REMOTE);
 static bool mock_reminder_active=false;
 namespace reminders {
  bool alarm_active(){return mock_reminder_active;}

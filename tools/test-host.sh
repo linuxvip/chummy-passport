@@ -117,6 +117,25 @@ python3 tests/test_media_startup.py
 "${CXX:-c++}" -std=c++17 -Wall -Wextra -Werror -fsanitize=address,undefined \
     -Itests/registry_mocks -Imain tests/test_netease_controls.cc -o "$test_dir/netease-controls"
 "$test_dir/netease-controls"
+"${CXX:-c++}" -std=c++17 -Wall -Wextra -Werror -fsanitize=address,undefined \
+    -Itests/registry_mocks -Imain tests/test_remote_controls.cc -o "$test_dir/remote-controls"
+"$test_dir/remote-controls"
+if [[ -n "${IDF_PATH:-}" && -f "$IDF_PATH/components/esp_hid/src/esp_hid_common.c" ]]; then
+    "${CC:-cc}" -std=c11 -Wall -Wextra -Werror -Wno-unused-parameter -include stdlib.h \
+        -DCONFIG_GATTS_ENABLE=0 -DCONFIG_GATTC_ENABLE=0 \
+        -Itests/remote_hid_mocks -I"$IDF_PATH/components/esp_hid/include" \
+        -c "$IDF_PATH/components/esp_hid/src/esp_hid_common.c" \
+        -o "$test_dir/esp_hid_common.o"
+    "${CXX:-c++}" -std=c++17 -Wall -Wextra -Werror -fsanitize=address,undefined \
+        -Itests/registry_mocks -Imain -Itests/remote_hid_mocks \
+        -I"$IDF_PATH/components/esp_hid/include" \
+        tests/test_remote_descriptor.cc "$test_dir/esp_hid_common.o" \
+        -o "$test_dir/remote-descriptor"
+    "$test_dir/remote-descriptor"
+else
+    echo "ESP-IDF HID report-map parser test skipped (IDF_PATH not set)"
+fi
+python3 tests/test_remote_ble.py
 "${CXX:-c++}" -std=c++17 -Wall -Wextra -Werror -fsanitize=address,undefined -Itests/registry_mocks -Imain \
     tests/test_netease_intent.cc main/apps/netease/netease_json.cc -o "$test_dir/netease-intent"
 "$test_dir/netease-intent"

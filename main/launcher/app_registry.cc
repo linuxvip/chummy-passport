@@ -23,6 +23,7 @@
 #include "ui_sfx.h"
 #include "apps/reminders/reminder_service.h"
 #include "apps/xiaozhi/app_xiaozhi.h"
+#include "apps/remote/app_remote.h"
 #include <atomic>
 #include <vector>
 
@@ -40,6 +41,7 @@ extern const passport_app_t g_lists_app;
 extern const passport_app_t g_bazi_app;
 extern const passport_app_t g_liuyao_app;
 extern const passport_app_t g_calendar_app;
+extern const passport_app_t g_remote_app;
 
 namespace {
 
@@ -56,6 +58,7 @@ const passport_app_t *s_apps[] = {
     &g_bazi_app,
     &g_liuyao_app,
     &g_calendar_app,
+    &g_remote_app,
     &g_settings_app,   // 设置放最后(应用惯用收尾位置)
 };
 

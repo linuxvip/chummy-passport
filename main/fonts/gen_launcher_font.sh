@@ -4,7 +4,7 @@ set -euo pipefail
 PROJ="$(cd -- "$(dirname -- "$0")/../.." && pwd)"
 OTF="$PROJ/managed_components/lvgl__lvgl/scripts/built_in_font/SourceHanSansSC-Normal.otf"
 OUT="$PROJ/main/fonts/launcher_font_12.c"
-SYMBOLS="小智AI城市收音机音乐播放器备忘提醒事项清单文字清单八字六爻排盘万年历设置选择一个应用上下逐项·长按跨行确定打开返回"
+SYMBOLS="小智AI城市收音机音乐播放器备忘提醒事项清单文字清单八字六爻排盘万年历手机遥控设置选择一个应用上下逐项·长按跨行确定打开返回"
 
 cd "$PROJ"
 npx --yes lv_font_conv \
