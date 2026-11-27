@@ -17,12 +17,13 @@ if [ ! -f "$lib/lv_conf.h" ]; then
 fi
 flags=(-O1 -DLV_CONF_INCLUDE_SIMPLE "-I$lib" "-I$lvgl")
 if [ ! -f "$lib/liblvgl.a" ]; then
-    find "$lvgl/src" -name '*.c' | while read -r src; do
+    while IFS= read -r -d '' src; do
         obj="$lib/obj/$(echo "$src" | tr '/' '_').o"
-        echo "cc ${flags[*]} -c $src -o $obj"
-    done | xargs -P "$(nproc)" -I{} sh -c '{}'
+        cc "${flags[@]}" -c "$src" -o "$obj"
+    done < <(find "$lvgl/src" -name '*.c' -print0)
     ar rcs "$lib/liblvgl.a" "$lib"/obj/*.o
 fi
 c++ -std=c++17 -Wall -Wextra -Werror "${flags[@]}" -Imain \
-    tools/xiaozhi_face_preview.cc main/apps/xiaozhi/xiaozhi_face.cc "$lib/liblvgl.a" -lm -o "$lib/face-preview"
+    tools/xiaozhi_face_preview.cc main/apps/xiaozhi/xiaozhi_face.cc \
+    main/apps/xiaozhi/xiaoming_assets.cc "$lib/liblvgl.a" -lm -o "$lib/face-preview"
 "$lib/face-preview" "$out" "${2:-}"

@@ -63,6 +63,7 @@ idf_component_register(
         "apps/xiaozhi/xiaozhi_audio.cc"
         "apps/xiaozhi/xiaozhi_ui.cc"
         "apps/xiaozhi/xiaozhi_face.cc"
+        "apps/xiaozhi/xiaoming_assets.cc"
         "apps/xiaozhi/xiaozhi_store.cc"
         "apps/xiaozhi/xiaozhi_ota.cc"
         "apps/xiaozhi/app_xiaozhi.cc"

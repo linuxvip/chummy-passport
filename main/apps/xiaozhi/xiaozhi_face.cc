@@ -1,6 +1,8 @@
-// Xiaozhi companion face. Geometry is in the 124x112 (big) and 26x20 (mini)
-// host boxes; every shape follows the pose's head bob.
+// Xiaozhi companion face. A 144px illustrated portrait is centred in the
+// 160x152 host; lightweight LVGL shapes add listening, thinking, sleep and
+// real microphone amplitude effects.
 #include "apps/xiaozhi/xiaozhi_face.h"
+#include "apps/xiaozhi/xiaoming_assets.h"
 
 #include <cstring>
 
@@ -88,186 +90,61 @@ struct Pen {
     }
 };
 
-enum class Eyes : uint8_t { Open, Happy, Closed, Round, Heart, Sad, Angry, Sleepy, Wink, Shades, Squint };
-enum class Mouth : uint8_t { Smile, Grin, Laugh, Talk, O, Flat, Frown, Smirk, Wavy, Tiny };
-
-struct Look {
-    Eyes eyes;
-    Mouth mouth;
-    uint8_t blush;  // 0 none, 1 soft, 2 shy
-    bool tears;
-};
-
-Look look_for(const Pose &p) {
-    switch (p.activity) {
-    case Activity::Offline:    return {Eyes::Closed, Mouth::Tiny, 0, false};
-    case Activity::Error:      return {Eyes::Sad, Mouth::Frown, 0, false};
-    case Activity::Connecting: return {Eyes::Open, Mouth::Flat, 0, false};
-    case Activity::Listening:  return {Eyes::Open, Mouth::O, 1, false};
-    case Activity::Thinking:   return {Eyes::Open, Mouth::Flat, 0, false};
-    default: break;
-    }
-    const bool talking = p.activity == Activity::Speaking;
-    const Mouth talk = talking ? Mouth::Talk : Mouth::Smile;
-    switch (p.mood) {
-    case Mood::Happy:     return {Eyes::Happy, talking ? Mouth::Talk : Mouth::Grin, 1, false};
-    case Mood::Laugh:     return {Eyes::Happy, Mouth::Laugh, 1, false};
-    case Mood::Sad:       return {Eyes::Sad, talking ? Mouth::Talk : Mouth::Frown, 0, false};
-    case Mood::Cry:       return {Eyes::Sad, talking ? Mouth::Talk : Mouth::Frown, 0, true};
-    case Mood::Angry:     return {Eyes::Angry, talking ? Mouth::Talk : Mouth::Frown, 0, false};
-    case Mood::Surprised: return {Eyes::Round, Mouth::O, 0, false};
-    case Mood::Love:      return {Eyes::Heart, talk, 1, false};
-    case Mood::Wink:      return {Eyes::Wink, talking ? Mouth::Talk : Mouth::Grin, 1, false};
-    case Mood::Cool:      return {Eyes::Shades, talking ? Mouth::Talk : Mouth::Smirk, 0, false};
-    case Mood::Sleepy:    return {Eyes::Sleepy, talking ? Mouth::Talk : Mouth::Tiny, 0, false};
-    case Mood::Confused:  return {Eyes::Squint, talking ? Mouth::Talk : Mouth::Wavy, 0, false};
-    case Mood::Shy:       return {Eyes::Happy, talking ? Mouth::Talk : Mouth::Smile, 2, false};
-    default:              return {Eyes::Open, talk, 1, false};
-    }
-}
-
 int clamp(int v, int lo, int hi) { return v < lo ? lo : v > hi ? hi : v; }
 
-// ---- big face --------------------------------------------------------------
+constexpr int kCx = kBigW / 2;
 
-constexpr int kCx = 62;
-constexpr int kEyeY = 52, kEyeLx = 47, kEyeRx = 77;
-constexpr int kMouthY = 70;
-
-void open_eye(Pen &pen, int cx, int cy, int w, int h, uint8_t open, const Palette &c) {
-    const int eh = h * open / 100 < 3 ? 3 : h * open / 100;
-    const int x = cx - w / 2, y = cy - eh / 2;
-    pen.rect(x, y, w, eh, c.eye, (w < eh ? w : eh) / 2);
-    if (eh >= 12) {
-        pen.rect(x + w - 8, y + 3, 5, 6, c.glint, 3);
-        pen.rect(x + 3, y + eh - 7, 3, 3, c.glint, 2, LV_OPA_60);
+assets::PortraitFrame portrait_frame(const Pose &p) {
+    if (p.activity == Activity::Error) return assets::PortraitFrame::Alert;
+    if (p.activity == Activity::Thinking || p.activity == Activity::Connecting)
+        return assets::PortraitFrame::Confident;
+    if (p.activity == Activity::Speaking) {
+        return p.mouth >= 4 ? assets::PortraitFrame::Speaking
+                            : assets::PortraitFrame::Calm;
+    }
+    switch (p.mood) {
+    case Mood::Happy:
+    case Mood::Laugh:
+    case Mood::Love:
+    case Mood::Wink:
+    case Mood::Shy:
+        return assets::PortraitFrame::Happy;
+    case Mood::Sad:
+    case Mood::Cry:
+    case Mood::Angry:
+    case Mood::Surprised:
+        return assets::PortraitFrame::Alert;
+    case Mood::Cool:
+    case Mood::Confused:
+        return assets::PortraitFrame::Confident;
+    case Mood::Sleepy:
+        return assets::PortraitFrame::Blink;
+    default:
+        return p.open < 65 ? assets::PortraitFrame::Blink
+                           : assets::PortraitFrame::Calm;
     }
 }
 
-void happy_eye(Pen &pen, int cx, int cy, const Palette &c) {
-    pen.arc(cx, cy + 6, 9, 4, 200, 340, c.eye);
+void draw_portrait(lv_layer_t *layer, const lv_area_t &area, const Pose &p) {
+    lv_draw_image_dsc_t d;
+    lv_draw_image_dsc_init(&d);
+    d.src = assets::portrait(portrait_frame(p));
+    d.opa = LV_OPA_COVER;
+    const int dx = 8 + p.gaze_x / 3;
+    const int dy = 4 + p.bob + p.gaze_y / 3;
+    const lv_area_t target{
+        area.x1 + dx, area.y1 + dy,
+        area.x1 + dx + 143, area.y1 + dy + 143,
+    };
+    lv_draw_image(layer, &d, &target);
 }
 
 void heart(Pen &pen, int cx, int cy, int s, uint32_t color, uint32_t glint) {
-    const int r = 5 + s;
-    pen.rect(cx - 5 - r, cy - 3 - r, 2 * r, 2 * r, color, r);
-    pen.rect(cx + 5 - r, cy - 3 - r, 2 * r, 2 * r, color, r);
-    pen.tri(cx - 10 - s, cy - 1, cx + 10 + s, cy - 1, cx, cy + 10 + s, color);
-    pen.rect(cx - 8, cy - 7, 3, 3, glint, 2);
-}
-
-// Eyelid wedge in the visor colour: sad lowers the outer corner, angry the inner.
-void lid(Pen &pen, int cx, int cy, bool lower_left, const Palette &c) {
-    const int x0 = cx - 11, x1 = cx + 11, y0 = cy - 14, drop = cy - 1;
-    pen.tri(x0, y0, x1, y0, lower_left ? x0 : x1, drop, c.screen);
-}
-
-void draw_eyes(Pen &pen, const Pose &p, const Look &look, int bob, const Palette &c) {
-    const bool listening = p.activity == Activity::Listening;
-    const int w = listening ? 18 : 16, h = listening ? 25 : 22;
-    const int ly = kEyeY + bob + p.gaze_y;
-    const int lx = kEyeLx + p.gaze_x, rx = kEyeRx + p.gaze_x;
-    switch (look.eyes) {
-    case Eyes::Open:
-        open_eye(pen, lx, ly, w, h, p.open, c);
-        open_eye(pen, rx, ly, w, h, p.open, c);
-        break;
-    case Eyes::Happy:
-        happy_eye(pen, lx, ly, c);
-        happy_eye(pen, rx, ly, c);
-        break;
-    case Eyes::Closed:
-        pen.arc(lx, ly - 5, 8, 3, 25, 155, c.eye);
-        pen.arc(rx, ly - 5, 8, 3, 25, 155, c.eye);
-        break;
-    case Eyes::Round:
-        open_eye(pen, lx, ly, 21, 21, p.open, c);
-        open_eye(pen, rx, ly, 21, 21, p.open, c);
-        break;
-    case Eyes::Heart: {
-        const int s = (p.phase & 7) < 2 ? 1 : 0;  // heartbeat
-        heart(pen, lx, ly, s, c.blush, c.glint);
-        heart(pen, rx, ly, s, c.blush, c.glint);
-        break;
-    }
-    case Eyes::Sad:
-    case Eyes::Angry: {
-        const bool sad = look.eyes == Eyes::Sad;
-        open_eye(pen, lx, ly, w, h, p.open, c);
-        open_eye(pen, rx, ly, w, h, p.open, c);
-        lid(pen, lx, ly, sad, c);
-        lid(pen, rx, ly, !sad, c);
-        break;
-    }
-    case Eyes::Sleepy:
-        open_eye(pen, lx, ly, w, h, p.open, c);
-        open_eye(pen, rx, ly, w, h, p.open, c);
-        pen.rect(lx - 10, ly - 13, 20, 14, c.screen);
-        pen.rect(rx - 10, ly - 13, 20, 14, c.screen);
-        pen.rect(lx - 9, ly, 18, 2, c.eye, 1);
-        pen.rect(rx - 9, ly, 18, 2, c.eye, 1);
-        break;
-    case Eyes::Wink:
-        open_eye(pen, lx, ly, w, h, p.open, c);
-        happy_eye(pen, rx, ly, c);
-        break;
-    case Eyes::Shades:
-        pen.rect(lx - 13, ly - 8, 26, 16, c.eye, 6);
-        pen.rect(rx - 13, ly - 8, 26, 16, c.eye, 6);
-        pen.rect(lx + 10, ly - 6, rx - lx - 20, 3, c.eye);
-        pen.line(lx + 2, ly - 4, lx + 7, ly - 4, 2, c.glint, LV_OPA_80);
-        pen.line(rx + 2, ly - 4, rx + 7, ly - 4, 2, c.glint, LV_OPA_80);
-        break;
-    case Eyes::Squint:
-        open_eye(pen, lx, ly, w, h, p.open, c);
-        open_eye(pen, rx + 1, ly + 3, 14, 10, 100, c);
-        pen.rect(rx - 9, ly - 8, 18, 3, c.eye, 1);  // raised brow
-        break;
-    }
-    if (look.tears) {
-        const int fall = (p.phase & 7) * 2;
-        pen.rect(lx - 9, ly + 8 + fall, 5, 7, c.tear, 3);
-        pen.rect(rx + 4, ly + 8 + ((fall + 6) & 15), 5, 7, c.tear, 3);
-    }
-}
-
-void draw_mouth(Pen &pen, const Pose &p, const Look &look, int bob, const Palette &c) {
-    const int mx = kCx + p.gaze_x / 2 + (p.activity == Activity::Thinking ? 6 : 0);
-    const int my = kMouthY + bob + (p.gaze_y > 0 ? 1 : 0);
-    switch (look.mouth) {
-    case Mouth::Smile: pen.arc(mx, my - 6, 7, 3, 25, 155, c.eye); break;
-    case Mouth::Grin:  pen.arc(mx, my - 8, 9, 3, 15, 165, c.eye); break;
-    case Mouth::Laugh: {
-        const int h = 9 + (p.mouth > 4 ? 2 : 0);
-        pen.rect(mx - 9, my - 3, 18, h, c.eye, 6);
-        pen.rect(mx - 9, my - 3, 18, 4, c.eye, 1);
-        pen.rect(mx - 5, my + h - 7, 10, 4, c.blush, 2);
-        break;
-    }
-    case Mouth::Talk: {
-        // Open mouth: lip ring, dark cavity, tongue once it is wide enough.
-        const int h = clamp(p.mouth, 2, 11), w = 12 + h / 2;
-        const int x = mx - w / 2, y = my - h / 2;
-        pen.rect(x, y, w, h, c.eye, (h < w ? h : w) / 2);
-        if (h >= 6) {
-            pen.rect(x + 2, y + 2, w - 4, h - 4, c.screen, (h - 4) / 2);
-            pen.rect(x + 4, y + h - 5, w - 8, 3, c.blush, 2);
-        }
-        break;
-    }
-    case Mouth::O: {
-        const int grow = p.activity == Activity::Listening ? ((p.phase >> 2) & 1) : 2;
-        pen.ring(mx - 4 - grow, my - 5 - grow, 8 + 2 * grow, 10 + 2 * grow, c.eye, 5 + grow, 3);
-        break;
-    }
-    case Mouth::Flat:  pen.rect(mx - 6, my - 1, 12, 3, c.eye, 1); break;
-    case Mouth::Frown: pen.arc(mx, my + 7, 7, 3, 205, 335, c.eye); break;
-    case Mouth::Smirk: pen.arc(mx + 2, my - 6, 7, 3, 15, 95, c.eye); break;
-    case Mouth::Wavy:
-        for (int i = 0; i < 4; ++i) pen.line(mx - 8 + i * 4, my - (i & 1 ? -1 : 1), mx - 4 + i * 4, my + (i & 1 ? -1 : 1), 2, c.eye);
-        break;
-    case Mouth::Tiny:  pen.rect(mx - 3, my - 1, 6, 3, c.eye, 1); break;
-    }
+    const int r = 4 + s;
+    pen.rect(cx - 4 - r, cy - 2 - r, 2 * r, 2 * r, color, r);
+    pen.rect(cx + 4 - r, cy - 2 - r, 2 * r, 2 * r, color, r);
+    pen.tri(cx - 9 - s, cy, cx + 9 + s, cy, cx, cy + 9 + s, color);
+    pen.rect(cx - 7, cy - 6, 3, 3, glint, 2);
 }
 
 void draw_letter_z(Pen &pen, int x, int y, int s, uint32_t color, lv_opa_t opa) {
@@ -309,16 +186,6 @@ void draw_extras(Pen &pen, const Pose &p, int bob, const Palette &c) {
         break;
     }
     default: break;
-    }
-}
-
-uint32_t antenna_color(const Pose &p, const Palette &c) {
-    switch (p.activity) {
-    case Activity::Listening: return c.tear;
-    case Activity::Thinking:
-    case Activity::Connecting: return (p.phase & 2) ? c.warn : c.edge;
-    case Activity::Offline: return c.edge;
-    default: return c.eye;
     }
 }
 
@@ -427,7 +294,10 @@ Pose Animator::step(Activity a) {
     uint8_t phase = 0;
     switch (a) {
     case Activity::Idle:       bob = kBob[(tick_ / 8) % 6]; break;
-    case Activity::Speaking:   bob = kBob[(tick_ / 4) % 6]; break;
+    case Activity::Speaking:
+        bob = kBob[(tick_ / 4) % 6];
+        phase = (tick_ / 2) & 15;
+        break;
     case Activity::Thinking:   bob = kBob[(tick_ / 10) % 6]; phase = (tick_ / 5) & 15; break;
     case Activity::Connecting: bob = kBob[(tick_ / 6) % 6]; phase = (tick_ / 4) & 15; break;
     case Activity::Offline:    bob = kBob[(tick_ / 14) % 6]; phase = (tick_ / 5) & 15; break;
@@ -440,92 +310,41 @@ Pose Animator::step(Activity a) {
 }
 
 void draw_big(lv_layer_t *layer, const lv_area_t &area, const Pose &p, const Palette &c) {
+    draw_portrait(layer, area, p);
     Pen pen{layer, area.x1, area.y1};
-    const Look look = look_for(p);
     const int b = p.bob;
 
-    // A compact amplitude history lives below the floating head. Silent columns
-    // rest as quiet dots; it fits the existing host without stealing text space.
+    // A compact live waveform sits across the jacket, replacing the old robot
+    // visor while preserving the real microphone feedback.
+    pen.rect(53, 119 + b, 54, 9, c.outfit_dark, 5, LV_OPA_80);
     for (int i = 0; i < kWaveBars; ++i) {
-        const int height = 2 + (p.bars[i] * 12 + 50) / 100;
-        pen.rect(kCx - 38 + i * 6, 103 - height / 2, 4, height,
-                 p.bars[i] ? c.eye : c.edge, 2, p.bars[i] ? LV_OPA_COVER : LV_OPA_50);
+        const int height = 2 + (p.bars[i] * 5 + 50) / 100;
+        pen.rect(57 + i * 3, 124 - height / 2, 2, height,
+                 p.bars[i] ? c.accessory : c.hair_light, 2,
+                 p.bars[i] ? LV_OPA_COVER : LV_OPA_40);
     }
 
-    // Antenna, then ears, so the head overlaps their roots.
-    pen.rect(kCx - 2, 9 + b, 4, 12, c.edge, 2);
-    const uint32_t tip = antenna_color(p, c);
-    if (p.activity == Activity::Listening || (p.phase & 2)) pen.rect(kCx - 8, 1 + b, 16, 16, tip, 8, LV_OPA_30);
-    pen.rect(kCx - 5, 4 + b, 10, 10, tip, 5);
-    const uint32_t ear = p.activity == Activity::Listening ? c.tear : c.edge;
-    pen.rect(7, 42 + b, 12, 26, ear, 5);
-    pen.rect(105, 42 + b, 12, 26, ear, 5);
-
-    pen.panel(14, 18 + b, 96, 74, c.shell, c.edge, 24, 2);
-    pen.rect(24, 28 + b, 76, 54, c.screen, 17);
-
-    if (look.blush) {
-        const lv_opa_t opa = look.blush > 1 ? LV_OPA_90 : LV_OPA_50;
-        pen.rect(28, 67 + b, 12, 6, c.blush, 3, opa);
-        pen.rect(84, 67 + b, 12, 6, c.blush, 3, opa);
+    if (p.mood == Mood::Love) {
+        const int sway = (p.phase & 3) * 2;
+        heart(pen, 126 - sway, 35 + b, 2, c.blush, c.glint);
+        heart(pen, 138 - sway, 21 + b, 1, c.blush, c.glint);
     }
-    draw_eyes(pen, p, look, b, c);
-    draw_mouth(pen, p, look, b, c);
     draw_extras(pen, p, b, c);
 }
 
 void draw_mini(lv_layer_t *layer, const lv_area_t &area, const Pose &p, const Palette &c, uint32_t frame) {
     Pen pen{layer, area.x1, area.y1};
-    const Look look = look_for(p);
+    (void)p;
     pen.panel(0, 0, kMiniW, kMiniH, c.screen, frame, 7, 2);
-    const int gx = p.gaze_x / 2, gy = p.gaze_y / 3;
-    const int lx = 9 + gx, rx = 17 + gx, ey = 8 + gy;
-    switch (look.eyes) {
-    case Eyes::Happy:
-        pen.arc(lx, ey + 3, 3, 2, 200, 340, c.eye);
-        pen.arc(rx, ey + 3, 3, 2, 200, 340, c.eye);
-        break;
-    case Eyes::Closed:
-    case Eyes::Sleepy:
-        pen.rect(lx - 2, ey + 1, 5, 2, c.eye, 1);
-        pen.rect(rx - 2, ey + 1, 5, 2, c.eye, 1);
-        break;
-    case Eyes::Heart:
-        pen.rect(lx - 2, ey - 2, 5, 5, c.blush, 2);
-        pen.rect(rx - 2, ey - 2, 5, 5, c.blush, 2);
-        break;
-    case Eyes::Shades:
-        pen.rect(lx - 3, ey - 2, rx - lx + 7, 4, c.eye, 1);
-        break;
-    case Eyes::Wink:
-        pen.rect(lx - 1, ey - 3, 3, 6, c.eye, 1);
-        pen.arc(rx, ey + 3, 3, 2, 200, 340, c.eye);
-        break;
-    default: {
-        const int h = clamp(6 * p.open / 100, 1, 6) + (look.eyes == Eyes::Round ? 1 : 0);
-        const int w = look.eyes == Eyes::Round ? 4 : 3;
-        pen.rect(lx - w / 2, ey - h / 2, w, h, c.eye, 1);
-        pen.rect(rx - w / 2, ey - h / 2, w, h, c.eye, 1);
-        break;
-    }
-    }
-    const int mx = 13 + gx;
-    if (look.mouth == Mouth::Talk || look.mouth == Mouth::Laugh) {
-        const int h = clamp(p.mouth / 3 + 1, 1, 3);
-        pen.rect(mx - 2, 14 - h / 2, 5, h, c.eye, 1);
-    } else if (look.mouth == Mouth::O) {
-        pen.rect(mx - 1, 13, 3, 3, c.eye, 1);
-    } else if (look.mouth == Mouth::Frown) {
-        pen.rect(mx - 2, 14, 5, 1, c.eye);
-        pen.rect(mx - 3, 15, 1, 1, c.eye);
-        pen.rect(mx + 3, 15, 1, 1, c.eye);
-    } else {
-        pen.rect(mx - 2, 14, 5, 1, c.eye);
-        if (look.mouth == Mouth::Smile || look.mouth == Mouth::Grin) {
-            pen.rect(mx - 3, 13, 1, 1, c.eye);
-            pen.rect(mx + 3, 13, 1, 1, c.eye);
-        }
-    }
+    lv_draw_image_dsc_t d;
+    lv_draw_image_dsc_init(&d);
+    d.src = assets::mini_portrait();
+    d.clip_radius = 5;
+    const lv_area_t target{
+        area.x1 + 1, area.y1 + 1,
+        area.x1 + kMiniW - 1, area.y1 + kMiniH - 1,
+    };
+    lv_draw_image(layer, &d, &target);
 }
 
 }  // namespace xiaozhi::face

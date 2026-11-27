@@ -1,9 +1,8 @@
-// Xiaozhi companion face: capsule eyes that blink, glance and change shape
+// Xiaozhi companion face: a bitmap portrait that blinks and changes expression
 // with the conversation state and the server's llm.emotion.
 //
-// Pure drawing + a small frame animator. No retained LVGL objects, images or
-// heap of its own: the caller owns one LVGL timer and invalidates its two
-// hosts only when the returned Pose changes.
+// The image data is static flash-backed RGB565A8. A small frame animator owns
+// no heap; the caller invalidates the two hosts only when the pose changes.
 #pragma once
 
 #include <stdint.h>
@@ -31,6 +30,15 @@ struct Palette {
     uint32_t blush;   // cheeks, hearts, tongue
     uint32_t tear;    // tears, sweat, listening light
     uint32_t warn;    // thinking light and bubbles
+    uint32_t skin = 0xF2C89F;
+    uint32_t skin_shadow = 0xD8946D;
+    uint32_t hair = 0x214A52;
+    uint32_t hair_light = 0x4DB8B3;
+    uint32_t outfit = 0x159E9A;
+    uint32_t outfit_dark = 0x17656A;
+    uint32_t scarf = 0xE46E55;
+    uint32_t mouth = 0x9C4B47;
+    uint32_t accessory = 0xF4C65D;
 };
 
 struct Pose {
@@ -75,7 +83,7 @@ private:
     Activity last_ = Activity::Idle;
 };
 
-constexpr int kBigW = 124, kBigH = 112;
+constexpr int kBigW = 160, kBigH = 152;
 constexpr int kMiniW = 26, kMiniH = 20;
 
 void draw_big(lv_layer_t *layer, const lv_area_t &area, const Pose &pose, const Palette &palette);

@@ -12,7 +12,7 @@ using namespace xiaozhi::face;
 
 namespace {
 
-constexpr int kCols = 6, kCellW = 132, kCellH = 162;
+constexpr int kCols = 5, kCellW = 174, kCellH = 205;
 constexpr int kRows = 4, kW = kCols * kCellW, kH = kRows * kCellH;
 uint16_t s_fb[kW * kH];
 uint32_t s_ms;

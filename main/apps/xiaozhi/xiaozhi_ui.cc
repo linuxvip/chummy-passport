@@ -95,6 +95,18 @@ face::Palette face_palette() {
     p.tear = classic ? UI_TEXT : (theme == UI_THEME_PLAYFUL || theme == UI_THEME_PAPER)
         ? UI_SECONDARY : 0x8FC7EF;
     p.warn = UI_WARNING;
+    p.skin = theme == UI_THEME_TRAVEL || theme == UI_THEME_NIGHT ? 0xEEC095 : 0xF5C99D;
+    p.skin_shadow = theme == UI_THEME_NEON ? 0xC77D75 : 0xD8946D;
+    p.hair = theme == UI_THEME_CLASSIC ? 0x245E45 :
+             theme == UI_THEME_NEON ? 0x193B56 :
+             theme == UI_THEME_PAPER ? 0x3C3A33 : 0x214A52;
+    p.hair_light = UI_ACCENT;
+    p.outfit = UI_ACCENT;
+    p.outfit_dark = UI_BORDER;
+    p.scarf = theme == UI_THEME_CLASSIC ? 0xA8EDBB :
+              theme == UI_THEME_NEON ? 0xFF78CA : 0xE46E55;
+    p.mouth = theme == UI_THEME_CLASSIC ? 0x37694B : 0x9C4B47;
+    p.accessory = UI_WARNING;
     return p;
 }
 
@@ -137,7 +149,7 @@ void show_companion(bool visible) {
     if (!s_companion) return;
     if (visible) {
         lv_obj_remove_flag(s_companion, LV_OBJ_FLAG_HIDDEN);
-        lv_obj_set_pos(s_msg_container, 12, 212);
+        lv_obj_set_pos(s_msg_container, 12, 228);
         lv_obj_set_height(s_msg_container, text_height_for_lines(2));
     } else {
         lv_obj_add_flag(s_companion, LV_OBJ_FLAG_HIDDEN);
@@ -227,7 +239,7 @@ void ui_init() {
 
     auto *header = ui_pixel_top_bar(s_screen);
     ui_pixel_wifi_bars_create(header, UI_STATUS_WIFI_X, 18, s_wifi_bars);
-    auto *title = ui_pixel_label(header, "小智 AI", &buddy_font_16, UI_TEXT);
+    auto *title = ui_pixel_label(header, "小智 · 小明", &buddy_font_16, UI_TEXT);
     lv_obj_align(title, LV_ALIGN_LEFT_MID, 42, 0);
     s_battery = ui_pixel_battery_create(header, UI_STATUS_BATTERY_X, 6, UI_TEXT, &lv_font_montserrat_14);
     refresh_status_bar();
@@ -303,7 +315,7 @@ void ui_init() {
 
     s_companion = lv_obj_create(s_screen);
     lv_obj_remove_style_all(s_companion);
-    lv_obj_set_pos(s_companion, (240 - face::kBigW) / 2, 88);
+    lv_obj_set_pos(s_companion, (240 - face::kBigW) / 2, 72);
     lv_obj_set_size(s_companion, face::kBigW, face::kBigH);
     lv_obj_remove_flag(s_companion, LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_add_event_cb(s_companion, draw_companion, LV_EVENT_DRAW_MAIN, nullptr);
@@ -447,7 +459,7 @@ void ui_set_ai_text(const std::string &text) {
     const std::string folded = passport::fold_display_text(text);
     const auto tail = passport::utf8_tail(folded, kMaxTextBytes);
     s_ai_reply_buffer.assign(tail.data(), tail.size());
-    std::string display = "小智: " + s_ai_reply_buffer;
+    std::string display = "小明: " + s_ai_reply_buffer;
     lv_label_set_text(s_ai_text_label, display.c_str());
     conversation_layout();
     scroll_to_bottom_locked();
@@ -459,7 +471,7 @@ void ui_append_ai_text(const std::string &text) {
     lv_obj_remove_flag(s_ai_text_label, LV_OBJ_FLAG_HIDDEN);
 
     passport::append_utf8_tail(s_ai_reply_buffer, passport::fold_display_text(text), kMaxTextBytes);
-    std::string display = "小智: " + s_ai_reply_buffer;
+    std::string display = "小明: " + s_ai_reply_buffer;
     lv_label_set_text(s_ai_text_label, display.c_str());
     conversation_layout();
     scroll_to_bottom_locked();
