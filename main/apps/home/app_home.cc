@@ -156,9 +156,6 @@ uint32_t s_quote_version = 0;
 
 lv_obj_t *s_lbl_profile_name = nullptr;
 lv_obj_t *s_lbl_profile_intro = nullptr;
-lv_obj_t *s_lbl_profile_city = nullptr;
-lv_obj_t *s_lbl_profile_wtext = nullptr;
-lv_obj_t *s_lbl_profile_temp = nullptr;
 lv_obj_t *s_profile_photo = nullptr;
 lv_obj_t *s_profile_photo_placeholder = nullptr;
 uint8_t *s_profile_photo_data = nullptr;
@@ -741,25 +738,6 @@ void update_profile_labels(const home_profile_t *prof) {
                        : "记录日常，在节气里寻找秩序。",
                    safe, sizeof(safe));
     lv_label_set_text(s_lbl_profile_intro, safe);
-    if (!s_lbl_profile_city || !s_lbl_profile_wtext || !s_lbl_profile_temp) return;
-    if (!prof || !prof->lat[0]) {
-        lv_label_set_text(s_lbl_profile_city, "未设城市");
-        lv_label_set_text(s_lbl_profile_wtext, "");
-        lv_label_set_text(s_lbl_profile_temp, "--");
-        return;
-    }
-    lv_label_set_text(s_lbl_profile_city, prof->city);
-    home_weather_t weather;
-    if (home_weather_get(&weather) && weather.valid) {
-        lv_label_set_text(s_lbl_profile_wtext, home_weather_code_text(weather.code));
-        char temperature[12];
-        std::snprintf(temperature, sizeof(temperature), "%d°",
-                      static_cast<int>(weather.temp_c));
-        lv_label_set_text(s_lbl_profile_temp, temperature);
-    } else {
-        lv_label_set_text(s_lbl_profile_wtext, "");
-        lv_label_set_text(s_lbl_profile_temp, "--");
-    }
 }
 
 void release_profile_photo() {
@@ -1362,27 +1340,11 @@ void create_profile_ui() {
     lv_obj_set_size(s_lbl_profile_name, 108, 28);
     lv_label_set_long_mode(s_lbl_profile_name, LV_LABEL_LONG_MODE_DOTS);
 
-    s_lbl_profile_city = make_label(s_screen, &buddy_font_16, kPhosDim,
-                                    LV_TEXT_ALIGN_LEFT);
-    lv_obj_set_pos(s_lbl_profile_city, 126, 82);
-    lv_obj_set_size(s_lbl_profile_city, 50, 18);
-    lv_label_set_long_mode(s_lbl_profile_city, LV_LABEL_LONG_MODE_DOTS);
-    s_lbl_profile_wtext = make_label(s_screen, &buddy_font_16, kWeatherAccent,
-                                     LV_TEXT_ALIGN_LEFT);
-    lv_obj_set_pos(s_lbl_profile_wtext, 174, 82);
-    lv_obj_set_size(s_lbl_profile_wtext, 30, 18);
-    lv_label_set_long_mode(s_lbl_profile_wtext, LV_LABEL_LONG_MODE_DOTS);
-    s_lbl_profile_temp = make_label(s_screen, &lv_font_montserrat_20, kTemperature,
-                                    LV_TEXT_ALIGN_LEFT);
-    lv_obj_set_pos(s_lbl_profile_temp, 205, 78);
-    lv_obj_set_size(s_lbl_profile_temp, 29, 26);
-    lv_label_set_long_mode(s_lbl_profile_temp, LV_LABEL_LONG_MODE_CLIP);
-
-    px_block(s_screen, 126, 106, 108, 1, kPhosBorder);
+    px_block(s_screen, 126, 82, 108, 1, kPhosBorder);
     s_lbl_profile_intro = make_label(s_screen, &buddy_font_16, kPhos,
                                     LV_TEXT_ALIGN_LEFT);
-    lv_obj_set_pos(s_lbl_profile_intro, 126, 113);
-    lv_obj_set_size(s_lbl_profile_intro, 108, 64);
+    lv_obj_set_pos(s_lbl_profile_intro, 126, 88);
+    lv_obj_set_size(s_lbl_profile_intro, 108, 90);
     lv_obj_set_style_text_letter_space(s_lbl_profile_intro, 0, 0);
     lv_label_set_long_mode(s_lbl_profile_intro, LV_LABEL_LONG_MODE_DOTS);
 
@@ -1696,9 +1658,6 @@ void home_stop() {
     s_lbl_quote = nullptr;
     s_lbl_profile_name = nullptr;
     s_lbl_profile_intro = nullptr;
-    s_lbl_profile_city = nullptr;
-    s_lbl_profile_wtext = nullptr;
-    s_lbl_profile_temp = nullptr;
     s_profile_photo = nullptr;
     s_profile_photo_placeholder = nullptr;
     s_profile_photo_version = UINT32_MAX;

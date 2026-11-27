@@ -34,6 +34,12 @@ assert "HOME_LAYOUT_MINIMAL" in home
 assert "HOME_LAYOUT_WEATHER" in home
 assert "HOME_LAYOUT_PROFILE" in home
 assert "sync_profile_photo();" in home
+assert "s_lbl_profile_city" not in home
+assert "s_lbl_profile_wtext" not in home
+assert "s_lbl_profile_temp" not in home
+assert "px_block(s_screen, 126, 82, 108, 1, kPhosBorder);" in home
+assert "lv_obj_set_pos(s_lbl_profile_intro, 126, 88);" in home
+assert "lv_obj_set_size(s_lbl_profile_intro, 108, 90);" in home
 assert "一页人物志" not in home
 assert "一张彩色相片" not in home
 print("Home layouts: four presets, settings cycling and NVS selection PASS")
